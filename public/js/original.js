@@ -1,5 +1,4 @@
-(() => {
-  try {
+// Archivo restaurado: sin <script> ni IIFE innecesario
   const $ = s => document.querySelector(s);
   const show = (el, on=true)=> el.style.display = on? 'flex':'none';
   const toastLimiter = { last: 0, gap: 400 }; // ms
@@ -18,6 +17,19 @@
   // Red: helpers para multijugador
   const hasNet = () => !!(window.sock && window.sock.connected);
   let __lastNetSend = 0;
+
+  // ====== SUAVIZADO REMOTO (nuevo) ======
+  const REMOTE = {
+    BUFFER: {},     // id -> [{x,y,t}, ...]
+    SMOOTH: {},     // id -> {x,y,vx,vy}
+    STATS: {},      // id -> {delay, iat:[], lastTs:0}
+    BASE_DELAY: 110,     // ms mínimo (sube a 120 si ves micro-tirón)
+    DELAY_MAX: 170,      // ms tope
+    EXTRA_GUARD: 10,     // ms sobre p80
+    MAX_BUF: 24,         // snapshots guardados
+    K: 18.0,             // rigidez del filtro crítico (12–24)
+    DEADZONE: 0.18       // px: evita microtemblores
+  };
 
     /* ===== FORMULARIO ===== */
   const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
@@ -156,8 +168,7 @@
       {k:'tech hub', icon:'🖥️', like:'tecnología', price:3, buyCost: 3500},
   ];
 
-  // porcentaje de ganancia adicional por cada venta basado en el costo de compra (por cada unidad de buyCost)
-  // ejemplo: 0.002 => cada 1000 de costo genera +2 créditos por venta
+  // porcentaje de ganancia adicional por cada venta basado en el costo de compra
   CFG.SHOP_PROFIT_FACTOR = CFG.SHOP_PROFIT_FACTOR || 0.002;
 
   /* Áreas clave */
@@ -179,7 +190,6 @@
         shops.length = 0; payload.shops.forEach(s=> shops.push({...s}));
       }
       if(Array.isArray(payload?.houses)){
-        // Mantener barrios locales en 'houses' y dibujar casas remotas aparte
         window.__netHouses = payload.houses.map(h=> ({...h}));
       }
     }catch(e){ console.warn('applyServerState error', e); }
@@ -329,7 +339,6 @@
     const cemeteryRect = scatterRects(1, [cemetery.w, cemetery.w], [cemetery.h, cemetery.h], avoidList, null)[0];
     if(cemeteryRect) { Object.assign(cemetery, cemeteryRect); avoidList.push(cemetery); }
 
-    // Añadir algunas instituciones iniciales de forma aleatoria
     const initialGovTypes = ['escuela', 'hospital', 'policia', 'biblioteca'];
     for(const typeKey of initialGovTypes) {
         const type = GOV_TYPES.find(t => t.k === typeKey);
@@ -491,7 +500,6 @@
       ctx.beginPath();ctx.moveTo(p.x-2*ZOOM,p.y); ctx.lineTo(p.x+h.w*ZOOM+2*ZOOM,p.y);ctx.lineTo(p.x+h.w*ZOOM-3*ZOOM,p.y-5*ZOOM); ctx.lineTo(p.x+3*ZOOM,p.y-5*ZOOM); ctx.closePath(); ctx.fill();
       ctx.fillStyle='#111827'; ctx.fillRect(p.x+h.w*ZOOM/2-3*ZOOM, p.y+h.h*ZOOM-8*ZOOM, 6*ZOOM, 8*ZOOM);
     }
-    // Casas remotas (del servidor)
     if(Array.isArray(window.__netHouses)){
       for(const h of window.__netHouses){
         const p=toScreen(h.x,h.y);
@@ -575,6 +583,106 @@
     return true;
   }
 
+  // ====== DIBUJO DE REMOTOS SUAVIZADO ======
+  function renderRemotePlayers(){
+    const now = performance.now();
+    if (!window.gameState || !Array.isArray(window.gameState.players)) return;
+
+    // Ingesta + delay adaptativo
+    for (const p of window.gameState.players) {
+      if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') continue;
+      const id = p.id;
+
+      const buf = (REMOTE.BUFFER[id] ||= []);
+      buf.push({ x: p.x, y: p.y, t: now });
+      if (buf.length > REMOTE.MAX_BUF) buf.shift();
+
+      const st = (REMOTE.STATS[id] ||= { delay: REMOTE.BASE_DELAY, iat: [], lastTs: 0 });
+      if (st.lastTs) {
+        const iat = now - st.lastTs;
+        st.iat.push(iat); if (st.iat.length > 20) st.iat.shift();
+        const sorted = st.iat.slice().sort((a,b)=>a-b);
+        const p80 = sorted.length ? sorted[Math.floor(sorted.length*0.8)-1] || sorted[sorted.length-1] : REMOTE.BASE_DELAY;
+        st.delay = Math.min(REMOTE.DELAY_MAX, Math.max(REMOTE.BASE_DELAY, (p80||REMOTE.BASE_DELAY) + REMOTE.EXTRA_GUARD));
+      }
+      st.lastTs = now;
+    }
+
+    // Catmull–Rom
+    function catmullRom(p0, p1, p2, p3, u){
+      const u2 = u*u, u3 = u2*u;
+      const a0 = -0.5, a1 = 1.5, a2 = -1.5, a3 = 0.5;
+      const b0 = 1.0,  b1 = -2.5, b2 = 2.0,  b3 = -0.5;
+      const c0 = -0.5, c1 = 0.0,  c2 = 0.5,  c3 = 0.0;
+      const d0 = 0.0,  d1 = 1.0,  d2 = 0.0,  d3 = 0.0;
+      const x = (a0*p0.x + a1*p1.x + a2*p2.x + a3*p3.x)*u3 +
+                (b0*p0.x + b1*p1.x + b2*p2.x + b3*p3.x)*u2 +
+                (c0*p0.x + c1*p1.x + c2*p2.x + c3*p3.x)*u  +
+                (d0*p0.x + d1*p1.x + d2*p2.x + d3*p3.x);
+      const y = (a0*p0.y + a1*p1.y + a2*p2.y + a3*p3.y)*u3 +
+                (b0*p0.y + b1*p1.y + b2*p2.y + b3*p3.y)*u2 +
+                (c0*p0.y + c1*p1.y + c2*p2.y + c3*p3.y)*u  +
+                (d0*p0.y + d1*p1.y + d2*p2.y + d3*p3.y);
+      return {x,y};
+    }
+
+    for (const p of window.gameState.players) {
+      // Only render remote players, not the local player
+      if (p.id === window.playerId) continue;
+      const id  = p.id;
+      const buf = REMOTE.BUFFER[id];
+      if (!buf || buf.length === 0) continue;
+
+      const st = REMOTE.STATS[id] || { delay: REMOTE.BASE_DELAY };
+      const renderTime = now - st.delay;
+
+      let idx = -1;
+      for (let i = 0; i < buf.length - 1; i++) {
+        if (buf[i].t <= renderTime && renderTime <= buf[i+1].t) { idx = i; break; }
+      }
+
+      let target;
+      if (idx >= 0) {
+        const p1 = buf[idx], p2 = buf[idx+1];
+        const p0 = buf[idx-1] || p1, p3 = buf[idx+2] || p2;
+        const u  = (renderTime - p1.t) / Math.max(1, (p2.t - p1.t));
+        target = catmullRom(p0, p1, p2, p3, Math.max(0, Math.min(1, u)));
+      } else {
+        const last = buf[buf.length - 1], prev = buf[buf.length - 2] || last;
+        const denom = Math.max(1, (last.t - prev.t));
+        const vx = (last.x - prev.x) / denom, vy = (last.y - prev.y) / denom;
+        const dt = Math.max(0, renderTime - last.t);
+        target = { x: last.x + vx * dt, y: last.y + vy * dt };
+      }
+
+      const s = (REMOTE.SMOOTH[id] ||= { x: target.x, y: target.y, vx:0, vy:0 });
+      let dx = target.x - s.x, dy = target.y - s.y;
+      const dist2 = dx*dx + dy*dy;
+      if (dist2 > REMOTE.DEADZONE*REMOTE.DEADZONE) {
+        const dt = 1/60;
+        const k  = REMOTE.K;
+        const ax = k*k*dx - 2*k*s.vx;
+        const ay = k*k*dy - 2*k*s.vy;
+        s.vx += ax * dt; s.vy += ay * dt;
+        s.x  += s.vx * dt; s.y  += s.vy * dt;
+      } else {
+        s.x = target.x; s.y = target.y; s.vx = 0; s.vy = 0;
+      }
+
+      const pt = toScreen(s.x, s.y);
+      ctx.beginPath();
+      const r = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM;
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
+      ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af';
+      ctx.fill();
+      if (ZOOM >= 0.7) {
+        ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+        ctx.fillText(`${p.code||'P'}`, pt.x, pt.y - 8*ZOOM);
+      }
+    }
+  }
+
   let __lastTime = performance.now();
   function loop(){
     if(!STARTED){ requestAnimationFrame(loop); return; }
@@ -584,21 +692,15 @@
     updateSocialLogic();
     drawWorld();
     drawSocialLines();
+
+    // ======= Jugadores remotos con smoothing nuevo =======
+    try{ renderRemotePlayers(); }catch(e){}
+
     const nowS = performance.now()/1000;
-    // Renderizar jugadores remotos
-    try{
-      const players = window.gameState?.players || [];
-      for(const pState of players){
-        if(pState.id && pState.id === window.playerId) continue;
-        const pt = toScreen(pState.x||0,pState.y||0);
-        ctx.beginPath(); ctx.arc(pt.x,pt.y, 3.2*ZOOM, 0, Math.PI*2);
-        ctx.fillStyle = (pState.gender==='F')? '#fda4af':'#93c5fd';
-        ctx.fill();
-        if(ZOOM>=0.9){ ctx.font=`700 ${Math.max(8,11*ZOOM)}px ui-monospace,monospace`; ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText(`${pState.code||'P'}`, pt.x, pt.y-10*ZOOM); }
-      }
-    }catch(e){}
 
     for(const a of agents){
+      // Only render the local player (not remote ones)
+      if (a.id !== USER_ID) continue;
       a.cooldownSocial = Math.max(0, a.cooldownSocial - dt);
       if (a.employedAtShopId) {
         const myWorkplace = shops.find(s => s.id === a.employedAtShopId);
@@ -726,6 +828,7 @@
       if (ZOOM >= 0.7) {
         ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
         ctx.fillStyle='#fff'; ctx.textAlign='center';
+        const age = (yearsSince(a.bornEpoch)|0);
         ctx.fillText(`${a.code}·${age}`, p.x, p.y-8*ZOOM);
       }
     }
@@ -759,7 +862,36 @@
     }
     return lines.join('\n') || 'Sin fondos por ahora.';
   }
-  function fullDocument(){const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));const player = agents.find(a => a.id === USER_ID);const playerName = player ? player.code : '—';const lines=[];lines.push('# Documento');lines.push(`Jugador: ${playerName}`);lines.push(`Población: ${agents.length} — Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);lines.push('', '## Finanzas por Agente', bankReport());return lines.join('\n');
+  function fullDocument(){
+    const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
+    const player = agents.find(a => a.id === USER_ID);
+    const playerName = player ? player.code : '—';
+    const lines=[];
+    lines.push('# Documento');
+    lines.push(`Jugador: ${playerName}`);
+    lines.push(`Población: ${agents.length} — Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
+    lines.push('');
+    lines.push('## Usuarios en el mundo (tiempo real)');
+    // Mostrar todos los usuarios conectados en tiempo real (de gameState)
+    let users = [];
+    if (window.gameState && Array.isArray(window.gameState.players)) {
+      users = window.gameState.players;
+    } else {
+      users = agents;
+    }
+    // Filtrar solo humanos (no bots) y no niños si quieres
+    const filtered = users.filter(u => !u.isBot && (!u.state || u.state !== 'child'));
+    if(filtered.length > 0){
+      for(const u of filtered){
+        lines.push(`- ${u.code || u.name || u.id}`);
+      }
+    }else{
+      lines.push('No hay usuarios conectados.');
+    }
+    lines.push('');
+    lines.push('## Finanzas por Agente');
+    lines.push(bankReport());
+    return lines.join('\n');
   }
   function generateMarriedList() {
       const lines = [];
@@ -785,7 +917,25 @@
 
   function automaticRoadConstruction() { /* lógica opcional */ }
 
-  btnShowDoc.onclick = ()=>{ const isVisible = docDock.style.display === 'flex'; if (!isVisible) { $("#docBody").textContent = fullDocument(); docDock.style.display = 'flex'; } else { docDock.style.display = 'none'; } };
+  btnShowDoc.onclick = ()=>{
+    const isVisible = docDock.style.display === 'flex';
+    if (!isVisible) {
+      // Actualizar el documento cada segundo mientras está abierto
+      if(!window.__docInterval){
+        window.__docInterval = setInterval(()=>{
+          $("#docBody").textContent = fullDocument();
+        }, 1000);
+      }
+      $("#docBody").textContent = fullDocument();
+      docDock.style.display = 'flex';
+    } else {
+      docDock.style.display = 'none';
+      if(window.__docInterval){
+        clearInterval(window.__docInterval);
+        window.__docInterval = null;
+      }
+    }
+  };
   btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } };
   $("#btnShowGov").onclick = ()=>{ const isVisible = govDock.style.display === 'flex'; if (!isVisible) { govDock.style.display = 'flex'; } else { govDock.style.display = 'none'; } };
   $("#uiHideBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(-130%)'; show($("#uiShowBtn"),true); };
@@ -811,7 +961,6 @@
     const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney});
     try{ user.avatar = (gender === 'M') ? 'https://i.postimg.cc/x8cc0drr/20250820-102743.png' : 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png'; }catch(e){}
     agents.push(user); USER_ID=user.id;
-    // Registrar jugador en servidor y evitar bots locales si hay red
     try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
     if(!hasNet()){
       for(let i=0;i<CFG.N_INIT;i++) {agents.push(makeAgent('adult',{ageYears:rand(18,60)}));}
@@ -1059,12 +1208,3 @@
   }
   ready();
   // setInterval(automaticRoadConstruction, 60_000);
-
-  } catch(err) {
-    console.error('Error al iniciar la simulación:', err);
-    try {
-      const t = document.querySelector('#toast'); 
-      if(t){ t.style.display='block'; t.textContent='Error: '+err.message; setTimeout(()=>t.style.display='none',5000); }
-    } catch(e){}
-  }
-})();

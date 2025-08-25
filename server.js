@@ -109,8 +109,47 @@ function tickBots(bounds = { w: 2200, h: 1400 }) {
   }
 }
 
-ensureBots(10);
-setInterval(() => tickBots(), 120);
+
+// Movimiento automático de todos los jugadores (no solo bots)
+
+function tickPlayers(bounds = { w: 2200, h: 1400 }) {
+  const dt = 0.12; // ~120ms por tick
+  for (const p of Object.values(state.players)) {
+    // Si no tiene objetivo, asignar uno aleatorio
+    if (typeof p.targetX !== 'number' || typeof p.targetY !== 'number') {
+      p.targetX = Math.random() * bounds.w;
+      p.targetY = Math.random() * bounds.h;
+    }
+    // Calcular distancia al objetivo
+    const dx = p.targetX - p.x;
+    const dy = p.targetY - p.y;
+    const dist = Math.hypot(dx, dy);
+    // Si llegó cerca del objetivo, asignar uno nuevo
+    if (dist < 18) {
+      p.targetX = Math.random() * bounds.w;
+      p.targetY = Math.random() * bounds.h;
+    }
+    // Movimiento suave hacia el objetivo
+    const speed = p.speed || 120;
+    const nx = dx / (dist || 1);
+    const ny = dy / (dist || 1);
+    // Usar interpolación para suavizar el movimiento
+    p.vx = (p.vx || 0) * 0.8 + nx * speed * 0.2;
+    p.vy = (p.vy || 0) * 0.8 + ny * speed * 0.2;
+    // Actualizar posición
+    p.x = Math.max(0, Math.min((p.x || 0) + p.vx * dt, bounds.w));
+    p.y = Math.max(0, Math.min((p.y || 0) + p.vy * dt, bounds.h));
+    // Rebote en bordes
+    if (p.x <= 0 || p.x >= bounds.w) { p.vx *= -0.7; p.targetX = Math.random() * bounds.w; }
+    if (p.y <= 0 || p.y >= bounds.h) { p.vy *= -0.7; p.targetY = Math.random() * bounds.h; }
+    p.updatedAt = now();
+  }
+}
+
+// Tick de movimiento automático para todos los jugadores
+setInterval(() => {
+  tickPlayers({ w: 2200, h: 1400 });
+}, 120);
 
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);
