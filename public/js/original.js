@@ -869,7 +869,8 @@
     const lines=[];
     lines.push('# Documento');
     lines.push(`Jugador: ${playerName}`);
-    lines.push(`Población: ${agents.length} — Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
+  // Quitar la línea antigua de población, solo mostrar créditos, fondo, negocios e instituciones
+  lines.push(`Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
     lines.push('');
     lines.push('## Usuarios en el mundo (tiempo real)');
     // Mostrar todos los usuarios conectados en tiempo real (de gameState)
@@ -881,6 +882,7 @@
     }
     // Filtrar solo humanos (no bots) y no niños si quieres
     const filtered = users.filter(u => !u.isBot && (!u.state || u.state !== 'child'));
+    lines.push(`Población conectada: ${filtered.length}`);
     if(filtered.length > 0){
       for(const u of filtered){
         lines.push(`- ${u.code || u.name || u.id}`);
