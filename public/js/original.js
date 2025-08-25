@@ -42,10 +42,31 @@
   const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
   const getBoxes=()=> Array.from(likesWrap.querySelectorAll('input[type="checkbox"]'));
   const getChecked=()=> getBoxes().filter(x=>x.checked);
-  function updateLikesUI(){const count = getChecked().length;likesCount.textContent = count;const disableOthers = count >= 5;getBoxes().forEach(cb=>{if(!cb.checked){cb.disabled = disableOthers;cb.closest('.chip')?.classList.toggle('disabled', disableOthers);}else{cb.disabled = false;cb.closest('.chip')?.classList.remove('disabled');}});}
+  function updateLikesUI(){
+    const count = getChecked().length;
+    likesCount.textContent = count;
+    const disableOthers = count >= 5;
+    getBoxes().forEach(cb=>{
+      if(!cb.checked){
+        cb.disabled = disableOthers;
+        cb.closest('.chip')?.classList.toggle('disabled', disableOthers);
+      }else{
+        cb.disabled = false;
+        cb.closest('.chip')?.classList.remove('disabled');
+      }
+    });
+    // Habilitar/deshabilitar el botón Comenzar según validación
+    const nameOk = fName && fName.value.trim().length > 0;
+    btnStart.disabled = !(nameOk && count === 5);
+  }
   function attachLimit(){getBoxes().forEach(cb=>{['click','change','touchend'].forEach(ev=>{cb.addEventListener(ev, ()=>{const checked=getChecked();if(checked.length>5){cb.checked=false;}updateLikesUI();},{passive:true});});});}
   attachLimit(); updateLikesUI();
+  if(fName){
+    fName.addEventListener('input', updateLikesUI);
+  }
   btnRandLikes.onclick = ()=>{getBoxes().forEach(cb=>{ cb.checked=false; cb.disabled=false; cb.closest('.chip')?.classList.remove('disabled'); });const boxes = getBoxes(); let picks = 0;while(picks<5){ const i=(Math.random()*boxes.length)|0; if(!boxes[i].checked){ boxes[i].checked=true; picks++; } }updateLikesUI();};
+// Asegurar que el botón Comenzar esté habilitado/deshabilitado al azar también
+btnRandLikes.addEventListener('click', updateLikesUI);
 
   /* ===== CANVAS / MUNDO ===== */
   const canvas=$("#world"), ctx=canvas.getContext('2d', {alpha: false});
@@ -66,6 +87,19 @@
   const isMobile = ()=> innerWidth<=768;
   let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
   const WORLD={w:0,h:0}; const cam={x:0,y:0};
+
+  // --- Generador de números aleatorios determinista (semilla fija para el mundo) ---
+  let _seed = 20250824; // Usa la fecha de hoy como semilla fija
+  function seededRandom() {
+    // LCG: https://en.wikipedia.org/wiki/Linear_congruential_generator
+    _seed = (_seed * 1664525 + 1013904223) % 4294967296;
+    return _seed / 4294967296;
+  }
+  function setSeed(s) { _seed = s >>> 0; }
+
+  // Versiones deterministas de randi y rand para la generación del mundo
+  function srandi(a, b) { return (seededRandom() * (b - a) + a) | 0; }
+  function srand(a, b) { return a + seededRandom() * (b - a); }
   function setWorldSize(){const vw=innerWidth, vh=innerHeight;WORLD.w = Math.floor(vw * (isMobile()? 3.6 : 2.8));WORLD.h = Math.floor(vh * (isMobile()? 3.2 : 2.6));}
   function fitCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; clampCam(); }
   function clampCam(){const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;const maxX = Math.max(0, WORLD.w - vw);const maxY = Math.max(0, WORLD.h - vh);cam.x = Math.max(0, Math.min(cam.x, maxX));cam.y = Math.max(0, Math.min(cam.y, maxY));}
@@ -225,8 +259,8 @@
   function scatterRects(n, [wmin,wmax], [hmin,hmax], avoid=[] , bounds=null, sameTypeMargin = 8){
     const placed=[]; const wr=bounds || {x:0,y:0,w:WORLD.w,h:WORLD.h}; let tries=0; const generalMargin = 8;
     while(placed.length<n && tries<3000){tries++;
-      const w = randi(wmin, wmax), h=randi(hmin,hmax);
-      const x = randi(wr.x+30, wr.x+wr.w-w-30), y = randi(wr.y+30, wr.y+wr.h-h-30);
+      const w = srandi(wmin, wmax), h=srandi(hmin,hmax);
+      const x = srandi(wr.x+30, wr.x+wr.w-w-30), y = srandi(wr.y+30, wr.y+wr.h-h-30);
       const rect={x,y,w,h};
       if(placed.some(r=>rectsOverlapWithMargin(r,rect, sameTypeMargin))) continue;
       if(avoid.some(r=>rectsOverlapWithMargin(r,rect, generalMargin))) continue;
@@ -285,8 +319,12 @@
   function regenInfrastructure(preserveHouses=false){
     streets.length=factories.length=banks.length=malls.length=0; government.placed.length=0;
     if(!preserveHouses){ houses.length=0; barrios.length=0; }
-    // ubicar complejo de gobierno centrado
-    const parkW = 180, parkH = 110, parkGap = 15;
+
+    // --- Semilla fija para el mundo ---
+    setSeed(20250824);
+
+    // Gobierno en el centro
+    const parkW = 220, parkH = 140, parkGap = 24;
     const govComplexW = government.w + 2 * parkW + 2 * parkGap;
     const govComplexH = government.h + 2 * parkH + 2 * parkGap;
     const govComplexRect = {
@@ -297,64 +335,87 @@
     };
     buildAvenidas({x:0, y:0, w:WORLD.w, h:WORLD.h}, govComplexRect);
 
-    const originalAvenidas = [...avenidas];
-    avenidas.length = 0;
-    for (const av of originalAvenidas) {
-        if (rectsOverlap(av, govComplexRect)) {
-            if (av.w > av.h) {
-                const leftW = govComplexRect.x - av.x;
-                if (leftW > 10) avenidas.push({ x: av.x, y: av.y, w: leftW, h: av.h });
-                const rightX = govComplexRect.x + govComplexRect.w;
-                const rightW = (av.x + av.w) - rightX;
-                if (rightW > 10) avenidas.push({ x: rightX, y: av.y, w: rightW, h: av.h });
-            } else {
-                const topH = govComplexRect.y - av.y;
-                if (topH > 10) avenidas.push({ x: av.x, y: av.y, w: av.w, h: topH });
-                const bottomY = govComplexRect.y + govComplexRect.h;
-                const bottomH = (av.y + av.h) - bottomY;
-                if (bottomH > 10) avenidas.push({ x: av.x, y: bottomY, w: av.w, h: bottomH });
-            }
-        } else {
-            avenidas.push(av);
-        }
-    }
-
+    // Parques grandes a los 4 lados
     government.x = govComplexRect.x + parkW + parkGap;
     government.y = govComplexRect.y + parkH + parkGap;
-    
     const parkType = GOV_TYPES.find(t=>t.k==='parque');
     if(parkType){
-      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y - parkH - parkGap, w: parkW, h: parkH});
-      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y + government.h + parkGap, w: parkW, h: parkH});
-      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y + government.h/2 - parkH/2, w: parkW, h: parkH});
-      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y + government.h/2 - parkH/2, w: parkW, h: parkH});
+      // Norte
+      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y - parkH - parkGap, w: parkW, h: parkH, icon:'🌳🌲🌳'});
+      // Sur
+      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y + government.h + parkGap, w: parkW, h: parkH, icon:'🌳🌴🌳'});
+      // Oeste
+      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y + government.h/2 - parkH/2, w: parkW, h: parkH, icon:'🌲🌳🌲'});
+      // Este
+      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y + government.h/2 - parkH/2, w: parkW, h: parkH, icon:'🌴🌳🌴'});
     }
 
-    let avoidList = [government, ...avenidas, ...roundabouts, ...government.placed];
-    if(!preserveHouses){ makeBarriosYCasas(CFG.N_INIT + 24, null, avoidList); }
-    avoidList.push(...houses, ...barrios);
+    // Cementerio alejado (esquina inferior derecha)
+    cemetery.x = WORLD.w - cemetery.w - 40;
+    cemetery.y = WORLD.h - cemetery.h - 40;
 
+    // Casas en 4 manzanas a los extremos
+    barrios.length = 0; houses.length = 0; cityBlocks.length = 0;
+    const barrioSize = {w: 420, h: 320};
+    const pad = 24;
+    const barriosPos = [
+      {x: pad, y: pad}, // Noroeste
+      {x: WORLD.w - barrioSize.w - pad, y: pad}, // Noreste
+      {x: pad, y: WORLD.h - barrioSize.h - pad}, // Suroeste
+      {x: WORLD.w - barrioSize.w - pad, y: WORLD.h - barrioSize.h - pad} // Sureste
+    ];
+    for(let i=0;i<4;i++){
+      const b = {...barriosPos[i], w: barrioSize.w, h: barrioSize.h, name: `Barrio ${i+1}`};
+      barrios.push(b);
+      cityBlocks.push(b);
+    }
+    // Distribuir casas en los 4 barrios
+    const hsize = CFG.HOUSE_SIZE;
+    let totalMade = 0;
+    const totalNeeded = CFG.N_INIT + 24;
+    const housesPerBarrio = Math.ceil(totalNeeded / barrios.length);
+    for (const b of barrios) {
+      let madeInThisBarrio = 0;
+      const colsH = Math.max(5, Math.floor((b.w - pad * 2) / (hsize + 10)));
+      const rowsH = Math.max(4, Math.floor((b.h - pad * 2) / (hsize + 10)));
+      for (let ry = 0; ry < rowsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; ry++) {
+        for (let rx = 0; rx < colsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; rx++) {
+          const hx = b.x + pad + rx * (hsize + 10), hy = b.y + pad + ry * (hsize + 10);
+          const newH = { x: hx, y: hy, w: hsize, h: hsize, ownerId: null, rentedBy: null };
+          if ([...avenidas, ...roundabouts].some(av => rectsOverlapWithMargin(av, newH, 8))) continue;
+          houses.push(newH);
+          totalMade++; madeInThisBarrio++;
+        }
+      }
+    }
+
+    let avoidList = [government, ...avenidas, ...roundabouts, ...government.placed, ...houses, ...barrios];
+    // Builder cerca del centro
     const builderRect = scatterRects(1, [builder.w, builder.w], [builder.h, builder.h], avoidList, null)[0];
     if(builderRect) { Object.assign(builder, builderRect); avoidList.push(builder); }
-    const cemeteryRect = scatterRects(1, [cemetery.w, cemetery.w], [cemetery.h, cemetery.h], avoidList, null)[0];
-    if(cemeteryRect) { Object.assign(cemetery, cemeteryRect); avoidList.push(cemetery); }
+    // Cementerio ya posicionado
+    avoidList.push(cemetery);
 
+    // Escuelas y hospitales cerca del centro, iconos grandes
     const initialGovTypes = ['escuela', 'hospital', 'policia', 'biblioteca'];
     for(const typeKey of initialGovTypes) {
         const type = GOV_TYPES.find(t => t.k === typeKey);
         if(type) {
             const newBuildings = scatterRects(2, [type.w, type.w], [type.h, type.h], avoidList, null, 50);
-            newBuildings.forEach(b => government.placed.push({...type, ...b}));
+            newBuildings.forEach(b => government.placed.push({...type, ...b, icon: type.icon.repeat(3)}));
             avoidList.push(...newBuildings);
         }
     }
 
+    // Negocios y fábricas con iconos grandes
     const sameTypeDist = 50;
     factories.push(...scatterRects(CFG.FACTORIES,[140,180],[90,120], avoidList, null, sameTypeDist)); avoidList.push(...factories);
     const newBanks = scatterRects(CFG.BANKS,[110,140],[70,90], avoidList, null, sameTypeDist);
     if (newBanks.length > 0) { newBanks[newBanks.length - 1].isFuchsia = true; }
     banks.push(...newBanks); avoidList.push(...banks);
     malls.push(...scatterRects(CFG.MALLS,[110,140],[75,95], avoidList, null, sameTypeDist));
+    // Negocios: iconos grandes
+    shops.forEach(s => { s.icon = (s.icon || '🏪').repeat(2); });
   }
 
   /* ===== AGENTES Y ECONOMÍA ===== */
