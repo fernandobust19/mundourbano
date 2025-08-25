@@ -335,19 +335,63 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     };
     buildAvenidas({x:0, y:0, w:WORLD.w, h:WORLD.h}, govComplexRect);
 
-    // Parques grandes a los 4 lados
+    // Posicionar el gobierno
     government.x = govComplexRect.x + parkW + parkGap;
     government.y = govComplexRect.y + parkH + parkGap;
+    // Agregar el edificio de gobierno como imagen
+    government.placed.push({
+      k: 'gobierno',
+      label: 'Gobierno',
+      x: government.x,
+      y: government.y,
+      w: government.w,
+      h: government.h
+    });
+    // Parques grandes a los 4 lados y 4 esquinas del complejo central
     const parkType = GOV_TYPES.find(t=>t.k==='parque');
     if(parkType){
+      // Lados (Norte, Este, Oeste) con rectángulos verdes visuales
       // Norte
-      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y - parkH - parkGap, w: parkW, h: parkH, icon:'🌳🌲🌳'});
-      // Sur
-      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y + government.h + parkGap, w: parkW, h: parkH, icon:'🌳🌴🌳'});
+      government.placed.push({
+        ...parkType,
+        x: government.x + government.w/2 - parkW/2,
+        y: government.y - parkH - parkGap,
+        w: parkW,
+        h: parkH,
+        icon:'🌳🌲🌳',
+        fill: '#22c55e', // verde fuerte
+        stroke: '#166534'
+      });
       // Oeste
-      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y + government.h/2 - parkH/2, w: parkW, h: parkH, icon:'🌲🌳🌲'});
+      government.placed.push({
+        ...parkType,
+        x: government.x - parkW - parkGap,
+        y: government.y + government.h/2 - parkH/2,
+        w: parkW,
+        h: parkH,
+        icon:'🌲�🌲',
+        fill: '#22c55e',
+        stroke: '#166534'
+      });
       // Este
-      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y + government.h/2 - parkH/2, w: parkW, h: parkH, icon:'🌴🌳🌴'});
+      government.placed.push({
+        ...parkType,
+        x: government.x + government.w + parkGap,
+        y: government.y + government.h/2 - parkH/2,
+        w: parkW,
+        h: parkH,
+        icon:'🌴🌳🌴',
+        fill: '#22c55e',
+        stroke: '#166534'
+      });
+      // Sur (mantener como antes, sin rectángulo verde especial)
+      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y + government.h + parkGap, w: parkW, h: parkH, icon:'🌳🌴🌳'});
+      // Esquinas
+      const cornerW = parkW * 0.9, cornerH = parkH * 0.9;
+      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y - parkH - parkGap, w: cornerW, h: cornerH, icon:'🌳🌳🌳'}); // NO
+      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y - parkH - parkGap, w: cornerW, h: cornerH, icon:'🌲🌲🌲'}); // NE
+      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y + government.h + parkGap, w: cornerW, h: cornerH, icon:'🌴🌴🌴'}); // SO
+      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y + government.h + parkGap, w: cornerW, h: cornerH, icon:'🌳🌴🌲'}); // SE
     }
 
     // Cementerio alejado (esquina inferior derecha)
@@ -395,6 +439,16 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     if(builderRect) { Object.assign(builder, builderRect); avoidList.push(builder); }
     // Cementerio ya posicionado
     avoidList.push(cemetery);
+
+    // Eliminar la avenida/calle que cruza por debajo del gobierno (horizontal central)
+    // Buscar la avenida horizontal más cercana al centro vertical del gobierno
+    const govY = government.y + government.h/2;
+    for(let i=avenidas.length-1;i>=0;i--){
+      const av = avenidas[i];
+      if(av.w > av.h && Math.abs((av.y+av.h/2)-govY) < 40){
+        avenidas.splice(i,1);
+      }
+    }
 
     // Escuelas y hospitales cerca del centro, iconos grandes
     const initialGovTypes = ['escuela', 'hospital', 'policia', 'biblioteca'];
@@ -497,14 +551,21 @@ btnRandLikes.addEventListener('click', updateLikesUI);
 
     drawRoundRect(builder,'rgba(58,74,47,0.92)','rgba(163,230,53,0.95)',10,3); drawLabelIcon(builder,'Constructora','🏗️');
     drawRoundRect(cemetery,'rgba(51,65,85,0.92)','rgba(148,163,184,0.95)',10,3); drawLabelIcon(cemetery,'Cementerio','✝');
-    drawRoundRect(government,'rgba(34,40,80,0.95)','rgba(147,197,253,0.95)',10,3);
-    try{
-      const pg = toScreen(government.x, government.y);
-      const gw = government.w * ZOOM, gh = government.h * ZOOM;
-      ctx.font = `900 ${Math.max(28, 48 * ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
-      ctx.textAlign = 'center'; ctx.fillStyle = 'white';
-      ctx.fillText('🏛️', pg.x + gw/2, pg.y + gh/2 + (18 * ZOOM));
-    }catch(e){ drawLabelIcon(government,'Gobierno','🏛️'); }
+    // Dibuja la imagen personalizada del gobierno en el centro
+    const pg = toScreen(government.x, government.y);
+  const gw = government.w * 2 * ZOOM, gh = government.h * 2 * ZOOM;
+  // Centrar la imagen en el mismo punto central
+  const pgx = pg.x + (government.w * ZOOM)/2 - gw/2;
+  const pgy = pg.y + (government.h * ZOOM)/2 - gh/2;
+    if(!window._govImg){
+      window._govImg = new window.Image();
+      window._govImg.src = 'https://i.postimg.cc/sXLTy7vW/20250824-105634.png';
+    }
+    if(window._govImg.complete){
+      ctx.drawImage(window._govImg, pgx, pgy, gw, gh);
+    }else{
+      window._govImg.onload = ()=>{ ctx.drawImage(window._govImg, pgx, pgy, gw, gh); };
+    }
 
     for(const b of banks){
       const fill = b.isFuchsia ? 'fuchsia' : 'rgba(250,204,21,0.95)';
@@ -538,8 +599,23 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     }
 
     for(const inst of government.placed){
-      drawRoundRect(inst, inst.fill, inst.stroke, 10, 3);
-      if(inst.k === 'carcel'){
+      if(inst.k === 'gobierno'){
+        // Dibuja la imagen personalizada del gobierno
+        const p = toScreen(inst.x, inst.y);
+        const w = inst.w * 2 * ZOOM, h = inst.h * 2 * ZOOM;
+        // Centrar la imagen en el mismo punto central
+        const px = p.x + (inst.w * ZOOM)/2 - w/2;
+        const py = p.y + (inst.h * ZOOM)/2 - h/2;
+        if(!window._govImg){
+          window._govImg = new window.Image();
+          window._govImg.src = 'https://i.postimg.cc/sXLTy7vW/20250824-105634.png';
+        }
+        if(window._govImg.complete){
+          ctx.drawImage(window._govImg, px, py, w, h);
+        }else{
+          window._govImg.onload = ()=>{ ctx.drawImage(window._govImg, px, py, w, h); };
+        }
+      } else if(inst.k === 'carcel'){
         const p = toScreen(inst.x, inst.y);
         const w = inst.w * ZOOM, h = inst.h * ZOOM;
         ctx.fillStyle = 'rgba(20,20,20,0.9)';
