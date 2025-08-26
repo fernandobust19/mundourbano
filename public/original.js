@@ -104,7 +104,7 @@
 
   /* ===== Tipos de Instituciones (25) ===== */
   const GOV_TYPES = [
-    {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)'},
+    {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)', imgSrc: '/img/parque.png'},
     {k:'escuela', label:'Escuela', cost:CFG.COST_SCHOOL, w:140,h:95, icon:'📚', fill:'rgba(51,65,85,0.92)', stroke:'rgba(148,163,184,0.95)'},
     {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047'},
     {k:'policia', label:'Policía', cost:CFG.COST_POLICE, w:150,h:80, icon:'🚓', fill:'#3b82f6', stroke:'#dbeafe'},
@@ -226,7 +226,9 @@
   }
 
   function makeBarriosYCasas(totalNeeded, urbanArea, avoidList = []) {
-    barrios.length = 0; houses.length = 0; cityBlocks.length = 0;
+    barrios.length = 0;
+    houses.length = 0;
+    cityBlocks.length = 0;
     const nBarrios = 4;
     const barriosTemp = scatterRects(nBarrios, [400, 550], [300, 450], avoidList, urbanArea);
     barrios.push(...barriosTemp.map((b, i) => ({...b, name: `Barrio ${i+1}`})));
@@ -463,9 +465,38 @@
       ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
     }
 
+    // Objeto para cachear las imágenes de las instituciones
+    if(!window.__instImgs) window.__instImgs = {};
+
     for(const inst of government.placed){
       drawRoundRect(inst, inst.fill, inst.stroke, 10, 3);
-      if(inst.k === 'carcel'){
+      // --- INICIO DEL CAMBIO ---
+      // Si la institución tiene una imagen definida, la dibujamos.
+      if (inst.imgSrc) {
+        try {
+          const p = toScreen(inst.x, inst.y);
+          const w = inst.w * ZOOM, h = inst.h * ZOOM;
+          
+          // Usamos un caché para no recargar la imagen en cada frame
+          if (!window.__instImgs[inst.imgSrc]) {
+            const img = new Image();
+            img.src = inst.imgSrc + `?v=1`; // Se añade `?v=1` para evitar problemas de caché
+            window.__instImgs[inst.imgSrc] = img;
+          }
+
+          const cachedImg = window.__instImgs[inst.imgSrc];
+          if (cachedImg.complete && cachedImg.naturalWidth > 0) {
+            ctx.drawImage(cachedImg, p.x, p.y, w, h);
+          } else {
+            // Si la imagen aún no carga, mostramos el ícono por defecto
+            drawLabelIcon(inst, inst.label, inst.icon);
+          }
+        } catch (e) {
+          console.error('Error dibujando imagen de institución', e);
+          drawLabelIcon(inst, inst.label, inst.icon);
+        }
+      } else if(inst.k === 'carcel'){
+      // --- FIN DEL CAMBIO ---
         const p = toScreen(inst.x, inst.y);
         const w = inst.w * ZOOM, h = inst.h * ZOOM;
         ctx.fillStyle = 'rgba(20,20,20,0.9)';
@@ -871,4 +902,23 @@
       }
     }
   });
+
+  // --- INICIO: Bloque catch faltante ---
+  } catch (e) {
+    console.error("Error fatal en el script principal:", e);
+    try {
+      const errDiv = document.createElement('div');
+      errDiv.style.position = 'fixed';
+      errDiv.style.top = '10px';
+      errDiv.style.left = '10px';
+      errDiv.style.padding = '15px';
+      errDiv.style.backgroundColor = 'red';
+      errDiv.style.color = 'white';
+      errDiv.style.fontFamily = 'monospace';
+      errDiv.style.zIndex = '9999';
+      errDiv.textContent = `ERROR: ${e.message}`;
+      document.body.appendChild(errDiv);
+    } catch {}
+  }
+  // --- FIN: Bloque catch faltante ---
 })();
