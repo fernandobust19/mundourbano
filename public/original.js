@@ -12,57 +12,6 @@
     if(_t){ _t.textContent=msg; _t.style.display='block'; clearTimeout(toast._id); toast._id=setTimeout(()=>_t.style.display='none',2400); }
   };
 
-  // ===== SISTEMA DE IMÁGENES PARA EDIFICIOS =====
-  const BUILDING_IMAGES = {};
-  
-  // Función para precargar imágenes de edificios
-  function preloadBuildingImages() {
-    // Primero, limpiamos cualquier imagen cargada anteriormente
-    for (const key in BUILDING_IMAGES) {
-      delete BUILDING_IMAGES[key];
-    }
-
-    // Lista de edificios para los que queremos cargar imágenes
-    const buildingTypes = [
-      'gobierno', 'casa', 'banco', 'fabrica', 'constructora', 'cementerio', 
-      'mall', 'parque', 'escuela', 'biblioteca', 'policia', 'hospital',
-      'central_electrica', 'bomberos', 'registro_civil', 'universidad', 
-      'tribunal', 'museo', 'teatro', 'estadio', 'terminal', 'correos',
-      'banco_central', 'aduana', 'carcel', 'planta_agua', 'reciclaje',
-      'centro_cultural', 'mercado_central', 'instituto_tecnologico', 
-      'centro_investigacion', 'observatorio'
-    ];
-    
-    // Para cada tipo de edificio, intentamos cargar su imagen
-    buildingTypes.forEach(type => {
-      const img = new Image();
-      
-      // Asegurarse de que la imagen esté completamente cargada antes de usarla
-      img.onload = () => {
-        BUILDING_IMAGES[type] = img;
-        console.log(`✅ Imagen cargada: ${type}.png (${img.width}x${img.height})`);
-        
-        // Forzar redibujado para esta imagen específica
-        if (type === 'gobierno') {
-          toast(`Imagen de gobierno cargada correctamente (${img.width}x${img.height})`);
-        }
-      };
-      
-      img.onerror = () => {
-        console.error(`❌ No se pudo cargar la imagen: img/buildings/${type}.png`);
-        if (type === 'gobierno') {
-          toast('Error al cargar imagen de gobierno. Verifique que existe gobierno.png');
-        }
-      };
-      
-      // Agregar timestamp para evitar caché
-      img.src = `/img/buildings/${type}.png?t=${Date.now()}`;
-      
-      // Evitar imágenes borrosas
-      img.setAttribute('crossOrigin', 'anonymous');
-    });
-  }
-
   window.addEventListener('error', e => { try{toast('⚠️ Error: '+(e.message||'JS'));}catch(_){} });
   window.addEventListener('unhandledrejection', e => { try{toast('⚠️ Promesa: '+(e.reason?.message||'error'));}catch(_){} });
 
@@ -73,8 +22,8 @@
     /* ===== FORMULARIO ===== */
   const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
   const fGenderPreview = document.getElementById('fGenderPreview');
-  const MALE_IMG = '/img/avatars/m.png';
-  const FEMALE_IMG = '/img/avatars/f.png';
+  const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
+  const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
   function updateGenderPreview(){ try{ if(!fGender || !fGender.value) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
   if(fGender){ fGender.addEventListener('change', updateGenderPreview); updateGenderPreview(); }
   const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
@@ -88,7 +37,7 @@
 
   /* ===== CANVAS / MUNDO ===== */
   const canvas=$("#world"), ctx=canvas.getContext('2d', {alpha: false});
-  const uiDock=$("#uiDock"), uiHideBtn=$("#uiShowBtn"), uiShowBtn=$("#uiShowBtn");
+  const uiDock=$("#uiDock"), uiHideBtn=$("#uiHideBtn"), uiShowBtn=$("#uiShowBtn");
   const zoomFab=$("#zoomFab"), zoomIn=$("#zoomIn"), zoomOut=$("#zoomOut"), docDock=$("#docDock"), govDock=$("#govDock"), topBar=$("#top-bar");
   const mini=$("#mini"), miniCanvas=$("#miniCanvas"), mctx=miniCanvas.getContext('2d');
   const stats=$("#stats"), toggleLinesBtn=$("#toggleLines");
@@ -277,9 +226,7 @@
   }
 
   function makeBarriosYCasas(totalNeeded, urbanArea, avoidList = []) {
-    barrios.length = 0;
-    houses.length = 0;
-    cityBlocks.length = 0;
+    barrios.length = 0; houses.length = 0; cityBlocks.length = 0;
     const nBarrios = 4;
     const barriosTemp = scatterRects(nBarrios, [400, 550], [300, 450], avoidList, urbanArea);
     barrios.push(...barriosTemp.map((b, i) => ({...b, name: `Barrio ${i+1}`})));
@@ -427,57 +374,7 @@
   }
 
   /* ===== DIBUJO ===== */
-  // Optimizar la función de dibujo para imágenes de 480x480
-  function drawRoundRect(r, fill, stroke, rad=10, lw=3, imageKey=null){
-    const p=toScreen(r.x,r.y); 
-    const w=r.w*ZOOM, h=r.h*ZOOM, rr=Math.min(rad*ZOOM,w/2,h/2);
-    
-    // Dibuja la imagen si existe
-    if(imageKey && BUILDING_IMAGES[imageKey]) {
-      const img = BUILDING_IMAGES[imageKey];
-      ctx.save();
-      
-      // Crear ruta de recorte con bordes redondeados
-      ctx.beginPath(); 
-      ctx.moveTo(p.x+rr,p.y);
-      ctx.arcTo(p.x+w,p.y,p.x+w,p.y+h,rr); 
-      ctx.arcTo(p.x+w,p.y+h,p.x,p.y+h,rr);
-      ctx.arcTo(p.x,p.y+h,p.x,p.y,rr); 
-      ctx.arcTo(p.x,p.y,p.x+w,p.y,rr); 
-      ctx.closePath();
-      ctx.clip();
-      
-      // Configuración para mejor renderizado de imágenes de 480x480
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      
-      // Dibujar imagen con mejor escalado para 480x480
-      ctx.drawImage(img, 0, 0, 480, 480, p.x, p.y, w, h);
-      
-      ctx.restore();
-    }
-    
-    // Siempre dibuja el borde redondeado
-    ctx.beginPath(); 
-    ctx.moveTo(p.x+rr,p.y);
-    ctx.arcTo(p.x+w,p.y,p.x+w,p.y+h,rr); 
-    ctx.arcTo(p.x+w,p.y+h,p.x,p.y+h,rr);
-    ctx.arcTo(p.x,p.y+h,p.x,p.y,rr); 
-    ctx.arcTo(p.x,p.y,p.x+w,p.y,rr); 
-    ctx.closePath();
-    
-    // Si no hay imagen o está configurado para mostrar siempre el fondo, llena con color
-    if(!imageKey || !BUILDING_IMAGES[imageKey]) {
-      ctx.fillStyle=fill; 
-      ctx.fill();
-    }
-    
-    // Siempre dibuja el borde
-    ctx.strokeStyle=stroke; 
-    ctx.lineWidth=lw*ZOOM; 
-    ctx.stroke();
-  }
-
+  function drawRoundRect(r, fill, stroke, rad=10, lw=3){const p=toScreen(r.x,r.y); const w=r.w*ZOOM, h=r.h*ZOOM, rr=Math.min(rad*ZOOM,w/2,h/2);ctx.beginPath(); ctx.moveTo(p.x+rr,p.y);ctx.arcTo(p.x+w,p.y,p.x+w,p.y+h,rr); ctx.arcTo(p.x+w,p.y+h,p.x,p.y+h,rr);ctx.arcTo(p.x,p.y+h,p.x,p.y,rr); ctx.arcTo(p.x,p.y,p.x+w,p.y,rr); ctx.closePath();ctx.fillStyle=fill; ctx.fill(); ctx.strokeStyle=stroke; ctx.lineWidth=lw*ZOOM; ctx.stroke();}
   function drawLabelIcon(rect, label, emoji, iconSize = 32){
     const p = toScreen(rect.x, rect.y);
     ctx.font = `700 ${Math.max(8, 12 * ZOOM)}px system-ui,Segoe UI,Arial`;
@@ -526,39 +423,25 @@
     drawGrid(); drawAvenidas(); drawRoundabouts();
     for(const r of roadRects){const p=toScreen(r.x,r.y);ctx.fillStyle='rgba(75,85,99,0.95)';ctx.fillRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);}
 
-    for(const f of factories){ drawRoundRect(f,'rgba(63,51,81,0.92)','rgba(167,139,250,0.95)',8,3,'fabrica'); drawLabelIcon(f,'Fábrica','🏭'); }
+    for(const f of factories){ drawRoundRect(f,'rgba(63,51,81,0.92)','rgba(167,139,250,0.95)',8,3); drawLabelIcon(f,'Fábrica','🏭'); }
 
-    drawRoundRect(builder,'rgba(58,74,47,0.92)','rgba(163,230,53,0.95)',10,3,'constructora'); drawLabelIcon(builder,'Constructora','🏗️');
-    drawRoundRect(cemetery,'rgba(51,65,85,0.92)','rgba(148,163,184,0.95)',10,3,'cementerio'); drawLabelIcon(cemetery,'Cementerio','✝');
-    if (BUILDING_IMAGES['gobierno']) {
-      // Dibujar solo con la imagen, sin relleno de color
-      drawRoundRect(government, null, 'rgba(147,197,253,0.95)', 10, 3, 'gobierno');
-      
-      // Agregar solo el texto "Gobierno" sin el emoji
-      const pg = toScreen(government.x, government.y);
-      ctx.font = `700 ${Math.max(10, 16 * ZOOM)}px system-ui,Segoe UI,Arial`;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = 'white';
-      ctx.shadowColor = 'rgba(0,0,0,0.7)';
-      ctx.shadowBlur = 3;
-      ctx.fillText('Gobierno', pg.x + (government.w * ZOOM) / 2, pg.y + 24 * ZOOM);
-      ctx.shadowColor = 'transparent';
-    } else {
-      // Fallback si la imagen no está disponible
-      drawRoundRect(government,'rgba(34,40,80,0.95)','rgba(147,197,253,0.95)',10,3);
-      drawLabelIcon(government,'Gobierno','🏛️');
-    }
+    drawRoundRect(builder,'rgba(58,74,47,0.92)','rgba(163,230,53,0.95)',10,3); drawLabelIcon(builder,'Constructora','🏗️');
+    drawRoundRect(cemetery,'rgba(51,65,85,0.92)','rgba(148,163,184,0.95)',10,3); drawLabelIcon(cemetery,'Cementerio','✝');
+    // Cambio de color para verificar que el nuevo script está cargando.
+    drawRoundRect(government,'#ff00ff','rgba(147,197,253,0.95)',10,3);
+    // Se elimina el bloque try/catch para la imagen y se usa el ícono por defecto.
+    drawLabelIcon(government,'Gobierno','🏛️',42);
 
     for(const b of banks){
       const fill = b.isFuchsia ? 'fuchsia' : 'rgba(250,204,21,0.95)';
       const stroke = b.isFuchsia ? '#f5d0fe' : 'rgba(202,138,4,0.95)';
-      drawRoundRect(b, fill, stroke, 8, 3,'banco');
+      drawRoundRect(b, fill, stroke, 8, 3);
       drawLabelIcon(b,'Banco','💰');
     }
-    for(const m of malls){ drawRoundRect(m,'rgba(239,68,68,0.92)','rgba(254,202,202,0.95)',8,3,'mall'); drawLabelIcon(m,'Mall','🛍️'); }
+    for(const m of malls){ drawRoundRect(m,'rgba(239,68,68,0.92)','rgba(254,202,202,0.95)',8,3); drawLabelIcon(m,'Mall','🛍️'); }
 
     for(const s of shops){
-      drawRoundRect(s,'rgba(17,24,39,0.92)','rgba(148,163,184,0.95)',8,2,'tienda');
+      drawRoundRect(s,'rgba(17,24,39,0.92)','rgba(148,163,184,0.95)',8,2);
       const p = toScreen(s.x, s.y);
       const labelFontSize = Math.max(8, 16 * ZOOM);
       ctx.font = `700 ${labelFontSize}px system-ui,Segoe UI,Arial,emoji`;
@@ -581,20 +464,15 @@
     }
 
     for(const inst of government.placed){
-      // Usar el tipo de la institución como clave para la imagen
-      drawRoundRect(inst, inst.fill, inst.stroke, 10, 3, inst.k);
+      drawRoundRect(inst, inst.fill, inst.stroke, 10, 3);
       if(inst.k === 'carcel'){
         const p = toScreen(inst.x, inst.y);
         const w = inst.w * ZOOM, h = inst.h * ZOOM;
-        
-        // Solo dibujar el interior de la cárcel si no hay imagen
-        if (!BUILDING_IMAGES['carcel']) {
-          ctx.fillStyle = 'rgba(20,20,20,0.9)';
-          ctx.fillRect(p.x, p.y, w, h);
-          ctx.fillStyle = 'rgba(220,220,220,0.95)';
-          const bars = Math.max(3, Math.floor(inst.w/10));
-          for(let i=0;i<bars;i++){ const bx = p.x + 6*ZOOM + i * (w - 12*ZOOM) / Math.max(1,bars-1); ctx.fillRect(bx, p.y+6*ZOOM, 3*ZOOM, h - 12*ZOOM); }
-        }
+        ctx.fillStyle = 'rgba(20,20,20,0.9)';
+        ctx.fillRect(p.x, p.y, w, h);
+        ctx.fillStyle = 'rgba(220,220,220,0.95)';
+        const bars = Math.max(3, Math.floor(inst.w/10));
+        for(let i=0;i<bars;i++){ const bx = p.x + 6*ZOOM + i * (w - 12*ZOOM) / Math.max(1,bars-1); ctx.fillRect(bx, p.y+6*ZOOM, 3*ZOOM, h - 12*ZOOM); }
         ctx.fillStyle = '#fff'; ctx.font=`700 ${Math.max(10, 14*ZOOM)}px system-ui`; ctx.textAlign='center'; ctx.fillText('CÁRCEL', p.x + w/2, p.y + 18*ZOOM);
       } else {
         drawLabelIcon(inst, inst.label, inst.icon);
@@ -603,45 +481,21 @@
 
     for(const h of houses){
       const p=toScreen(h.x,h.y);
-      
-      // Usar imagen de casa si existe
-      if (BUILDING_IMAGES['casa']) {
-        ctx.drawImage(BUILDING_IMAGES['casa'], p.x, p.y, h.w*ZOOM, h.h*ZOOM);
-        // Indicar el estado con un pequeño rectángulo coloreado
-        const statusRect = 6 * ZOOM;
-        ctx.fillStyle = h.ownerId ? '#65a30d' : '#b45309';
-        ctx.fillRect(p.x + h.w*ZOOM - statusRect - 2*ZOOM, p.y + 2*ZOOM, statusRect, statusRect);
-      } else {
-        // Fallback al dibujo original
-        ctx.fillStyle=h.ownerId?'#65a30d':'#b45309';
-        ctx.fillRect(p.x,p.y,h.w*ZOOM,h.h*ZOOM);
-        ctx.fillStyle=h.ownerId?'#4d7c0f':'#92400e';
-        ctx.beginPath();ctx.moveTo(p.x-2*ZOOM,p.y); ctx.lineTo(p.x+h.w*ZOOM+2*ZOOM,p.y);ctx.lineTo(p.x+h.w*ZOOM-3*ZOOM,p.y-5*ZOOM); ctx.lineTo(p.x+3*ZOOM,p.y-5*ZOOM); ctx.closePath(); ctx.fill();
-        ctx.fillStyle='#111827'; ctx.fillRect(p.x+h.w*ZOOM/2-3*ZOOM, p.y+h.h*ZOOM-8*ZOOM, 6*ZOOM, 8*ZOOM);
-      }
+      ctx.fillStyle=h.ownerId?'#65a30d':'#b45309';
+      ctx.fillRect(p.x,p.y,h.w*ZOOM,h.h*ZOOM);
+      ctx.fillStyle=h.ownerId?'#4d7c0f':'#92400e';
+      ctx.beginPath();ctx.moveTo(p.x-2*ZOOM,p.y); ctx.lineTo(p.x+h.w*ZOOM+2*ZOOM,p.y);ctx.lineTo(p.x+h.w*ZOOM-3*ZOOM,p.y-5*ZOOM); ctx.lineTo(p.x+3*ZOOM,p.y-5*ZOOM); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#111827'; ctx.fillRect(p.x+h.w*ZOOM/2-3*ZOOM, p.y+h.h*ZOOM-8*ZOOM, 6*ZOOM, 8*ZOOM);
     }
-    
     // Casas remotas (del servidor)
     if(Array.isArray(window.__netHouses)){
       for(const h of window.__netHouses){
         const p=toScreen(h.x,h.y);
-        
-        // Usar imagen de casa si existe
-        if (BUILDING_IMAGES['casa']) {
-          ctx.drawImage(BUILDING_IMAGES['casa'], p.x, p.y, h.w*ZOOM, h.h*ZOOM);
-          // Añadir un tinte verde para diferenciar
-          ctx.globalAlpha = 0.3;
-          ctx.fillStyle = '#4ade80';
-          ctx.fillRect(p.x, p.y, h.w*ZOOM, h.h*ZOOM);
-          ctx.globalAlpha = 1.0;
-        } else {
-          // Fallback al dibujo original
-          ctx.fillStyle='#4ade80';
-          ctx.fillRect(p.x,p.y,h.w*ZOOM,h.h*ZOOM);
-          ctx.fillStyle='#166534';
-          ctx.beginPath();ctx.moveTo(p.x-2*ZOOM,p.y); ctx.lineTo(p.x+h.w*ZOOM+2*ZOOM,p.y);ctx.lineTo(p.x+h.w*ZOOM-3*ZOOM,p.y-5*ZOOM); ctx.lineTo(p.x+3*ZOOM,p.y-5*ZOOM); ctx.closePath(); ctx.fill();
-          ctx.fillStyle='#0a0a0a'; ctx.fillRect(p.x+h.w*ZOOM/2-3*ZOOM, p.y+h.h*ZOOM-8*ZOOM, 6*ZOOM, 8*ZOOM);
-        }
+        ctx.fillStyle='#4ade80';
+        ctx.fillRect(p.x,p.y,h.w*ZOOM,h.h*ZOOM);
+        ctx.fillStyle='#166534';
+        ctx.beginPath();ctx.moveTo(p.x-2*ZOOM,p.y); ctx.lineTo(p.x+h.w*ZOOM+2*ZOOM,p.y);ctx.lineTo(p.x+h.w*ZOOM-3*ZOOM,p.y-5*ZOOM); ctx.lineTo(p.x+3*ZOOM,p.y-5*ZOOM); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#0a0a0a'; ctx.fillRect(p.x+h.w*ZOOM/2-3*ZOOM, p.y+h.h*ZOOM-8*ZOOM, 6*ZOOM, 8*ZOOM);
       }
     }
   }
@@ -675,7 +529,7 @@
           const near = d < 28;
           const aOwnsHouse = a.houseIdx !== null && houses[a.houseIdx] && houses[a.houseIdx].ownerId === a.id;
           const bOwnsHouse = b.houseIdx !== null && houses[b.houseIdx] && houses[b.houseIdx].ownerId === b.id;
-          if (near && matches >= 5 && (aOwnsHouse || bOwnsHouse) && a.state === 'single' && b.state === 'single' && a.cooldownSocial <= 0 && b.cooldownSocial <= 0) {
+          if (near && matches >= 5 && (aOwnsHouse || bOwnsHouse) && a.state === 'single' && b.state === 'single' && a.gender !== b.gender && a.cooldownSocial <= 0 && b.cooldownSocial <= 0) {
             a.state = 'paired'; b.state = 'paired';
             a.spouseId = b.id; b.spouseId = a.id;
             a.cooldownSocial = 120; b.cooldownSocial = 120;
@@ -766,7 +620,7 @@
         const c=a.target; if(Math.hypot(a.x-c.x,a.y-c.y)<14){
           a.money += a.pendingDeposit; a.pendingDeposit=0; a.goingToBank=false; a.nextWorkAt = nowS + CFG.WORK_COOLDOWN;
           if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a.targetRole='home'; else a.target=null, a.targetRole='idle'; }
-          else { a.target=null, a.targetRole='idle'; }
+          else { a.target=null; a.targetRole='idle'; }
         }
       }
       if(!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle' || a.targetRole==='home')) {
@@ -824,7 +678,7 @@
         }
       } else {
         const isWorkingInFactory = a.workingUntil && nowS < a.workingUntil;
-        const isWorkingInShop = a
+        const isWorkingInShop = a.employedAtShopId;
         if (isWorkingInFactory || isWorkingInShop) {
           a.vx = 0; a.vy = 0;
         } else {
@@ -931,7 +785,7 @@
   btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } };
   $("#btnShowGov").onclick = ()=>{ const isVisible = govDock.style.display === 'flex'; if (!isVisible) { govDock.style.display = 'flex'; } else { govDock.style.display = 'none'; } };
   $("#uiHideBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(-130%)'; show($("#uiShowBtn"),true); };
-   $("#uiShowBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(0)'; show($("#uiShowBtn"),false); };
+  $("#uiShowBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(0)'; show($("#uiShowBtn"),false); };
   panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; toast('Depósito realizado.'); };
 
   function setVisibleWorldUI(on){
@@ -951,17 +805,7 @@
     const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
     let startMoney = 100 + addCredits;
     const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney});
-    try{ 
-      user.avatar = (gender === 'M') ? '/img/avatars/m.png' : '/img/avatars/f.png'; 
-      // Verificar que la imagen exista
-      const img = new Image();
-      img.onerror = () => {
-        console.error("No se encontró la imagen de avatar local. Asegúrate de tener las imágenes en /img/avatars/");
-      };
-      img.src = user.avatar;
-    }catch(e){}    // Líneas 31-32
-    const MALE_IMG = '/img/avatars/m.png';
-    const FEMALE_IMG = '/img/avatars/f.png';
+    try{ user.avatar = (gender === 'M') ? 'https://i.postimg.cc/x8cc0drr/20250820-102743.png' : 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png'; }catch(e){}
     agents.push(user); USER_ID=user.id;
     // Registrar jugador en servidor y evitar bots locales si hay red
     try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
@@ -992,235 +836,39 @@
       if((u.money||0) < placingHouse.cost){ toast('Saldo insuficiente.'); placingHouse=null; return; }
       if(hasNet()){
         window.sock?.emit('placeHouse', newH, (res)=>{
-          if(res?.ok){ u.money -= placingHouse.cost; placingHouse=null; toast('Casa propia construida 🏠'); }
-          else { toast(res?.msg||'Error al colocar casa'); placingHouse=null; }
+          if(res?.ok){ u.money -= placingHouse.cost; placingHouse=null; toast('Casa propia construida'); }
         });
-        return;
+      }else{
+        u.money -= placingHouse.cost;
+        houses.push(newH);
+        placingHouse = null;
+        toast('Casa propia construida (modo offline)');
       }
-      u.money -= placingHouse.cost;
-      if(u.houseIdx !== null && houses[u.houseIdx]) { houses[u.houseIdx].rentedBy = null; }
-      houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
-      toast('Casa propia construida 🏠'); return;
-    }
-    if(placingShop){
-      const u=agents.find(a=>a.id===placingShop.ownerId); if(!u){ placingShop=null; return; }
-      const rectShop = {x: pt.x - placingShop.size.w/2, y: pt.y - placingShop.size.h/2, w: placingShop.size.w, h: placingShop.size.h};
-      if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectShop, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
-      if((u.money||0) < placingShop.price){ toast('Saldo insuficiente.'); placingShop=null; return; }
-      const newShop = { ownerId:u.id, x:rectShop.x, y:rectShop.y, w:rectShop.w, h:rectShop.h, kind:placingShop.kind.k, icon:placingShop.kind.icon, like:placingShop.kind.like, price:placingShop.kind.price, buyCost: placingShop.kind.buyCost };
+    }else if(placingGov){
+      if(allBuildings.some(r=>rectsOverlapWithMargin(r,{...placingGov, x:pt.x, y:pt.y}, 8))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
+      if((window.government.funds||0) < placingGov.cost){ toast('Fondo gubernamental insuficiente.'); placingGov=null; return; }
+      if(hasNet()){
+        window.sock?.emit('placeGov', {type:placingGov.k, x:pt.x, y:pt.y}, (res)=>{
+          if(res?.ok){ government.funds -= placingGov.cost; placingGov=null; toast('Institución construida'); }
+        });
+      }else{
+        government.funds -= placingGov.cost;
+        government.placed.push({...placingGov, x:pt.x, y:pt.y});
+        placingGov = null;
+        toast('Institución construida (modo offline)');
+      }
+    }else if(placingShop){
+      const newShop = { x: pt.x - 60, y: pt.y - 40, w: 120, h: 80, kind: placingShop.k, ownerId: USER_ID, price: placingShop.price, buyCost: placingShop.buyCost };
+      if(allBuildings.some(r=>rectsOverlapWithMargin(r,newShop, 8))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
+      if((USER_ID && (agents.find(a=>a.id===USER_ID)?.money||0)) < placingShop.cost){ toast('Saldo insuficiente.'); placingShop=null; return; }
       if(hasNet()){
         window.sock?.emit('placeShop', newShop, (res)=>{
-          if(res?.ok){ u.money -= placingShop.price; placingShop=null; toast('Negocio colocado 🏪'); }
-          else { toast(res?.msg||'Error al colocar negocio'); placingShop=null; }
+          if(res?.ok){ toast('Negocio construido'); placingShop=null; }
         });
-        return;
-      }
-      u.money -= placingShop.price;
-      newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop);
-      placingShop=null; toast('Negocio colocado 🏪'); return;
-    }
-    if(placingGov){
-      const rectX = { x: pt.x - placingGov.w/2, y: pt.y - placingGov.h/2, w: placingGov.w, h: placingGov.h, label: placingGov.label, icon: placingGov.icon, fill: placingGov.fill, stroke: placingGov.stroke, k: placingGov.k };
-      rectX.x = clamp(rectX.x, 10, WORLD.w - rectX.w - 10);
-      rectX.y = clamp(rectX.y, 10, WORLD.h - rectX.h - 10);
-      if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectX, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
-      if(government.funds < placingGov.cost){ toast('Fondos insuficientes.'); placingGov=null; return; }
-      if(hasNet()){
-        const payload = { ...rectX, cost: placingGov.cost };
-        window.sock?.emit('placeGov', payload, (res)=>{
-          if(res?.ok){ placingGov=null; toast('Construcción realizada ✅'); }
-          else { toast(res?.msg||'No se pudo construir'); placingGov=null; }
-        });
-        return;
-      }
-      government.funds -= placingGov.cost;
-      government.placed.push(rectX);
-      govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)}`;
-      placingGov=null; toast('Construcción realizada ✅');
-      updateGovDesc();
-      return;
-    }
-
-    for(const b of banks){ if(inside(pt,b)){const you = USER_ID? agents.find(a=>a.id===USER_ID) : null; if(you){ const your$ = Math.floor((you.money||0) + (you.pendingDeposit||0)); accBankBody.innerHTML = `Saldo de ${you.code}: <span class="balance-amount">${your$}</span>`; } else { accBankBody.textContent = 'Crea tu persona primero.'; } toast('Banco abierto');return;} }
-    if(inside(pt,builder)){ openBuilderMenu(); return; }
-    for(const s of shops){
-      if(inside(pt,s) && s.ownerId === USER_ID){
-        if(s.hasEmployee){
-          const employee = agents.find(a => a.id === s.employeeId);
-          if(employee){ employee.employedAtShopId = null; employee.target = null; employee.targetRole = 'idle'; }
-          s.hasEmployee = false; s.employeeId = null; s.wage = 0;
-          toast("Empleado despedido.");
-        } else {
-          const candidate = agents.find(a => a.id !== USER_ID && !a.employedAtShopId && !shops.some(shop => shop.ownerId === a.id));
-          if(candidate){
-            s.hasEmployee = true; s.employeeId = candidate.id;
-            s.wage = Math.ceil(CFG.EARN_PER_SHIFT * 1.25);
-            candidate.employedAtShopId = s.id;
-            candidate.target = centerOf(s); candidate.targetRole = 'work_shop';
-            candidate.workingUntil = null; candidate.goingToBank = false;
-            toast(`Empleado ${candidate.code} contratado! 👔`);
-          } else {
-            toast("No hay personal disponible para contratar.");
-          }
-        }
-        return;
+      }else{
+        toast('Negocio construido (modo offline)');
+        placingShop = null;
       }
     }
   });
-
-  function drawMiniMap(){
-    const w=miniCanvas.width, h=miniCanvas.height; mctx.clearRect(0,0,w,h);
-    mctx.fillStyle='#0b142b'; mctx.fillRect(0,0,w,h);
-    const sx = w / WORLD.w, sy = h / WORLD.h;
-    const mrect=(r,fill)=>{ mctx.fillStyle=fill; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy)); };
-    cityBlocks.forEach(r=>mrect(r,'#334155'));
-    roadRects.forEach(r=>mrect(r,'#9ca3af')); factories.forEach(r=>mrect(r,'#8b5cf6'));
-    banks.forEach(r=>mrect(r,'#fde047')); malls.forEach(r=>mrect(r,'#ef4444')); shops.forEach(r=>mrect(r,'#94a3b8'));
-    mrect(cemetery,'#cbd5e1'); mrect(builder,'#84cc16'); mrect(government,'#60a5fa');
-    government.placed.forEach(r=>{
-      if(r.k === 'carcel'){
-        mctx.fillStyle = '#111'; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy));
-        mctx.fillStyle = '#fff'; const bars = 3; const bx = Math.max(0,r.x*sx), by = Math.max(0,r.y*sy), bw = Math.max(1,r.w*sx), bh = Math.max(1,r.h*sy);
-        for(let i=0;i<bars;i++){ const px = bx + 4 + i*(bw-8)/(bars-1); mctx.fillRect(px, by+4, 2, bh-8); }
-      } else { mrect(r, r.fill || '#94a3b8'); }
-    });
-    const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;
-    mctx.strokeStyle='#22d3ee'; mctx.lineWidth=1; mctx.strokeRect(cam.x*sx, cam.y*sy, vw*sx, vh*sy);
-    if(USER_ID){
-      const u=agents.find(a=>a.id===USER_ID);
-      if(u){
-        const playerX = u.x * sx;
-        const playerY = u.y * sy;
-        mctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
-        mctx.beginPath(); mctx.arc(playerX, playerY, 6, 0, Math.PI * 2); mctx.fill();
-        mctx.fillStyle = '#FFFF00';
-        mctx.beginPath(); mctx.arc(playerX, playerY, 2.5, 0, Math.PI * 2); mctx.fill();
-      }
-    }
-  }
-  miniCanvas.addEventListener('click', (e)=>{const r=miniCanvas.getBoundingClientRect();const mx=e.clientX-r.left, my=e.clientY-r.top;const sx = mx / miniCanvas.width, sy = my / miniCanvas.height;const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;cam.x = Math.min(Math.max(0, sx*WORLD.w - vw/2), Math.max(0, WORLD.w - vw));cam.y = Math.min(Math.max(0, sy*WORLD.h - vh/2), Math.max(0, WORLD.h - vh));clampCam();});
-
-  function openBuilderMenu(){if(!STARTED){ toast('Primero inicia el mundo.'); return; }if(!USER_ID){ toast('Crea tu persona primero.'); return; }const u=agents.find(a=>a.id===USER_ID); if(!u){ toast('No encontré tu persona.'); return; }$("#builderMsg").textContent = `Tu saldo: ${Math.floor(u.money)}.`;show(builderModal,true);}
-  btnBuilderClose.onclick = ()=> show(builderModal,false);
-  btnBuy.onclick = ()=>{const u=agents.find(a=>a.id===USER_ID); if(!u) return;if(u.houseIdx!=null && houses[u.houseIdx]?.ownerId===u.id){ $("#builderMsg").textContent='Ya eres dueño de una casa.'; return; }if(u.money<CFG.HOUSE_BUY_COST){ $("#builderMsg").textContent=`No te alcanza para comprar (${CFG.HOUSE_BUY_COST}).`; return; }placingHouse = {cost: CFG.HOUSE_BUY_COST, size:{w:CFG.HOUSE_SIZE, h:CFG.HOUSE_SIZE}, ownerId: u.id};show(builderModal,false);toast('Modo colocación: toca un espacio libre.');};
-
-  function openShopMenu(){
-      if(!STARTED){ toast('Primero inicia el mundo.'); return; }
-      if(!USER_ID){ toast('Crea tu persona primero.'); return; }
-      const u=agents.find(a=>a.id===USER_ID);
-      if(!u){ toast('No encontré tu persona.'); return; }
-      shopList.innerHTML='';
-      const sortedShops = [...SHOP_TYPES].sort((a, b) => a.buyCost - b.buyCost);
-      sortedShops.forEach(t=>{
-          const b=document.createElement('button');
-          b.className='btn';
-          b.textContent=`${t.icon} ${t.k} (Costo: ${t.buyCost}, Venta: $${t.price})`;
-          b.onclick=()=>{
-              if(u.money < t.buyCost){ $("#shopMsg").textContent=`No te alcanza. Necesitas ${t.buyCost}.`; return; }
-              placingShop = {ownerId:u.id, kind:t, price:t.buyCost, size:{w:CFG.SHOP_W,h:CFG.SHOP_H}};
-              show(shopModal,false); toast('Modo colocación: toca el mapa.');
-          };
-          shopList.appendChild(b);
-      });
-      $("#shopMsg").textContent = `Tu saldo: ${Math.floor(u.money)}. El precio de venta es la ganancia por cliente.`;
-      show(shopModal,true);
-  }
-  btnShopClose.onclick = ()=> show(shopModal,false);
-  btnHouse.onclick = ()=> openBuilderMenu();
-  btnShop.onclick  = ()=> openShopMenu();
-
-  function populateGovSelect(){
-    govSelectEl.innerHTML = '';
-    GOV_TYPES.forEach(t=>{
-      const opt=document.createElement('option');
-      opt.value=t.k;
-      opt.textContent = `${t.icon} ${t.label} (Costo: ${t.cost})`;
-      govSelectEl.appendChild(opt);
-    });
-  }
-  function selectedGovType(){
-    const k = govSelectEl.value;
-    return GOV_TYPES.find(x=>x.k===k) || GOV_TYPES[0];
-  }
-  function updateGovDesc(){
-    const n = government.placed.length;
-    const rate = Math.min(CFG.WEALTH_TAX_MAX, CFG.WEALTH_TAX_BASE + n*CFG.INSTITUTION_TAX_PER);
-    govDescEl.textContent = `Instituciones: ${n}/25 · Impuesto actual: ${(rate*100).toFixed(1)}% (Base 1.0% + 0.1% × ${n}).`;
-    govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)}`;
-  }
-  btnGovPlace.onclick = ()=>{
-    if(!STARTED){ toast('Inicia el mundo primero.'); return; }
-    const typ = selectedGovType();
-    if(government.funds < typ.cost){ toast('Fondos insuficientes.'); return; }
-    placingGov = {...typ};
-    toast(`Modo colocación: ${typ.label}. Haz clic en el mapa.`);
-  }
-
-  setInterval(()=>{if(!STARTED) return; if(hasNet()) return;
-    const n = government.placed.length;
-    const effRate = Math.min(CFG.WEALTH_TAX_MAX, CFG.WEALTH_TAX_BASE + n*CFG.INSTITUTION_TAX_PER);
-    let collected = 0;
-    for(const a of agents){
-      const taxAmount = (a.money || 0) * effRate;
-      if(a.money >= taxAmount){ a.money -= taxAmount; collected += taxAmount; }
-    }
-    government.funds += collected;
-    if(collected > 0){ govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)} (+${Math.round(collected)})`; toast(`Gobierno recaudó ${Math.round(collected)} créditos (tasa ${(effRate*100).toFixed(1)}%).`); }
-    updateGovDesc();
-  }, CFG.GOV_TAX_EVERY*1000);
-
-  setInterval(()=>{if(!STARTED) return; if(hasNet()) return; let rentCollected = 0; let renters = 0;for(const h of houses){if(h.rentedBy){const renter = agents.find(a => a.id === h.rentedBy);if(renter && renter.money >= CFG.GOV_RENT_AMOUNT){renter.money -= CFG.GOV_RENT_AMOUNT; rentCollected += CFG.GOV_RENT_AMOUNT; renters++;}}}government.funds += rentCollected;if(rentCollected > 0){govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)} (+${Math.round(rentCollected)})`;toast(`Gobierno recaudó ${Math.round(rentCollected)} en alquileres de ${renters} personas.`);} }, CFG.GOV_RENT_EVERY*1000);
-
-  setInterval(()=>{ if(!STARTED) return; if(hasNet()) return;
-    for(const shop of shops){
-      if(shop.hasEmployee && shop.employeeId && shop.ownerId){
-        const owner = agents.find(a => a.id === shop.ownerId);
-        const employee = agents.find(a => a.id === shop.employeeId);
-        if(!owner || !employee) continue;
-        if(shop.cashbox >= shop.wage){ shop.cashbox -= shop.wage; employee.money += shop.wage; toast(`Nómina pagada en ${shop.kind}. Caja ahora: ${Math.floor(shop.cashbox)}.`); }
-        else { toast(`Caja insuficiente en ${shop.kind}. ¡El empleado ${employee.code} ha renunciado!`); shop.hasEmployee = false; shop.employeeId = null; shop.wage = 0; employee.employedAtShopId = null; employee.target = null; employee.targetRole = 'idle'; }
-      }
-    }
-  }, CFG.SALARY_PAY_EVERY * 1000);
-
-  const carTypeSelect = $('#carTypeSelect'), btnBuyCar = $('#btnBuyCar'), carMsg = $('#carMsg');
-  btnBuyCar.addEventListener('click', () => {
-      if(!USER_ID) { toast('Debes iniciar la simulación.'); return; }
-      const u = agents.find(a => a.id === USER_ID);
-      if(!u) { toast('Error: No se encontró a tu agente.'); return; }
-      const vType = carTypeSelect.value;
-      if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
-      const vehicle = VEHICLES[vType];
-      if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); }
-      else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
-  });
-
-  function isVisible(el){ return getComputedStyle(el).display!=='none'; }
-  function ready(){
-    setVisibleWorldUI(false);
-    populateGovSelect();
-    govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)}`;
-    updateGovDesc();
-    
-    // Precargar imágenes de edificios
-    preloadBuildingImages();
-    
-    // Integración de red: escuchar estado de servidor
-    try{
-      if(window.sock){
-        window.sock.on('state', applyServerState);
-        window.sock.on('govPlaced', ()=>{ try{ if(typeof window.updateGovDesc==='function') window.updateGovDesc(); }catch(e){} });
-      }
-    }catch(e){}
-  }
-  ready();
-  // setInterval(automaticRoadConstruction, 60_000);
-
-  } catch(err) {
-    console.error('Error al iniciar la simulación:', err);
-    try {
-      const t = document.querySelector('#toast'); 
-      if(t){ t.style.display='block'; t.textContent='Error: '+err.message; setTimeout(()=>t.style.display='none',5000); }
-    } catch(e){}
-  }
 })();
