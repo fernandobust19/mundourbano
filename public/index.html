@@ -89,7 +89,7 @@
       <label>Género</label>
       <div style="display:flex;align-items:center;gap:8px;">
         <select id="fGender" class="select"><option value="M">Masculino (azul)</option><option value="F">Femenino (rosado)</option></select>
-        <img id="fGenderPreview" src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="preview" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2b3553;background:#fff" />
+        <img id="fGenderPreview" src="/img/avatars/m.png" alt="preview" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2b3553;background:#fff" />
       </div>
     </div>
     <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="Ej: Fer"/></div>
@@ -164,7 +164,7 @@
     <button id="uiHideBtn" title="Ocultar panel">▲</button>
     <b>Mundo activo</b><br/><small>Trabajo 60s = +15 → 💰 banco</small>
     <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
-      <img id="uiAvatar" src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" style="width:56px;height:56px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover" alt="avatar" />
+      <img id="uiAvatar" src="/img/avatars/m.png" style="width:56px;height:56px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover" alt="avatar" />
       <div>
         <div id="stats" style="font-size:12px"></div>
         <div id="userName" style="font-size:12px;opacity:.9;margin-top:2px">Sin iniciar</div>
@@ -277,5 +277,16 @@
 <script src="/js/socket.js"></script>
 <!-- Lógica del mundo (usa el estado compartido si está disponible) -->
 <script src="/js/original.js"></script>
+
+<button id="reloadImages" style="position: fixed; top: 10px; right: 100px; z-index: 100; background: #3b82f6; color: white; border: 0; padding: 5px 10px; border-radius: 4px;">🔄 Recargar Imágenes</button>
+
+<script>
+  document.getElementById('reloadImages').addEventListener('click', function() {
+    if (typeof preloadBuildingImages === 'function') {
+      preloadBuildingImages();
+      alert('Recargando imágenes...');
+    }
+  });
+</script>
 </body>
 </html>
