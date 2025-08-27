@@ -2,6 +2,7 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,6 +14,30 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Silenciar el error de favicon.ico en la consola del navegador
 app.get('/favicon.ico', (req, res) => res.status(204).send());
+
+// --- Herramienta de Depuración de Imágenes ---
+// Visita http://localhost:3000/debug-img para ver los archivos en public/img
+app.get('/debug-img', (req, res) => {
+  const imgDirPath = path.join(__dirname, 'public', 'img');
+  fs.readdir(imgDirPath, (err, files) => {
+    if (err) {
+      console.error("Error leyendo el directorio 'public/img':", err);
+      return res.status(500).send(`<h1>Error al leer el directorio de imágenes</h1>
+        <p>No se pudo encontrar la carpeta en la ruta: <code>${imgDirPath}</code></p>
+        <p>Asegúrate de que la carpeta 'public/img' exista.</p>`);
+    }
+
+    let fileListHtml = files.map(file => `<li><code>${file}</code></li>`).join('');
+    res.send(`
+      <h1>Contenido de la carpeta <code>/public/img/</code></h1>
+      <p>Esta es la lista de archivos que el servidor puede ver:</p>
+      <ul>${fileListHtml || "<li>La carpeta está vacía.</li>"}</ul>
+      <hr>
+      <p>Si <b>gobierno.png</b> no aparece en esta lista, significa que el archivo no está en la ubicación correcta o tiene un nombre diferente.</p>
+      <p>La ruta que el servidor está revisando es: <code>${imgDirPath}</code></p>
+    `);
+  });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 

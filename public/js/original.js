@@ -151,63 +151,63 @@ btnRandLikes.addEventListener('click', updateLikesUI);
 
   /* ===== Tipos de Instituciones (25) ===== */
   const GOV_TYPES = [
-    {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)'},
-    {k:'escuela', label:'Escuela', cost:CFG.COST_SCHOOL, w:140,h:95, icon:'📚', fill:'rgba(51,65,85,0.92)', stroke:'rgba(148,163,184,0.95)'},
-    {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047'},
-    {k:'policia', label:'Policía', cost:CFG.COST_POLICE, w:150,h:80, icon:'🚓', fill:'#3b82f6', stroke:'#dbeafe'},
-    {k:'hospital', label:'Hospital', cost:CFG.COST_HOSPITAL, w:180,h:100, icon:'🏥', fill:'#f1f5f9', stroke:'#ef4444'},
-    {k:'central_electrica', label:'Central Eléctrica', cost:CFG.COST_POWER, w:200,h:120, icon:'⚡', fill:'#475569', stroke:'#facc15'},
-    {k:'bomberos', label:'Cuerpo de Bomberos', cost:220, w:160,h:85, icon:'🚒', fill:'#7c2d12', stroke:'#fecaca'},
-    {k:'registro_civil', label:'Registro Civil', cost:180, w:150,h:85, icon:'🪪', fill:'#0f172a', stroke:'#94a3b8'},
-    {k:'universidad', label:'Universidad Pública', cost:300, w:200,h:120, icon:'🎓', fill:'#1e293b', stroke:'#93c5fd'},
-    {k:'tribunal', label:'Tribunal / Corte', cost:260, w:170,h:95, icon:'⚖️', fill:'#111827', stroke:'#9ca3af'},
-    {k:'museo', label:'Museo', cost:200, w:160,h:90, icon:'🏛️', fill:'#3f3f46', stroke:'#cbd5e1'},
-    {k:'teatro', label:'Teatro', cost:190, w:160,h:90, icon:'🎭', fill:'#1f2937', stroke:'#9ca3af'},
-    {k:'estadio', label:'Estadio', cost:350, w:230,h:140, icon:'🏟️', fill:'#0b3a1e', stroke:'#10b981'},
-    {k:'terminal', label:'Terminal Terrestre', cost:260, w:200,h:110, icon:'🚌', fill:'#0c4a6e', stroke:'#7dd3fc'},
-    {k:'correos', label:'Correos del Estado', cost:170, w:150,h:85, icon:'📮', fill:'#0b1f3a', stroke:'#60a5fa'},
-    {k:'banco_central', label:'Banco Central', cost:300, w:180,h:100, icon:'🏦', fill:'#2d3748', stroke:'#fde68a'},
-    {k:'aduana', label:'Aduana', cost:240, w:170,h:95, icon:'🚢', fill:'#1e3a8a', stroke:'#93c5fd'},
-    {k:'carcel', label:'Centro de Rehabilitación', cost:280, w:200,h:110, icon:'🗝️', fill:'#111827', stroke:'#64748b'},
-    {k:'planta_agua', label:'Planta de Agua', cost:260, w:190,h:110, icon:'🚰', fill:'#0e7490', stroke:'#67e8f9'},
-    {k:'reciclaje', label:'Planta de Reciclaje', cost:220, w:180,h:100, icon:'♻️', fill:'#14532d', stroke:'#86efac'},
-    {k:'centro_cultural', label:'Centro Cultural', cost:190, w:160,h:90, icon:'🎨', fill:'#3b0764', stroke:'#d8b4fe'},
-    {k:'mercado_central', label:'Mercado Central', cost:210, w:180,h:100, icon:'🥚', fill:'#78350f', stroke:'#fde68a'},
-    {k:'instituto_tecnologico', label:'Instituto Tecnológico', cost:230, w:180,h:100, icon:'🧪', fill:'#0f172a', stroke:'#60a5fa'},
-    {k:'centro_investigacion', label:'Centro de Investigación', cost:260, w:190,h:105, icon:'🔬', fill:'#164e63', stroke:'#a5f3fc'},
-    {k:'observatorio', label:'Observatorio', cost:240, w:170,h:95, icon:'🔭', fill:'#1e293b', stroke:'#c7d2fe'}
+    {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)', imageUrl: 'https://i.postimg.cc/jj5wcbrQ/parque-1.png'},
+    {k:'escuela', label:'Escuela', cost:CFG.COST_SCHOOL, w:140,h:95, icon:'📚', fill:'rgba(51,65,85,0.92)', stroke:'rgba(148,163,184,0.95)', imageUrl: 'https://i.postimg.cc/x1PTBFPx/escuela.png'},
+    {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047', imageUrl: null},
+    {k:'policia', label:'Policía', cost:CFG.COST_POLICE, w:150,h:80, icon:'🚓', fill:'#3b82f6', stroke:'#dbeafe', imageUrl: null},
+    {k:'hospital', label:'Hospital', cost:CFG.COST_HOSPITAL, w:180,h:100, icon:'🏥', fill:'#f1f5f9', stroke:'#ef4444', imageUrl: null},
+    {k:'central_electrica', label:'Central Eléctrica', cost:CFG.COST_POWER, w:200,h:120, icon:'⚡', fill:'#475569', stroke:'#facc15', imageUrl: null},
+    {k:'bomberos', label:'Cuerpo de Bomberos', cost:220, w:160,h:85, icon:'🚒', fill:'#7c2d12', stroke:'#fecaca', imageUrl: null},
+    {k:'registro_civil', label:'Registro Civil', cost:180, w:150,h:85, icon:'🪪', fill:'#0f172a', stroke:'#94a3b8', imageUrl: null},
+    {k:'universidad', label:'Universidad Pública', cost:300, w:200,h:120, icon:'🎓', fill:'#1e293b', stroke:'#93c5fd', imageUrl: null},
+    {k:'tribunal', label:'Tribunal / Corte', cost:260, w:170,h:95, icon:'⚖️', fill:'#111827', stroke:'#9ca3af', imageUrl: null},
+    {k:'museo', label:'Museo', cost:200, w:160,h:90, icon:'🏛️', fill:'#3f3f46', stroke:'#cbd5e1', imageUrl: null},
+    {k:'teatro', label:'Teatro', cost:190, w:160,h:90, icon:'🎭', fill:'#1f2937', stroke:'#9ca3af', imageUrl: null},
+    {k:'estadio', label:'Estadio', cost:350, w:230,h:140, icon:'🏟️', fill:'#0b3a1e', stroke:'#10b981', imageUrl: null},
+    {k:'terminal', label:'Terminal Terrestre', cost:260, w:200,h:110, icon:'🚌', fill:'#0c4a6e', stroke:'#7dd3fc', imageUrl: null},
+    {k:'correos', label:'Correos del Estado', cost:170, w:150,h:85, icon:'📮', fill:'#0b1f3a', stroke:'#60a5fa', imageUrl: null},
+    {k:'banco_central', label:'Banco Central', cost:300, w:180,h:100, icon:'🏦', fill:'#2d3748', stroke:'#fde68a', imageUrl: null},
+    {k:'aduana', label:'Aduana', cost:240, w:170,h:95, icon:'🚢', fill:'#1e3a8a', stroke:'#93c5fd', imageUrl: null},
+    {k:'carcel', label:'Centro de Rehabilitación', cost:280, w:200,h:110, icon:'🗝️', fill:'#111827', stroke:'#64748b', imageUrl: null},
+    {k:'planta_agua', label:'Planta de Agua', cost:260, w:190,h:110, icon:'🚰', fill:'#0e7490', stroke:'#67e8f9', imageUrl: null},
+    {k:'reciclaje', label:'Planta de Reciclaje', cost:220, w:180,h:100, icon:'♻️', fill:'#14532d', stroke:'#86efac', imageUrl: null},
+    {k:'centro_cultural', label:'Centro Cultural', cost:190, w:160,h:90, icon:'🎨', fill:'#3b0764', stroke:'#d8b4fe', imageUrl: null},
+    {k:'mercado_central', label:'Mercado Central', cost:210, w:180,h:100, icon:'🥚', fill:'#78350f', stroke:'#fde68a', imageUrl: null},
+    {k:'instituto_tecnologico', label:'Instituto Tecnológico', cost:230, w:180,h:100, icon:'🧪', fill:'#0f172a', stroke:'#60a5fa', imageUrl: null},
+    {k:'centro_investigacion', label:'Centro de Investigación', cost:260, w:190,h:105, icon:'🔬', fill:'#164e63', stroke:'#a5f3fc', imageUrl: null},
+    {k:'observatorio', label:'Observatorio', cost:240, w:170,h:95, icon:'🔭', fill:'#1e293b', stroke:'#c7d2fe', imageUrl: null}
   ];
 
   /* ===== Estructuras almacenadas ===== */
   const streets=[], factories=[], banks=[], malls=[], houses=[], barrios=[], deceased=[], avenidas=[], roundabouts=[], shops=[];
   const SHOP_TYPES = [
-      {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400},
-      {k:'kiosco', icon:'🏪', like:'kiosco', price:1, buyCost: 450},
-      {k:'juguería', icon:'🥣', like:'jugos', price:1, buyCost: 500},
-      {k:'cafetería', icon:'☕', like:'café', price:2, buyCost: 800},
-      {k:'heladería', icon:'🍨', like:'helado', price:2, buyCost: 850},
-      {k:'pizzería', icon:'🍕', like:'pizza', price:2, buyCost: 900},
-      {k:'librería', icon:'📚', like:'libros', price:2, buyCost: 1000},
-      {k:'juguetería', icon:'🧸', like:'juguetes', price:2, buyCost: 1000},
-      {k:'yoga studio', icon:'🧘', like:'yoga', price:2, buyCost: 1100},
-      {k:'dance hall', icon:'💃', like:'baile', price:2, buyCost: 1100},
-      {k:'tienda deportes', icon:'🏅', like:'deporte', price:2, buyCost: 1200},
-      {k:'arte & galería', icon:'🎨', like:'arte', price:2, buyCost: 1300},
-      {k:'cineclub', icon:'🎬', like:'cine', price:2, buyCost: 1400},
-      {k:'gamer zone', icon:'🎮', like:'videojuegos', price:2, buyCost: 1400},
-      {k:'senderismo', icon:'🧾', like:'naturaleza', price:2, buyCost: 1500},
-      {k:'foto-lab', icon:'📷', like:'fotografía', price:2, buyCost: 1500},
-      {k:'astro club', icon:'🔭', like:'astronomía', price:2, buyCost: 1600},
-      {k:'restaurante', icon:'🍽️', like:'comida', price:3, buyCost: 2500},
-      {k:'electrónica', icon:'🔌', like:'electrónica', price:3, buyCost: 3000},
-      {k:'tech hub', icon:'🖥️', like:'tecnología', price:3, buyCost: 3500},
+      {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400, imageUrl: null},
+      {k:'kiosco', icon:'🏪', like:'kiosco', price:1, buyCost: 450, imageUrl: null},
+      {k:'juguería', icon:'🥣', like:'jugos', price:1, buyCost: 500, imageUrl: null},
+      {k:'cafetería', icon:'☕', like:'café', price:2, buyCost: 800, imageUrl: null},
+      {k:'heladería', icon:'🍨', like:'helado', price:2, buyCost: 850, imageUrl: null},
+      {k:'pizzería', icon:'🍕', like:'pizza', price:2, buyCost: 900, imageUrl: null},
+      {k:'librería', icon:'📚', like:'libros', price:2, buyCost: 1000, imageUrl: null},
+      {k:'juguetería', icon:'🧸', like:'juguetes', price:2, buyCost: 1000, imageUrl: null},
+      {k:'yoga studio', icon:'🧘', like:'yoga', price:2, buyCost: 1100, imageUrl: null},
+      {k:'dance hall', icon:'💃', like:'baile', price:2, buyCost: 1100, imageUrl: null},
+      {k:'tienda deportes', icon:'🏅', like:'deporte', price:2, buyCost: 1200, imageUrl: null},
+      {k:'arte & galería', icon:'🎨', like:'arte', price:2, buyCost: 1300, imageUrl: null},
+      {k:'cineclub', icon:'🎬', like:'cine', price:2, buyCost: 1400, imageUrl: null},
+      {k:'gamer zone', icon:'🎮', like:'videojuegos', price:2, buyCost: 1400, imageUrl: null},
+      {k:'senderismo', icon:'🧾', like:'naturaleza', price:2, buyCost: 1500, imageUrl: null},
+      {k:'foto-lab', icon:'📷', like:'fotografía', price:2, buyCost: 1500, imageUrl: null},
+      {k:'astro club', icon:'🔭', like:'astronomía', price:2, buyCost: 1600, imageUrl: null},
+      {k:'restaurante', icon:'🍽️', like:'comida', price:3, buyCost: 2500, imageUrl: null},
+      {k:'electrónica', icon:'🔌', like:'electrónica', price:3, buyCost: 3000, imageUrl: null},
+      {k:'tech hub', icon:'🖥️', like:'tecnología', price:3, buyCost: 3500, imageUrl: null},
   ];
 
   // porcentaje de ganancia adicional por cada venta basado en el costo de compra
   CFG.SHOP_PROFIT_FACTOR = CFG.SHOP_PROFIT_FACTOR || 0.002;
 
   /* Áreas clave */
-  const builder={x:0,y:0,w:220,h:110}, cemetery={x:0,y:0,w:CFG.CEM_W,h:CFG.CEM_H}, government={x:0,y:0,w:240,h:140,funds:0, placed:[]};
+  const builder={x:0,y:0,w:220,h:110, imageUrl: null}, cemetery={x:0,y:0,w:CFG.CEM_W,h:CFG.CEM_H, imageUrl: null}, government={x:0,y:0,w:240,h:140,funds:0, placed:[]};
   const roadRects=[];
   const cityBlocks = [];
   let urbanZone = {x:0, y:0, w:0, h:0};
@@ -255,7 +255,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   }
 
   function scatterRects(n, [wmin,wmax], [hmin,hmax], avoid=[] , bounds=null, sameTypeMargin = 8){
-    const placed=[]; const wr=bounds || {x:0,y:0,w:WORLD.w,h:WORLD.h}; let tries=0; const generalMargin = 8;
+    const placed=[]; const wr=bounds || {x:0,y:0,w:WORLD.w,h:WORLD.h}; let tries=0; const generalMargin = 15;
     while(placed.length<n && tries<3000){tries++;
       const w = srandi(wmin, wmax), h=srandi(hmin,hmax);
       const x = srandi(wr.x+30, wr.x+wr.w-w-30), y = srandi(wr.y+30, wr.y+wr.h-h-30);
@@ -296,6 +296,27 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     }
   }
 
+  function generateCityStreets(avoidList) {
+    const streetWidth = 18;
+    const collisionMargin = 5; // Margen para evitar que las calles toquen los edificios
+
+    for (const block of cityBlocks) {
+        // Intentar añadir una calle horizontal en el centro del bloque
+        const hStreetY = block.y + block.h / 2 - streetWidth / 2;
+        const hStreet = { x: block.x, y: hStreetY, w: block.w, h: streetWidth };
+        if (!avoidList.some(b => rectsOverlapWithMargin(b, hStreet, collisionMargin))) {
+            roadRects.push(hStreet);
+        }
+
+        // Intentar añadir una calle vertical en el centro del bloque
+        const vStreetX = block.x + block.w / 2 - streetWidth / 2;
+        const vStreet = { x: vStreetX, y: block.y, w: streetWidth, h: block.h };
+        if (!avoidList.some(b => rectsOverlapWithMargin(b, vStreet, collisionMargin))) {
+            roadRects.push(vStreet);
+        }
+    }
+  }
+
   function buildAvenidas(urbanArea, avoidRect = null){
     avenidas.length=0; roundabouts.length=0;
     const avW=26;
@@ -306,7 +327,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     for (const vx of vPoints) avenidas.push({x:vx-avW/2, y:urbanArea.y, w:avW, h:urbanArea.h});
     for (const hy of hPoints) avenidas.push({x:urbanArea.x, y:hy-avW/2, w:urbanArea.w, h:avW});
     for (const vx of vPoints) for (const hy of hPoints) {
-      if (Math.random() > 0.6) continue;
+      if (seededRandom() > 0.8) continue; // Reducir probabilidad de rotondas al 20%
       const rRadius = randi(50, 85);
       const newRoundabout = {x:vx-rRadius, y:hy-rRadius, w:rRadius*2, h:rRadius*2, cx:vx, cy:hy};
       if (avoidRect && rectsOverlap(newRoundabout, avoidRect)) continue;
@@ -321,76 +342,18 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     // --- Semilla fija para el mundo ---
     setSeed(20250824);
 
-    // Gobierno en el centro
-    const parkW = 220, parkH = 140, parkGap = 24;
-    const govComplexW = government.w + 2 * parkW + 2 * parkGap;
-    const govComplexH = government.h + 2 * parkH + 2 * parkGap;
-    const govComplexRect = {
-        x: WORLD.w / 2 - govComplexW / 2,
-        y: WORLD.h / 2 - govComplexH / 2,
-        w: govComplexW,
-        h: govComplexH
+    // --- Nuevo Edificio de Gobierno en la parte superior ---
+    const presidenciaBuilding = {
+      k: 'presidencia',
+      label: 'Presidencia',
+      w: 480, h: 250,
+      x: WORLD.w / 2 - 240, y: 50, // Posicionado arriba y centrado
+      imageUrl: 'https://i.postimg.cc/HxhH0q9K/Gobierno-2.png'
     };
-    buildAvenidas({x:0, y:0, w:WORLD.w, h:WORLD.h}, govComplexRect);
-
-    // Posicionar el gobierno
-    government.x = govComplexRect.x + parkW + parkGap;
-    government.y = govComplexRect.y + parkH + parkGap;
-    // Agregar el edificio de gobierno como imagen
-    government.placed.push({
-      k: 'gobierno',
-      label: 'Gobierno',
-      x: government.x,
-      y: government.y,
-      w: government.w,
-      h: government.h
-    });
-    // Parques grandes a los 4 lados y 4 esquinas del complejo central
-    const parkType = GOV_TYPES.find(t=>t.k==='parque');
-    if(parkType){
-      // Lados (Norte, Este, Oeste) con rectángulos verdes visuales
-      // Norte
-      government.placed.push({
-        ...parkType,
-        x: government.x + government.w/2 - parkW/2,
-        y: government.y - parkH - parkGap,
-        w: parkW,
-        h: parkH,
-        icon:'🌳🌲🌳',
-        fill: '#22c55e', // verde fuerte
-        stroke: '#166534'
-      });
-      // Oeste
-      government.placed.push({
-        ...parkType,
-        x: government.x - parkW - parkGap,
-        y: government.y + government.h/2 - parkH/2,
-        w: parkW,
-        h: parkH,
-        icon:'🌲🌲',
-        fill: '#22c55e',
-        stroke: '#166534'
-      });
-      // Este
-      government.placed.push({
-        ...parkType,
-        x: government.x + government.w + parkGap,
-        y: government.y + government.h/2 - parkH/2,
-        w: parkW,
-        h: parkH,
-        icon:'🌴🌳🌴',
-        fill: '#22c55e',
-        stroke: '#166534'
-      });
-      // Sur (mantener como antes, sin rectángulo verde especial)
-      government.placed.push({...parkType, x: government.x + government.w/2 - parkW/2, y: government.y + government.h + parkGap, w: parkW, h: parkH, icon:'🌳🌴🌳'});
-      // Esquinas
-      const cornerW = parkW * 0.9, cornerH = parkH * 0.9;
-      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y - parkH - parkGap, w: cornerW, h: cornerH, icon:'🌳🌳🌳'}); // NO
-      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y - parkH - parkGap, w: cornerW, h: cornerH, icon:'🌲🌲🌲'}); // NE
-      government.placed.push({...parkType, x: government.x - parkW - parkGap, y: government.y + government.h + parkGap, w: cornerW, h: cornerH, icon:'🌴🌴🌴'}); // SO
-      government.placed.push({...parkType, x: government.x + government.w + parkGap, y: government.y + government.h + parkGap, w: cornerW, h: cornerH, icon:'🌳🌴🌲'}); // SE
-    }
+    government.placed.push(presidenciaBuilding);
+    
+    // Construir avenidas principales, evitando el nuevo edificio de presidencia
+    buildAvenidas({x:0, y:0, w:WORLD.w, h:WORLD.h}, presidenciaBuilding);
 
     // Cementerio alejado (esquina inferior derecha)
     cemetery.x = WORLD.w - cemetery.w - 40;
@@ -431,43 +394,43 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       }
     }
 
-    let avoidList = [government, ...avenidas, ...roundabouts, ...government.placed, ...houses, ...barrios];
+    let avoidList = [presidenciaBuilding, ...avenidas, ...roundabouts, ...government.placed, ...houses, ...barrios];
     // Builder cerca del centro
     const builderRect = scatterRects(1, [builder.w, builder.w], [builder.h, builder.h], avoidList, null)[0];
     if(builderRect) { Object.assign(builder, builderRect); avoidList.push(builder); }
     // Cementerio ya posicionado
     avoidList.push(cemetery);
 
-    // Eliminar la avenida/calle que cruza por debajo del gobierno (horizontal central)
-    // Buscar la avenida horizontal más cercana al centro vertical del gobierno
-    const govY = government.y + government.h/2;
-    for(let i=avenidas.length-1;i>=0;i--){
-      const av = avenidas[i];
-      if(av.w > av.h && Math.abs((av.y+av.h/2)-govY) < 40){
-        avenidas.splice(i,1);
-      }
-    }
-
     // Escuelas y hospitales cerca del centro, iconos grandes
-    const initialGovTypes = ['escuela', 'hospital', 'policia', 'biblioteca'];
+    const initialGovTypes = ['escuela', 'parque', 'hospital', 'policia', 'biblioteca'];
     for(const typeKey of initialGovTypes) {
         const type = GOV_TYPES.find(t => t.k === typeKey);
         if(type) {
-            const newBuildings = scatterRects(2, [type.w, type.w], [type.h, type.h], avoidList, null, 50);
-            newBuildings.forEach(b => government.placed.push({...type, ...b, icon: type.icon.repeat(3)}));
+            const count = (typeKey === 'escuela' || typeKey === 'parque') ? 3 : 2;
+            const newBuildings = scatterRects(count, [type.w, type.w], [type.h, type.h], avoidList, null, 50);
+            newBuildings.forEach(b => government.placed.push({...type, ...b}));
             avoidList.push(...newBuildings);
         }
     }
 
     // Negocios y fábricas con iconos grandes
     const sameTypeDist = 50;
-    factories.push(...scatterRects(CFG.FACTORIES,[140,180],[90,120], avoidList, null, sameTypeDist)); avoidList.push(...factories);
-    const newBanks = scatterRects(CFG.BANKS,[110,140],[70,90], avoidList, null, sameTypeDist);
+    // Para las fábricas, usamos un margen mucho mayor para dejar espacio a la imagen grande.
+    const factoryMarginForPlacement = 120;
+    factories.push(...scatterRects(CFG.FACTORIES,[140,180],[90,120], avoidList, null, sameTypeDist, factoryMarginForPlacement).map(o => ({...o, imageUrl: 'https://i.postimg.cc/G2365XpC/fabrica.png'})));
+    avoidList.push(...factories);
+    
+    const newBanks = scatterRects(CFG.BANKS,[110,140],[70,90], avoidList, null, sameTypeDist).map(o => ({...o, imageUrl: null}));
     if (newBanks.length > 0) { newBanks[newBanks.length - 1].isFuchsia = true; }
-    banks.push(...newBanks); avoidList.push(...banks);
-    malls.push(...scatterRects(CFG.MALLS,[110,140],[75,95], avoidList, null, sameTypeDist));
+    banks.push(...newBanks);
+    avoidList.push(...banks);
+    
+    malls.push(...scatterRects(CFG.MALLS,[110,140],[75,95], avoidList, null, sameTypeDist).map(o => ({...o, imageUrl: null})));
     // Negocios: iconos grandes
     shops.forEach(s => { s.icon = (s.icon || '🏪').repeat(2); });
+
+    // --- Generar calles secundarias que eviten todos los edificios ---
+    generateCityStreets(avoidList);
   }
 
   /* ===== AGENTES Y ECONOMÍA ===== */
@@ -542,10 +505,32 @@ btnRandLikes.addEventListener('click', updateLikesUI);
 
   function drawWorld(){
     ctx.fillStyle = '#0b1220';ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawGrid(); drawAvenidas(); drawRoundabouts();
-    for(const r of roadRects){const p=toScreen(r.x,r.y);ctx.fillStyle='rgba(75,85,99,0.95)';ctx.fillRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);}
+    drawGrid();
+    
+    for(const f of factories){
+      // Prepara la imagen de la fábrica para ser usada.
+      if (!window._factoryImg) {
+          window._factoryImg = new window.Image();
+          window._factoryImg.src = 'https://i.postimg.cc/G2365XpC/fabrica.png';
+      }
 
-    for(const f of factories){ drawRoundRect(f,'rgba(63,51,81,0.92)','rgba(167,139,250,0.95)',8,3); drawLabelIcon(f,'Fábrica','🏭'); }
+      // Si la imagen está cargada, la dibuja. Si no, dibuja el ícono por defecto.
+      if (window._factoryImg.complete && window._factoryImg.naturalWidth !== 0) {
+          const p = toScreen(f.x, f.y);
+          const w = f.w * ZOOM;
+          const h = f.h * ZOOM;
+          // Dibujar la imagen el doble de grande y centrada sobre la fábrica
+          const newW = w * 2;
+          const newH = h * 2;
+          const newX = p.x - w / 2;
+          const newY = p.y - h / 2;
+          ctx.drawImage(window._factoryImg, newX, newY, newW, newH);
+      } else {
+          // Dibuja el ícono y texto por defecto mientras la imagen carga.
+          drawRoundRect(f,'rgba(63,51,81,0.92)','rgba(167,139,250,0.95)',8,3);
+          drawLabelIcon(f,'Fábrica','🏭');
+      }
+    }
 
     drawRoundRect(builder,'rgba(58,74,47,0.92)','rgba(163,230,53,0.95)',10,3); drawLabelIcon(builder,'Constructora','🏗️');
     drawRoundRect(cemetery,'rgba(51,65,85,0.92)','rgba(148,163,184,0.95)',10,3); drawLabelIcon(cemetery,'Cementerio','✝');
@@ -582,38 +567,30 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     }
 
     for(const inst of government.placed){
-      if(inst.k === 'gobierno'){
-        // Dibuja la imagen personalizada del gobierno
+      // Lógica genérica para dibujar edificios con imágenes
+      if (inst.imageUrl) {
+        if (!window._buildingImages) window._buildingImages = {};
+        if (!window._buildingImages[inst.imageUrl]) {
+          const img = new window.Image();
+          img.src = inst.imageUrl;
+          window._buildingImages[inst.imageUrl] = img;
+        }
+
+        const img = window._buildingImages[inst.imageUrl];
         const p = toScreen(inst.x, inst.y);
-        const w = inst.w * 2 * ZOOM, h = inst.h * 2 * ZOOM;
-        // Centrar la imagen en el mismo punto central
-        const px = p.x + (inst.w * ZOOM)/2 - w/2;
-        const py = p.y + (inst.h * ZOOM)/2 - h/2;
-        if(!window._govImg){
-            window._govImg = new window.Image();
-            window._govImg.onerror = () => {
-                console.error("Fallo al cargar /img/gobierno.png. Asegúrate que el archivo está en la carpeta 'public/img' y que el nombre es correcto.");
-                window._govImg.failed = true; // Marcar como fallido para no reintentar
-            };
-            window._govImg.src = '/img/gobierno.png';
-        }
-        // Verificamos si la imagen está completamente cargada y no está rota.
-        if (window._govImg.complete && window._govImg.naturalWidth !== 0) {
-          ctx.drawImage(window._govImg, px, py, w, h);
-        } else if (window._govImg.failed || (window._govImg.complete && window._govImg.naturalWidth === 0)) {
-          // Si la imagen falló al cargar, dibujamos un marcador de posición para evitar que el juego se congele.
-          ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
-          ctx.fillRect(px, py, w, h);
-          ctx.strokeStyle = '#ef4444';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(px, py, w, h);
-          ctx.fillStyle = 'white';
+        const w = inst.w * ZOOM;
+        const h = inst.h * ZOOM;
+
+        if (img.complete && img.naturalWidth !== 0) {
+          ctx.drawImage(img, p.x, p.y, w, h);
+        } else {
+          // Dibuja un recuadro simple como placeholder mientras carga la imagen, sin el ícono.
+          drawRoundRect(inst, inst.fill || '#1f2937', inst.stroke || '#4b5563', 10, 2);
+          ctx.font = `700 ${Math.max(8, 12 * ZOOM)}px system-ui`;
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
           ctx.textAlign = 'center';
-          ctx.font = `700 ${Math.max(8, 12 * ZOOM)}px ui-monospace,monospace`;
-          ctx.fillText('Error al cargar', px + w / 2, py + h / 2 - 6 * ZOOM);
-          ctx.fillText('gobierno.png', px + w / 2, py + h / 2 + 6 * ZOOM);
+          ctx.fillText(inst.label, p.x + w / 2, p.y + h / 2);
         }
-        // Si la imagen aún se está cargando, no hacemos nada. Se dibujará en el siguiente fotograma.
       } else if(inst.k === 'carcel'){
         const p = toScreen(inst.x, inst.y);
         const w = inst.w * ZOOM, h = inst.h * ZOOM;
@@ -624,6 +601,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
         for(let i=0;i<bars;i++){ const bx = p.x + 6*ZOOM + i * (w - 12*ZOOM) / Math.max(1,bars-1); ctx.fillRect(bx, p.y+6*ZOOM, 3*ZOOM, h - 12*ZOOM); }
         ctx.fillStyle = '#fff'; ctx.font=`700 ${Math.max(10, 14*ZOOM)}px system-ui`; ctx.textAlign='center'; ctx.fillText('CÁRCEL', p.x + w/2, p.y + 18*ZOOM);
       } else {
+        // Fallback para edificios sin imagen (dibuja con ícono)
         drawLabelIcon(inst, inst.label, inst.icon);
       }
     }
@@ -646,6 +624,11 @@ btnRandLikes.addEventListener('click', updateLikesUI);
         ctx.fillStyle='#0a0a0a'; ctx.fillRect(p.x+h.w*ZOOM/2-3*ZOOM, p.y+h.h*ZOOM-8*ZOOM, 6*ZOOM, 8*ZOOM);
       }
     }
+
+    // --- DIBUJAR CALLES ENCIMA DE TODO ---
+    drawAvenidas();
+    drawRoundabouts();
+    for(const r of roadRects){const p=toScreen(r.x,r.y);ctx.fillStyle='rgba(75,85,99,0.95)';ctx.fillRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);}
   }
 
   function drawSocialLines() {
@@ -861,7 +844,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       if(a.goingToBank && a.target){
         const c=a.target; if(Math.hypot(a.x-c.x,a.y-c.y)<14){
           a.money += a.pendingDeposit; a.pendingDeposit=0; a.goingToBank=false; a.nextWorkAt = nowS + CFG.WORK_COOLDOWN;
-          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a_targetRole='home'; else a.target=null, a.targetRole='idle'; }
+          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a.targetRole='home'; else a.target=null, a.targetRole='idle'; }
           else { a.target=null; a.targetRole='idle'; }
         }
       }
@@ -1131,7 +1114,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     if(placingHouse){
       const u=agents.find(a=>a.id===placingHouse.ownerId); if(!u){ placingHouse=null; return; }
       const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null};
-      if(allBuildings.some(r=>rectsOverlapWithMargin(r,newH, 8))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
+      if(allBuildings.some(r=>rectsOverlapWithMargin(r,newH, 15))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
       if((u.money||0) < placingHouse.cost){ toast('Saldo insuficiente.'); placingHouse=null; return; }
       if(hasNet()){
         window.sock?.emit('placeHouse', newH, (res)=>{
@@ -1148,7 +1131,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     if(placingShop){
       const u=agents.find(a=>a.id===placingShop.ownerId); if(!u){ placingShop=null; return; }
       const rectShop = {x: pt.x - placingShop.size.w/2, y: pt.y - placingShop.size.h/2, w: placingShop.size.w, h: placingShop.size.h};
-      if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectShop, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
+      if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectShop, 15))){ toast('No se puede colocar aquí (muy cerca).'); return; }
       if((u.money||0) < placingShop.price){ toast('Saldo insuficiente.'); placingShop=null; return; }
       const newShop = { ownerId:u.id, x:rectShop.x, y:rectShop.y, w:rectShop.w, h:rectShop.h, kind:placingShop.kind.k, icon:placingShop.kind.icon, like:placingShop.kind.like, price:placingShop.kind.price, buyCost: placingShop.kind.buyCost };
       if(hasNet()){
@@ -1166,7 +1149,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       const rectX = { x: pt.x - placingGov.w/2, y: pt.y - placingGov.h/2, w: placingGov.w, h: placingGov.h, label: placingGov.label, icon: placingGov.icon, fill: placingGov.fill, stroke: placingGov.stroke, k: placingGov.k };
       rectX.x = clamp(rectX.x, 10, WORLD.w - rectX.w - 10);
       rectX.y = clamp(rectX.y, 10, WORLD.h - rectX.h - 10);
-      if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectX, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
+      if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectX, 15))){ toast('No se puede colocar aquí (muy cerca).'); return; }
       if(government.funds < placingGov.cost){ toast('Fondos insuficientes.'); placingGov=null; return; }
       if(hasNet()){
         const payload = { ...rectX, cost: placingGov.cost };
@@ -1219,9 +1202,11 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     cityBlocks.forEach(r=>mrect(r,'#334155'));
     roadRects.forEach(r=>mrect(r,'#9ca3af')); factories.forEach(r=>mrect(r,'#8b5cf6'));
     banks.forEach(r=>mrect(r,'#fde047')); malls.forEach(r=>mrect(r,'#ef4444')); shops.forEach(r=>mrect(r,'#94a3b8'));
-    mrect(cemetery,'#cbd5e1'); mrect(builder,'#84cc16'); mrect(government,'#60a5fa');
+    mrect(cemetery,'#cbd5e1'); mrect(builder,'#84cc16');
     government.placed.forEach(r=>{
-      if(r.k === 'carcel'){
+      if (r.k === 'presidencia') {
+        mrect(r, '#60a5fa'); // Representa el nuevo edificio de la presidencia en el minimapa
+      } else if(r.k === 'carcel'){
         mctx.fillStyle = '#111'; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy));
         mctx.fillStyle = '#fff'; const bars = 3; const bx = Math.max(0,r.x*sx), by = Math.max(0,r.y*sy), bw = Math.max(1,r.w*sx), bh = Math.max(1,r.h*sy);
         for(let i=0;i<bars;i++){ const px = bx + 4 + i*(bw-8)/(bars-1); mctx.fillRect(px, by+4, 2, bh-8); }
