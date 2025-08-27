@@ -10,6 +10,10 @@ const io = require('socket.io')(server, {
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Silenciar el error de favicon.ico en la consola del navegador
+app.get('/favicon.ico', (req, res) => res.status(204).send());
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const state = {
@@ -62,7 +66,7 @@ function ensureBots(n = 3) {
       code: randomPersonName(gender),
       x: Math.random() * 800 + 50,
       y: Math.random() * 500 + 50,
-      money: 100,
+      money: 400,
       gender,
       avatar: null,
       isBot: true,
@@ -109,46 +113,49 @@ function tickBots(bounds = { w: 2200, h: 1400 }) {
   }
 }
 
-
-// Movimiento automático de todos los jugadores (no solo bots)
-
-function tickPlayers(bounds = { w: 2200, h: 1400 }) {
+// Movimiento para jugadores humanos inactivos, para que el mundo se sienta vivo.
+function tickIdlePlayers(bounds = { w: 2200, h: 1400 }) {
   const dt = 0.12; // ~120ms por tick
+  const idleTimeout = 3000; // 3 segundos de inactividad para empezar a moverse
+  const currentTime = now();
+
   for (const p of Object.values(state.players)) {
-    // Si no tiene objetivo, asignar uno aleatorio
-    if (typeof p.targetX !== 'number' || typeof p.targetY !== 'number') {
+    // Omitir bots (manejados por tickBots) y jugadores que han enviado actualizaciones recientemente.
+    if (p.isBot || (currentTime - (p.lastUpdateFromClient || 0) < idleTimeout)) {
+      continue;
+    }
+
+    // Lógica de movimiento aleatorio para jugadores inactivos
+    if (typeof p.targetX !== 'number' || typeof p.targetY !== 'number' || Math.random() < 0.02) {
       p.targetX = Math.random() * bounds.w;
       p.targetY = Math.random() * bounds.h;
     }
-    // Calcular distancia al objetivo
+
     const dx = p.targetX - p.x;
     const dy = p.targetY - p.y;
     const dist = Math.hypot(dx, dy);
-    // Si llegó cerca del objetivo, asignar uno nuevo
-    if (dist < 18) {
+
+    if (dist < 20) {
       p.targetX = Math.random() * bounds.w;
       p.targetY = Math.random() * bounds.h;
     }
-    // Movimiento suave hacia el objetivo
+
     const speed = p.speed || 120;
     const nx = dx / (dist || 1);
     const ny = dy / (dist || 1);
-    // Usar interpolación para suavizar el movimiento
-    p.vx = (p.vx || 0) * 0.8 + nx * speed * 0.2;
-    p.vy = (p.vy || 0) * 0.8 + ny * speed * 0.2;
-    // Actualizar posición
+    p.vx = (p.vx || 0) * 0.85 + nx * speed * 0.15;
+    p.vy = (p.vy || 0) * 0.85 + ny * speed * 0.15;
     p.x = Math.max(0, Math.min((p.x || 0) + p.vx * dt, bounds.w));
     p.y = Math.max(0, Math.min((p.y || 0) + p.vy * dt, bounds.h));
-    // Rebote en bordes
-    if (p.x <= 0 || p.x >= bounds.w) { p.vx *= -0.7; p.targetX = Math.random() * bounds.w; }
-    if (p.y <= 0 || p.y >= bounds.h) { p.vy *= -0.7; p.targetY = Math.random() * bounds.h; }
     p.updatedAt = now();
   }
 }
 
 // Tick de movimiento automático para todos los jugadores
 setInterval(() => {
-  tickPlayers({ w: 2200, h: 1400 });
+  ensureBots(5); // Aseguramos que haya 5 bots
+  tickBots({ w: 2200, h: 1400 });
+  tickIdlePlayers({ w: 2200, h: 1400 });
 }, 120);
 
 io.on('connection', (socket) => {
@@ -163,11 +170,12 @@ io.on('connection', (socket) => {
       code: data.code || ('Player' + id),
       x: data.x || 100,
       y: data.y || 100,
-      money: (data.startMoney != null) ? data.startMoney : 100,
+      money: (data.startMoney != null) ? data.startMoney : 400,
       gender: data.gender || 'M',
       avatar: data.avatar || null,
       createdAt: now(),
-      updatedAt: now()
+      updatedAt: now(),
+      lastUpdateFromClient: now()
     };
     state.players[id] = player;
     socket.playerId = id;
@@ -188,6 +196,7 @@ io.on('connection', (socket) => {
   if ('bank' in data) p.bank = data.bank;
     if ('vehicle' in data) p.vehicle = data.vehicle;
     p.updatedAt = now();
+    p.lastUpdateFromClient = t;
   });
 
   socket.on('placeShop', (payload, ack) => {

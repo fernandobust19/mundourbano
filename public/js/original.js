@@ -17,6 +17,7 @@
   // Red: helpers para multijugador
   const hasNet = () => !!(window.sock && window.sock.connected);
   let __lastNetSend = 0;
+  let __lastSentState = { x: -1, y: -1, money: -1 };
 
   // ====== SUAVIZADO REMOTO (nuevo) ======
   const REMOTE = {
@@ -220,9 +221,6 @@ btnRandLikes.addEventListener('click', updateLikesUI);
         (payload.government.placed||[]).forEach(g=> government.placed.push({...g}));
         if(typeof window.updateGovDesc === 'function') window.updateGovDesc();
       }
-      if(Array.isArray(payload?.shops)){
-        shops.length = 0; payload.shops.forEach(s=> shops.push({...s}));
-      }
       if(Array.isArray(payload?.houses)){
         window.__netHouses = payload.houses.map(h=> ({...h}));
       }
@@ -369,7 +367,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
         y: government.y + government.h/2 - parkH/2,
         w: parkW,
         h: parkH,
-        icon:'🌲�🌲',
+        icon:'🌲🌲',
         fill: '#22c55e',
         stroke: '#166534'
       });
@@ -490,7 +488,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     const id = nextId++;
     const codeName = (opts.name && opts.name.trim())? opts.name.trim().slice(0,12) : (gender==='M'?('M'+((Math.random()*90+10)|0)):('F'+((Math.random()*90+10)|0)));
     return { id, x:pos.x, y:pos.y, vx:0, vy:0, speed: CFG.SPEED, vehicle: null, isDriving: false, gender, code: codeName,
-      state: kind==='child'?'child':'single', spouseId:null, houseIdx:null, bornEpoch, likes, money: (opts.startMoney!=null?opts.startMoney:100),
+      state: kind==='child'?'child':'single', spouseId:null, houseIdx:null, bornEpoch, likes, money: (opts.startMoney!=null?opts.startMoney:400),
         workingUntil:null, nextWorkAt: performance.now()/1000 + rand(0, 1), pendingDeposit:0, goingToBank:false, target:null, targetRole:null,
         cooldownSocial:0, parents: opts.parents || null, employedAtShopId: null, forcedShopId: null, _shopDwellStarted: false, shopDwellEnds: null,
         visitedNewShops: {}, justMarried: null, goingToWork: false, workFactoryId: null
@@ -551,21 +549,6 @@ btnRandLikes.addEventListener('click', updateLikesUI);
 
     drawRoundRect(builder,'rgba(58,74,47,0.92)','rgba(163,230,53,0.95)',10,3); drawLabelIcon(builder,'Constructora','🏗️');
     drawRoundRect(cemetery,'rgba(51,65,85,0.92)','rgba(148,163,184,0.95)',10,3); drawLabelIcon(cemetery,'Cementerio','✝');
-    // Dibuja la imagen personalizada del gobierno en el centro
-    const pg = toScreen(government.x, government.y);
-  const gw = government.w * 2 * ZOOM, gh = government.h * 2 * ZOOM;
-  // Centrar la imagen en el mismo punto central
-  const pgx = pg.x + (government.w * ZOOM)/2 - gw/2;
-  const pgy = pg.y + (government.h * ZOOM)/2 - gh/2;
-    if(!window._govImg){
-      window._govImg = new window.Image();
-      window._govImg.src = 'https://i.postimg.cc/sXLTy7vW/20250824-105634.png';
-    }
-    if(window._govImg.complete){
-      ctx.drawImage(window._govImg, pgx, pgy, gw, gh);
-    }else{
-      window._govImg.onload = ()=>{ ctx.drawImage(window._govImg, pgx, pgy, gw, gh); };
-    }
 
     for(const b of banks){
       const fill = b.isFuchsia ? 'fuchsia' : 'rgba(250,204,21,0.95)';
@@ -607,14 +590,30 @@ btnRandLikes.addEventListener('click', updateLikesUI);
         const px = p.x + (inst.w * ZOOM)/2 - w/2;
         const py = p.y + (inst.h * ZOOM)/2 - h/2;
         if(!window._govImg){
-          window._govImg = new window.Image();
-          window._govImg.src = 'https://i.postimg.cc/sXLTy7vW/20250824-105634.png';
+            window._govImg = new window.Image();
+            window._govImg.onerror = () => {
+                console.error("Fallo al cargar /img/gobierno.png. Asegúrate que el archivo está en la carpeta 'public/img' y que el nombre es correcto.");
+                window._govImg.failed = true; // Marcar como fallido para no reintentar
+            };
+            window._govImg.src = '/img/gobierno.png';
         }
-        if(window._govImg.complete){
+        // Verificamos si la imagen está completamente cargada y no está rota.
+        if (window._govImg.complete && window._govImg.naturalWidth !== 0) {
           ctx.drawImage(window._govImg, px, py, w, h);
-        }else{
-          window._govImg.onload = ()=>{ ctx.drawImage(window._govImg, px, py, w, h); };
+        } else if (window._govImg.failed || (window._govImg.complete && window._govImg.naturalWidth === 0)) {
+          // Si la imagen falló al cargar, dibujamos un marcador de posición para evitar que el juego se congele.
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+          ctx.fillRect(px, py, w, h);
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(px, py, w, h);
+          ctx.fillStyle = 'white';
+          ctx.textAlign = 'center';
+          ctx.font = `700 ${Math.max(8, 12 * ZOOM)}px ui-monospace,monospace`;
+          ctx.fillText('Error al cargar', px + w / 2, py + h / 2 - 6 * ZOOM);
+          ctx.fillText('gobierno.png', px + w / 2, py + h / 2 + 6 * ZOOM);
         }
+        // Si la imagen aún se está cargando, no hacemos nada. Se dibujará en el siguiente fotograma.
       } else if(inst.k === 'carcel'){
         const p = toScreen(inst.x, inst.y);
         const w = inst.w * ZOOM, h = inst.h * ZOOM;
@@ -862,7 +861,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       if(a.goingToBank && a.target){
         const c=a.target; if(Math.hypot(a.x-c.x,a.y-c.y)<14){
           a.money += a.pendingDeposit; a.pendingDeposit=0; a.goingToBank=false; a.nextWorkAt = nowS + CFG.WORK_COOLDOWN;
-          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a.targetRole='home'; else a.target=null, a.targetRole='idle'; }
+          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a_targetRole='home'; else a.target=null, a.targetRole='idle'; }
           else { a.target=null; a.targetRole='idle'; }
         }
       }
@@ -979,7 +978,17 @@ btnRandLikes.addEventListener('click', updateLikesUI);
         const t = performance.now();
         if(t - __lastNetSend > 120){
           const me = agents.find(a=>a.id===USER_ID);
-          if(me){ window.sockApi?.update({ x: me.x, y: me.y, money: Math.floor(me.money||0) }); }
+          if(me){
+            const currentMoney = Math.floor(me.money || 0);
+            // Solo enviar actualización si el estado ha cambiado para no interferir
+            // con la lógica de inactividad del servidor.
+            if (me.x !== __lastSentState.x || me.y !== __lastSentState.y || currentMoney !== __lastSentState.money) {
+              window.sockApi?.update({ x: me.x, y: me.y, money: currentMoney });
+              __lastSentState.x = me.x;
+              __lastSentState.y = me.y;
+              __lastSentState.money = currentMoney;
+            }
+          }
           __lastNetSend = t;
         }
       }
@@ -1075,8 +1084,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       }
     }
   };
-  btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } };
-  $("#btnShowGov").onclick = ()=>{ const isVisible = govDock.style.display === 'flex'; if (!isVisible) { govDock.style.display = 'flex'; } else { govDock.style.display = 'none'; } };
+  btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } }; $("#btnShowGov").onclick = ()=>{ const isVisible = govDock.style.display === 'flex'; if (!isVisible) { govDock.style.display = 'flex'; } else { govDock.style.display = 'none'; } };
   $("#uiHideBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(-130%)'; show($("#uiShowBtn"),true); };
   $("#uiShowBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(0)'; show($("#uiShowBtn"),false); };
   panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; toast('Depósito realizado.'); };
@@ -1089,15 +1097,14 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     zoomFab.style.display = on ? 'flex':'none';
     mini.style.display = on ? 'block':'none';
     show($("#uiShowBtn"),false);
-    docDock.style.display = 'none';
-    govDock.style.display = 'none';
+    docDock.style.display = 'none'; govDock.style.display = 'none';
   }
 
   function startWorldWithUser({name,gender,age,likes,usd}){
     $("#formBar").style.display='none'; setVisibleWorldUI(true); STARTED=true; setWorldSize(); fitCanvas(); regenInfrastructure(false);
     const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
-    let startMoney = 100 + addCredits;
-    const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney});
+    let startMoney = 400 + addCredits;
+    const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
     try{ user.avatar = (gender === 'M') ? 'https://i.postimg.cc/x8cc0drr/20250820-102743.png' : 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png'; }catch(e){}
     agents.push(user); USER_ID=user.id;
     try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
@@ -1337,7 +1344,6 @@ btnRandLikes.addEventListener('click', updateLikesUI);
     populateGovSelect();
     govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)}`;
     updateGovDesc();
-    // Integración de red: escuchar estado de servidor
     try{
       if(window.sock){
         window.sock.on('state', applyServerState);

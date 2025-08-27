@@ -44,7 +44,6 @@ header.app-header h1 { font-size: 1.4rem; color: var(--accent); }
   background: rgba(45,212,191,0.08);
   color: var(--accent);
   font-weight: 600;
-  margin-left: 8px;
 }
 
 /* botones */
