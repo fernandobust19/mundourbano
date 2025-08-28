@@ -18,5 +18,14 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fernandobust19/mundourbano.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/fernandobust19/mundourbano/issues"
+  },
+  "homepage": "https://github.com/fernandobust19/mundourbano#readme"
 }
