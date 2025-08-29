@@ -255,14 +255,22 @@
     </div>
 
     <script>
-        const toast = (msg)=>{
-  const now = performance.now();
-  if (now - toastLimiter.last < toastLimiter.gap) return;
-  toastLimiter.last = now;
-  const t="#toast"; // Corregido: Antes era ("#toast")
-  const _t = document.querySelector(t);
-  if(_t){ _t.textContent=msg; _t.style.display='block'; clearTimeout(toast._id); toast._id=setTimeout(()=>_t.style.display='none',2400); }
+        const toastLimiter = { last: 0, gap: 1000 };
+
+const toast = (msg) => {
+    const now = performance.now();
+    if (now - toastLimiter.last < toastLimiter.gap) return;
+    toastLimiter.last = now;
+    const t = "#toast";
+    const _t = document.querySelector(t);
+    if (_t) {
+        _t.textContent = msg;
+        _t.style.display = 'block';
+        clearTimeout(toast._id);
+        toast._id = setTimeout(() => _t.style.display = 'none', 2400);
+    }
 };
+
     </script>
     
     <script src="original.js"></script>

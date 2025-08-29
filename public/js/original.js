@@ -190,7 +190,7 @@ preloadImages();
 
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
-  LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:22, CEM_W:220, CEM_H:130, N_INIT:10,
+  LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:10,  // Aumentado HOUSE_SIZE de 22 a 70
     R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
     YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
     HOUSE_BUY_COST:3000,
@@ -470,20 +470,22 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       barrios.push(b);
       cityBlocks.push(b);
     }
-
-    const hsize = CFG.HOUSE_SIZE, pad = 18;
+    // Distribuir casas en los 4 barrios con tamaños variables más grandes
+    const pad = 24; // Aumentado padding de 18 a 24 para más espacio
     let totalMade = 0;
-    const housesPerBarrio = Math.ceil(totalNeeded / (barrios.length || 1));
-
+    const housesPerBarrio = Math.ceil(totalNeeded / barrios.length);
     for (const b of barrios) {
-      if (totalMade >= totalNeeded) break;
       let madeInThisBarrio = 0;
-      const colsH = Math.max(5, Math.floor((b.w - pad * 2) / (hsize + 10)));
-      const rowsH = Math.max(4, Math.floor((b.h - pad * 2) / (hsize + 10)));
-
+      // Usar tamaños variables: 60-90 píxeles para variar como otras edificaciones
+      const minHouseSize = 60, maxHouseSize = 90;
+      const colsH = Math.max(4, Math.floor((b.w - pad * 2) / (maxHouseSize + 15))); // Ajustado para tamaños mayores
+      const rowsH = Math.max(3, Math.floor((b.h - pad * 2) / (maxHouseSize + 15)));
       for (let ry = 0; ry < rowsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; ry++) {
         for (let rx = 0; rx < colsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; rx++) {
-          const hx = b.x + pad + rx * (hsize + 10), hy = b.y + pad + ry * (hsize + 10);
+          // Tamaño aleatorio para cada casa (como fábricas o bancos)
+          const hsize = srandi(minHouseSize, maxHouseSize);
+          const hx = b.x + pad + rx * (maxHouseSize + 15); // Usar max para espaciado consistente
+          const hy = b.y + pad + ry * (maxHouseSize + 15);
           const newH = { x: hx, y: hy, w: hsize, h: hsize, ownerId: null, rentedBy: null };
           if ([...avenidas, ...roundabouts].some(av => rectsOverlapWithMargin(av, newH, 8))) continue;
           houses.push(newH);
@@ -636,57 +638,12 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     cemetery.x = WORLD.w - cemetery.w - 40;
     cemetery.y = WORLD.h - cemetery.h - 40;
 
-    // Casas en 4 barrios organizados simétricamente
-    barrios.length = 0; 
-    houses.length = 0; 
-    cityBlocks.length = 0;
-
-    const barrioMargin = 40; // Margen desde los bordes
-    const barrioSize = {
-      w: 380, 
-      h: 320
-    };
-
-    // Posiciones más simétricas para los barrios
-    const barriosPos = [
-      {x: barrioMargin, y: barrioMargin}, // Noroeste
-      {x: WORLD.w - barrioSize.w - barrioMargin, y: barrioMargin}, // Noreste
-      {x: barrioMargin, y: WORLD.h - barrioSize.h - barrioMargin}, // Suroeste
-      {x: WORLD.w - barrioSize.w - barrioMargin, y: WORLD.h - barrioSize.h - barrioMargin} // Sureste
-    ];
-
-    // Crear los barrios equidistantes
-    for(let i=0; i<4; i++){
-      const b = {
-        ...barriosPos[i], 
-        w: barrioSize.w, 
-        h: barrioSize.h, 
-        name: `Barrio ${i+1}`
-      };
-      barrios.push(b);
-      cityBlocks.push(b);
-    }
-    // Distribuir casas en los 4 barrios
-    const hsize = CFG.HOUSE_SIZE, pad = 18;
-    let totalMade = 0;
-    const totalNeeded = CFG.N_INIT + 24;
-    const housesPerBarrio = Math.ceil(totalNeeded / barrios.length);
-    for (const b of barrios) {
-      let madeInThisBarrio = 0;
-      const colsH = Math.max(5, Math.floor((b.w - pad * 2) / (hsize + 10)));
-      const rowsH = Math.max(4, Math.floor((b.h - pad * 2) / (hsize + 10)));
-      for (let ry = 0; ry < rowsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; ry++) {
-        for (let rx = 0; rx < colsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; rx++) {
-          const hx = b.x + pad + rx * (hsize + 10), hy = b.y + pad + ry * (hsize + 10);
-          const newH = { x: hx, y: hy, w: hsize, h: hsize, ownerId: null, rentedBy: null };
-          if ([...avenidas, ...roundabouts].some(av => rectsOverlapWithMargin(av, newH, 8))) continue;
-          houses.push(newH);
-          totalMade++; madeInThisBarrio++;
-        }
-      }
+    // Llamar a la función para crear barrios y casas (sin duplicación)
+    if (!preserveHouses) {
+      makeBarriosYCasas(CFG.N_INIT + 24, {x: 0, y: 0, w: WORLD.w, h: WORLD.h}, []);
     }
 
-   
+    // Crear lista de evitación actualizada (después de crear casas)
     let avoidList = [government, ...avenidas, ...roundabouts, ...government.placed, ...houses, ...barrios];
     // Cementerio ya posicionado
     avoidList.push(cemetery);
@@ -1191,6 +1148,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if (!a.forcedShopId && Math.random() < CFG.VISIT_RATE) {
           const liked = shops.filter(s=> a.likes.includes(s.like) && s.ownerId !== a.id);
           if(liked.length){
+
             let best=null, bestD=1e9;
             for(const s of liked){
               const d=Math.hypot(a.x-(s.x+s.w/2), a.y-(s.y+s.h/2));
