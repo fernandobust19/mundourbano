@@ -145,6 +145,25 @@ const BUILDING_IMAGES = {
   panadería: 'https://i.postimg.cc/sDHYgSvJ/20250827-065353.png',
   bar: 'https://i.postimg.cc/Pqfdyv2c/Bar.png',
   
+  // Nuevas URLs agregadas para negocios faltantes
+  kiosco: 'https://i.postimg.cc/xjp7LhNK/kiosco.png',
+  juguería: 'https://i.postimg.cc/Y0TbTcQZ/jugo.png',
+  cafetería: 'https://i.postimg.cc/J4gfCv11/cafeteria.png',
+  heladería: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
+  pizzería: 'https://i.postimg.cc/nhb3kJFQ/pizzería.png',
+  librería: 'https://i.postimg.cc/jSncineclubrWK8w/librería.png',
+  juguetería: 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
+  'yoga studio': 'https://i.postimg.cc/8Ps23NgK/yoga_estudio.png',
+  'dance hall': 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
+  'tienda deportes': 'https://i.postimg.cc/XvWDV0t0/deportes.png',
+  'arte & galería': 'https://i.postimg.cc/VvZ36HnW/galeria.png',
+  cineclub: 'https://i.postimg.cc/8cz2TVJC/cine_club.png',
+  'gamer zone': 'https://i.postimg.cc/c48DwHSS/gamer.png',
+  senderismo: 'https://i.postimg.cc/PrxHj1YM/senderismo.png',
+  'foto-lab': 'https://i.postimg.cc/pVkv4shT/foto_club.png',
+  'astro club': 'https://i.postimg.cc/c4bS46cG/astro_club.png',
+  restaurante: 'https://i.postimg.cc/vHwKPbTd/20250827_070529.png',
+  
   // Otras instituciones
   bomberos: 'https://i.postimg.cc/KYzPHMhV/bomberos.png', // ACTUALIZADA
   universidad: 'https://i.imgur.com/hvsZIsB.png', // URL alternativa
@@ -1140,7 +1159,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(a.goingToBank && a.target){
         const c=a.target; if(Math.hypot(a.x-c.x,a.y-c.y)<14){
           a.money += a.pendingDeposit; a.pendingDeposit=0; a.goingToBank=false; a.nextWorkAt = nowS + CFG.WORK_COOLDOWN;
-          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a_targetRole='home'; else a.target=null, a.targetRole='idle'; }
+          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a.targetRole='home'; else a.target=null, a.targetRole='idle'; }
           else { a.target=null, a.targetRole='idle'; }
         }
       }
@@ -1148,6 +1167,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if (!a.forcedShopId && Math.random() < CFG.VISIT_RATE) {
           const liked = shops.filter(s=> a.likes.includes(s.like) && s.ownerId !== a.id);
           if(liked.length){
+
+
 
             let best=null, bestD=1e9;
             for(const s of liked){
@@ -1423,7 +1444,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if((u.money||0) < placingHouse.cost){ toast('Saldo insuficiente.'); placingHouse=null; return; }
       if(hasNet()){
         window.sock?.emit('placeHouse', newH, (res)=>{
-          if(res?.ok){ u.money -= placingHouse.cost; placingHouse=null; toast('Casa propia construida 🏠'); }
+          if(res?.ok){ u.money -= placingHouse.cost; houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null; toast('Casa propia construida 🏠'); }
           else { toast(res?.msg||'Error al colocar casa'); placingHouse=null; }
         });
         return;
@@ -1454,7 +1475,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         console.log("Intentando colocar negocio vía red...");
         window.sock?.emit('placeShop', newShop, (res)=>{
           console.log("Respuesta del servidor:", res);
-          if(res?.ok){ u.money -= placingShop.price; placingShop=null; toast('Negocio colocado 🏪'); }
+          if(res?.ok){ u.money -= placingShop.price; newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop); placingShop=null; toast('Negocio colocado 🏪'); }
           else { toast(res?.msg||'Error al colocar negocio'); placingShop=null; }
         });
         return;
@@ -1472,7 +1493,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(hasNet()){
         const payload = { ...rectX, cost: placingGov.cost };
         window.sock?.emit('placeGov', payload, (res)=>{
-          if(res?.ok){ placingGov=null; toast('Construcción realizada ✅'); }
+          if(res?.ok){ government.funds -= placingGov.cost; government.placed.push(rectX); updateGovDesc(); placingGov=null; toast('Construcción realizada ✅'); }
           else { toast(res?.msg||'No se pudo construir'); placingGov=null; }
         });
         return;
