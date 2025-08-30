@@ -152,8 +152,7 @@
 
 <div id="top-bar">
   <button id="btnShowDoc">📄 Documento</button>
-  <button id="btnShowMarried">👨‍👩‍👧‍👦 Casados</button>
-  <button id="btnShowGov">🏛️ Gobierno</button>
+  <button id="btnShowMarried">👨‍👩👧‍👦 Casados</button>
 </div>
 
 <canvas id="world"></canvas>
@@ -213,9 +212,12 @@
   </div>
 </div>
 
-<div id="govDock" style="display:none;">
+  <div id="govDock" style="display:none;">
   <div class="card">
-    <h4 style="margin:0 0 6px 0">🏛️ Panel de Gobierno</h4>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h4 style="margin:0 0 6px 0">🏛️ Panel de Gobierno</h4>
+      <button id="btnGovClose" title="Cerrar" style="all:unset;cursor:pointer;padding:6px;border-radius:6px;background:transparent;color:var(--text);font-weight:700">✕</button>
+    </div>
     <div id="govDesc" class="hint" style="margin-bottom:6px"></div>
     <div id="govFunds" class="hint" style="margin:6px 0">Fondo: 0</div>
 

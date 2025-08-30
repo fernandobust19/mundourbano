@@ -82,9 +82,6 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const shopModal=$("#shopModal"), shopList=$("#shopList"), shopMsg=$("#shopMsg"), btnShopClose=$("#btnShopClose");
   const govFundsEl=$("#govFunds"), govDescEl = $("#govDesc");
   const govSelectEl=$("#govSelect"), btnGovPlace=$("#btnGovPlace");
-
-  const btnGovClose = $("#btnGovClose");
-  if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
   let placingGov = null, placingHouse = null, placingShop = null;
 
   const isMobile = ()=> innerWidth<=768;
@@ -1388,39 +1385,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
     }
   };
-  btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } };
-
-  // Gobierno: abrir vía edificio en el mapa (no botón)
-  // openGovPanel(target) posiciona el panel sobre el edificio (target en coords del mundo)
-  function openGovPanel(target){
-    if(!target) { govDock.style.display = 'flex'; populateGovSelect(); return; }
-    try{
-      const screenPos = toScreen(target.x, target.y);
-      const dockW = Math.min(window.innerWidth * 0.9, govDock.offsetWidth || 340);
-      const dockH = Math.min(window.innerHeight * 0.8, govDock.offsetHeight || 220);
-      // centrar sobre el edificio y desplazar hacia arriba para que quede encima
-      let left = screenPos.x + (target.w * ZOOM)/2 - dockW/2;
-      let top = screenPos.y - dockH - 10; // 10px de espacio
-      // asegurarse de que quede dentro de la ventana
-      left = Math.max(6, Math.min(left, window.innerWidth - dockW - 6));
-      top = Math.max(6, Math.min(top, window.innerHeight - dockH - 6));
-      govDock.style.position = 'fixed';
-      govDock.style.left = `${left}px`;
-      govDock.style.top = `${top}px`;
-      govDock.style.width = `${dockW}px`;
-      govDock.style.display = 'flex';
-      populateGovSelect();
-    }catch(e){ govDock.style.display = 'flex'; populateGovSelect(); }
-  }
-  function closeGovPanel(){ govDock.style.display = 'none'; }
-  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeGovPanel(); });
-  document.addEventListener('pointerdown', (e)=>{
-    try{
-      if(govDock.style.display !== 'flex') return;
-      const gd = govDock.getBoundingClientRect();
-      if(e.clientX < gd.left || e.clientX > gd.right || e.clientY < gd.top || e.clientY > gd.bottom){ closeGovPanel(); }
-    }catch(e){}
-  }, {passive:true});
+  btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } }; $("#btnShowGov").onclick = ()=>{ const isVisible = govDock.style.display === 'flex'; if (!isVisible) { govDock.style.display = 'flex'; populateGovSelect(); } else { govDock.style.display = 'none'; } };
   $("#uiHideBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(-130%)'; show($("#uiShowBtn"),true); };
   $("#uiShowBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(0)'; show($("#uiShowBtn"),false); };
   panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; toast('Depósito realizado.'); };
@@ -1469,21 +1434,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     if(!STARTED) return;
     const rect = canvas.getBoundingClientRect(); const pt = toWorld(e.clientX-rect.left, e.clientY-rect.top);
     if(isOverUI(e.clientX,e.clientY)) return;
-    // Si se hace click en el edificio del gobierno, abrir el panel de gobierno
-    try{
-      // rect gobierno principal
-      if(pt && government && typeof government.x === 'number'){
-        if(pt.x >= government.x && pt.x <= government.x + government.w && pt.y >= government.y && pt.y <= government.y + government.h){
-          openGovPanel(government); return;
-        }
-      }
-      // también verificar edificaciones gubernamentales colocadas
-      for(const inst of government.placed || []){
-        if(inst && inst.k === 'gobierno'){
-          if(pt.x >= inst.x && pt.x <= inst.x + inst.w && pt.y >= inst.y && pt.y <= inst.y + inst.h){ openGovPanel(inst); return; }
-        }
-      }
-    }catch(e){}
 
   const allBuildings = [cemetery,government,...banks,...malls,...factories,...houses,...(window.__netHouses||[]),...roadRects,...shops, ...avenidas, ...roundabouts, ...government.placed];
 
