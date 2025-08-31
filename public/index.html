@@ -25,7 +25,7 @@
   *{box-sizing:border-box}
 
 
-  #formBar{position:fixed;top:0;left:0;right:0;z-index:2000;background:var(--ui);border-bottom:1px solid rgba(70,85,100,0.18);backdrop-filter:blur(6px)}
+  #formBar{position:fixed;top:0;left:0;right:0;z-index:2000;background:rgba(15,28,48,0.85);border-bottom:1px solid rgba(20,40,64,0.28);backdrop-filter:blur(6px);color:#eef7fb}
   #formInner{width:min(1100px,98vw);margin:0 auto;padding:12px;display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
   #formInner h2{grid-column:1/-1;margin:0 0 4px 0;color:var(--brand);font-size:18px}
   .field{display:flex;flex-direction:column;gap:6px}
@@ -40,22 +40,28 @@
   @media (max-width:960px){.col-3,.col-4,.col-6{grid-column:1/-1}}
 
 
-  #likesWrap{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;max-height:240px;overflow:auto;padding:8px;border:1px dashed rgba(0,0,0,0.08);border-radius:12px;background:var(--card)}
+  #likesWrap{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;max-height:240px;overflow:auto;padding:8px;border:1px dashed rgba(0,0,0,0.08);border-radius:12px;background:rgba(24,36,48,0.5);}
   @media (max-width:960px){#likesWrap{grid-template-columns:repeat(2,minmax(150px,1fr));max-height:280px}}
-  .chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(0,0,0,0.06);border-radius:999px;background:rgba(255,238,150,0.6);font-size:13px;white-space:nowrap}
+  .chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,0.06);border-radius:999px;background:rgba(255,255,255,0.04);font-size:13px;white-space:nowrap;color:#eef7fb}
   .chip input{accent-color:#60a5fa;width:18px;height:18px}
   .chip.disabled{opacity:.45;filter:grayscale(40%)}
   .chip.disabled input{pointer-events:none}
   .limitNote{font-size:12px;margin-top:4px;color:#93c5fd}
+
+  /* Avatar grid for visual selection */
+  #avatarGrid{display:flex;gap:8px;align-items:center}
+  .avatar-option{width:48px;height:48px;padding:0;border-radius:8px;border:1px solid transparent;background:transparent;display:inline-grid;place-items:center;cursor:pointer}
+  .avatar-option img{width:100%;height:100%;object-fit:cover;border-radius:8px;display:block}
+  .avatar-option.selected{outline:2px solid rgba(100,160,220,0.85);box-shadow:0 4px 14px rgba(16,24,32,0.45)}
 
 
   #world{display:none;width:100vw;height:100vh;position:fixed;inset:0;z-index:10}
   .card{background:var(--card);border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:10px 12px;backdrop-filter:blur(4px);position:relative}
   /* UI menus shown inside the map: darker bluish with more transparency for subtle overlay */
   #uiDock .card, #docDock .card, #govDock .card {
-    background: rgba(24,36,48,0.60); /* darker bluish-gray, 60% opacity */
-    border-color: rgba(10,20,30,0.18);
-    color: #eef7fb; /* light text for contrast */
+    background: rgba(12,18,26,0.78); /* stronger, darker bluish-gray at 78% opacity */
+    border-color: rgba(5,10,18,0.24);
+    color: #f3f8fb; /* light text for contrast */
     backdrop-filter: blur(6px);
   }
   #uiDock, #docDock, #govDock{position:fixed;top:10px;z-index:24;display:none;width:min(340px,92vw);display:flex;flex-direction:column;gap:10px;pointer-events:auto}
@@ -110,7 +116,14 @@
       <label>Género</label>
       <div style="display:flex;align-items:center;gap:8px;">
         <select id="fGender" class="select"><option value="M">Masculino (azul)</option><option value="F">Femenino (rosado)</option></select>
+  <!-- avatar select removed: using visual avatar grid instead -->
         <img id="fGenderPreview" src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="preview" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2b3553;background:#fff" />
+      </div>
+      <div id="avatarGrid" style="margin-top:8px">
+        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/x8cc0drr/20250820-102743.png"><img src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="H1"/></button>
+        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png"><img src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png" alt="F1"/></button>
+        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png"><img src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png" alt="H2"/></button>
+        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png"><img src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png" alt="F2"/></button>
       </div>
     </div>
   <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/></div>

@@ -48,6 +48,26 @@
   const fGenderPreview = document.getElementById('fGenderPreview');
   const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
   const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
+  const MALE_IMG_2 = 'https://i.postimg.cc/vHf2KjGK/20250831_015656.png';
+  const FEMALE_IMG_2 = 'https://i.postimg.cc/hjZ1J8cT/20250831_015636.png';
+
+  // Avatar grid clickable thumbnails
+  const avatarGrid = document.getElementById('avatarGrid');
+  function clearAvatarSelection(){ if(!avatarGrid) return; avatarGrid.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected')); }
+  if(avatarGrid){
+    avatarGrid.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('.avatar-option'); if(!btn) return;
+      const src = btn.getAttribute('data-src');
+      if(!src) return;
+      clearAvatarSelection(); btn.classList.add('selected');
+      // set preview and UI avatar
+      try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){}
+      // set the select value too for form persistence
+      if(avatarSelect) avatarSelect.value = src;
+    });
+    // pre-select first
+    const first = avatarGrid.querySelector('.avatar-option'); if(first) first.classList.add('selected');
+  }
   function updateGenderPreview(){ try{ if(!fGender || !fGender.value) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
   if(fGender){ fGender.addEventListener('change', updateGenderPreview); updateGenderPreview(); }
   const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
@@ -115,7 +135,13 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   // Versiones deterministas de randi y rand para la generación del mundo
   function srandi(a, b) { return (seededRandom() * (b - a) + a) | 0; }
   function srand(a, b) { return a + seededRandom() * (b - a); }
-  function setWorldSize(){const vw=innerWidth, vh=innerHeight;WORLD.w = Math.floor(vw * (isMobile()? 3.6 : 2.8));WORLD.h = Math.floor(vh * (isMobile()? 3.2 : 2.6));}
+  function setWorldSize(){
+    const vw = innerWidth, vh = innerHeight;
+    // Doblar la extensión horizontal del mapa grande: multiplicadores duplicados
+    WORLD.w = Math.floor(vw * (isMobile() ? 7.2 : 5.6));
+    WORLD.h = Math.floor(vh * (isMobile() ? 3.2 : 2.6));
+  }
+
   function fitCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; clampCam(); }
   function clampCam(){const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;const maxX = Math.max(0, WORLD.w - vw);const maxY = Math.max(0, WORLD.h - vh);cam.x = Math.max(0, Math.min(cam.x, maxX));cam.y = Math.max(0, Math.min(cam.y, maxY));}
   function toScreen(x,y){ return {x:(x-cam.x)*ZOOM, y:(y-cam.y)*ZOOM}; }
