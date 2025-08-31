@@ -11,10 +11,11 @@
   body { background: var(--color-principal); }
 
   :root{
-    /* Tema amarillo */
+    /* Tema amarillo (variables ajustadas) */
     --bg:#ffd54f; /* fondo principal */
     --card:#fff8e1; /* tarjetas y modales */
-    --ui:#fff8e1cc; /* elementos UI con transparencia */
+    /* UI más oscuro, azul-grisáceo con transparencia */
+    --ui:#9aa7b3cc; /* elementos UI con transparencia (darker bluish-gray) */
     --edge:#d4a300; /* bordes/acento oscuro */
     --brand:#ff9800; /* color principal de botones */
     --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --muted:#8b6b00; --text:#222222;
@@ -24,7 +25,7 @@
   *{box-sizing:border-box}
 
 
-  #formBar{position:fixed;top:0;left:0;right:0;z-index:2000;background:var(--ui);border-bottom:1px solid var(--edge);backdrop-filter:blur(6px)}
+  #formBar{position:fixed;top:0;left:0;right:0;z-index:2000;background:var(--ui);border-bottom:1px solid rgba(70,85,100,0.18);backdrop-filter:blur(6px)}
   #formInner{width:min(1100px,98vw);margin:0 auto;padding:12px;display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
   #formInner h2{grid-column:1/-1;margin:0 0 4px 0;color:var(--brand);font-size:18px}
   .field{display:flex;flex-direction:column;gap:6px}
@@ -50,6 +51,13 @@
 
   #world{display:none;width:100vw;height:100vh;position:fixed;inset:0;z-index:10}
   .card{background:var(--card);border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:10px 12px;backdrop-filter:blur(4px);position:relative}
+  /* UI menus shown inside the map: darker bluish with more transparency for subtle overlay */
+  #uiDock .card, #docDock .card, #govDock .card {
+    background: rgba(24,36,48,0.60); /* darker bluish-gray, 60% opacity */
+    border-color: rgba(10,20,30,0.18);
+    color: #eef7fb; /* light text for contrast */
+    backdrop-filter: blur(6px);
+  }
   #uiDock, #docDock, #govDock{position:fixed;top:10px;z-index:24;display:none;width:min(340px,92vw);display:flex;flex-direction:column;gap:10px;pointer-events:auto}
   #uiDock{left:10px;}
   /* Transition para mostrar/ocultar con animación */

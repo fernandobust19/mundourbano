@@ -193,6 +193,34 @@ const BUILDING_IMAGES = {
 // Precarga de imágenes para mejor rendimiento
 const BUILDING_IMAGE_CACHE = {};
 
+// Street texture image & pattern cache
+const STREET_IMG = new Image();
+STREET_IMG.src = '/assets/calle1.jpg';
+const STREET_PATTERN_CACHE = { pattern: null, lastZoom: null, lastCam: {x:0,y:0} };
+
+function getStreetPattern(ctx){
+  try{
+    if(!STREET_IMG || !STREET_IMG.complete || STREET_IMG.naturalWidth === 0) return null;
+    // If zoom or cam changed significantly, recreate pattern
+    const key = `${Math.round(ZOOM*100)}_${Math.round(cam.x)}_${Math.round(cam.y)}`;
+    if(STREET_PATTERN_CACHE.key === key && STREET_PATTERN_CACHE.pattern) return STREET_PATTERN_CACHE.pattern;
+
+    const patternCanvas = document.createElement('canvas');
+    const iw = STREET_IMG.naturalWidth, ih = STREET_IMG.naturalHeight;
+    // scale image to maintain appearance at current zoom (avoid distortion)
+    patternCanvas.width = Math.max(64, Math.round(iw * Math.max(1, ZOOM)));
+    patternCanvas.height = Math.max(64, Math.round(ih * Math.max(1, ZOOM)));
+    const pc = patternCanvas.getContext('2d');
+    pc.clearRect(0,0,patternCanvas.width, patternCanvas.height);
+    // draw the source image scaled to canvas size preserving aspect
+    pc.drawImage(STREET_IMG, 0, 0, patternCanvas.width, patternCanvas.height);
+    const pat = ctx.createPattern(patternCanvas, 'repeat');
+    STREET_PATTERN_CACHE.pattern = pat;
+    STREET_PATTERN_CACHE.key = key;
+    return pat;
+  }catch(e){ console.warn('getStreetPattern error', e); return null; }
+}
+
 function preloadImages() {
   console.log("Iniciando precarga de imágenes con manejo de errores mejorado...");
   
@@ -233,6 +261,8 @@ const BG_IMG = new Image();
 BG_IMG.onload = () => { console.log('Background image loaded:', BG_IMG.src); };
 BG_IMG.onerror = function() { console.warn('Background image not found at /assets/fondo1.jpg — usando color de respaldo'); };
 BG_IMG.src = '/assets/fondo1.jpg';
+
+// ... no street texture feature (restored to solid fills)
 
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
@@ -296,27 +326,14 @@ BG_IMG.src = '/assets/fondo1.jpg';
   // helper: lista de negocios visibles en el mapa grande
   function getVisibleShops(){
     // Preferir el estado del servidor si existe, sino usar el array local
-    const raw = (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
-  // Ocultar solo las panaderías que no tienen dueño (deben comprarse antes de aparecer)
-  return raw.filter(s => !(s && s.kind === 'panadería' && !s.ownerId));
+  // Devolver todas las tiendas (incluyendo panaderías). El usuario pidió que se muestren todas las panaderías en el mapa grande.
+  return (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
   }
 
   // helper: eliminar panaderías no compradas (robusto)
   function removeUnownedPanaderias(){
-    try{
-      // Si el servidor envía shops, filtrar ahí también
-      if(window.gameState && Array.isArray(window.gameState.shops)){
-        const before = window.gameState.shops.length;
-        window.gameState.shops = window.gameState.shops.filter(s => !(s && s.kind === 'panadería' && !s.ownerId));
-        const after = window.gameState.shops.length;
-        if(before !== after) console.log(`Removed ${before-after} unowned panaderias from gameState.shops`);
-      }
-      // Limpiar la lista local
-      for(let i = shops.length - 1; i >= 0; i--){
-        const s = shops[i];
-        if(s && s.kind === 'panadería' && !s.ownerId){ shops.splice(i,1); }
-      }
-    }catch(e){ console.warn('removeUnownedPanaderias error', e); }
+  // NO-OP: previously removed unowned panaderias; left empty to keep panaderias visible
+  return;
   }
   const SHOP_TYPES = [
   {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400},
@@ -365,10 +382,9 @@ BG_IMG.src = '/assets/fondo1.jpg';
       }
       if (Array.isArray(payload?.shops)) {
         // Reemplazar el array local de tiendas con los datos del servidor
-  // filtrar panaderías sin propietario (no deben aparecer hasta comprarse)
+  // Cargar todas las tiendas tal cual vienen del servidor (incluyendo panaderías)
   shops.length = 0;
-  const filtered = payload.shops.filter(s => !(s && s.kind === 'panadería' && !s.ownerId));
-  shops.push(...filtered);
+  shops.push(...payload.shops);
       }
     }catch(e){ console.warn('applyServerState error', e); }
   }
@@ -426,86 +442,27 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const placed = [];
   const [wmin, wmax] = widthRange;
   const [hmin, hmax] = heightRange;
-  const grid = {
-    cols: Math.floor(Math.sqrt(n * zone.w / zone.h)),
-    rows: Math.ceil(Math.sqrt(n * zone.h / zone.w))
-  };
-  
-  // Asegurar que tengamos suficientes celdas
-  while (grid.cols * grid.rows < n) {
-    grid.cols++;
+
+  const maxAttempts = Math.max(500, n * 400);
+  let attempts = 0;
+
+  while (placed.length < n && attempts < maxAttempts) {
+    attempts++;
+    const w = randi(wmin, wmax);
+    const h = randi(hmin, hmax);
+    const x = rand(Math.max(zone.x + 8, 0), Math.max(zone.x + 8, zone.x + zone.w - w - 8));
+    const y = rand(Math.max(zone.y + 8, 0), Math.max(zone.y + 8, zone.y + zone.h - h - 8));
+    const rect = { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+
+    const collides = [...avoid, ...placed].some(o => rectsOverlapWithMargin(rect, o, margin));
+    if (!collides) placed.push(rect);
   }
-  
-  const cellWidth = zone.w / grid.cols;
-  const cellHeight = zone.h / grid.rows;
-  
-  let count = 0;
-  let maxTries = 100; // Límite de intentos
-  
-  // Intenta colocar edificios en cada celda
-  for (let row = 0; row < grid.rows && count < n; row++) {
-    for (let col = 0; col < grid.cols && count < n; col++) {
-      let tries = 0;
-      let placed_in_cell = false;
-      
-      while (!placed_in_cell && tries < maxTries) {
-        tries++;
-        
-        // Tamaño del edificio
-        const w = srandi(wmin, wmax);
-        const h = srandi(hmin, hmax);
-        
-        // Posición dentro de la celda con un margen
-        const cellMargin = margin / 2;
-        const x = zone.x + col * cellWidth + srandi(cellMargin, cellWidth - w - cellMargin);
-        const y = zone.y + row * cellHeight + srandi(cellMargin, cellHeight - h - cellMargin);
-        
-        const rect = {x, y, w, h};
-        
-        // Verificar colisiones
-        let collision = false;
-        
-        // Comprobar colisión con edificios a evitar
-        for (const avoidRect of avoid) {
-          if (rectsOverlapWithMargin(rect, avoidRect, margin)) {
-            collision = true;
-            break;
-          }
-        }
-        
-        // Comprobar colisión con edificios ya colocados
-        if (!collision) {
-          for (const placedRect of placed) {
-            if (rectsOverlapWithMargin(rect, placedRect, margin)) {
-              collision = true;
-              break;
-            }
-          }
-        }
-        
-        // Si no hay colisiones, colocar el edificio
-        if (!collision) {
-          placed.push(rect);
-          placed_in_cell = true;
-          count++;
-        }
-      }
-    }
-  }
-  
-  // Si no pudimos colocar todos, intentar rellenar los que faltan
-  if (count < n) {
-    const remaining = scatterRects(
-      n - count,
-      widthRange,
-      heightRange,
-      [...avoid, ...placed],
-      zone,
-      margin
-    );
+
+  if (placed.length < n && typeof scatterRects === 'function') {
+    const remaining = scatterRects(n - placed.length, widthRange, heightRange, [...avoid, ...placed], zone, margin);
     placed.push(...remaining);
   }
-  
+
   return placed;
 }
 
@@ -842,6 +799,37 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     );
     malls.push(...mallPositions);
     avoidList.push(...malls);
+    // --- Remove specific items per user request ---
+    try{
+      // Remove 'Biblioteca 3' if it was added
+      for (let i = government.placed.length - 1; i >= 0; i--) {
+        const it = government.placed[i];
+        if (it && typeof it.label === 'string' && it.label.trim() === 'Biblioteca 3') {
+          government.placed.splice(i, 1);
+        }
+      }
+
+      // Remove any mall located in the bottom-left corner of the world
+      const removedMalls = [];
+      for (let i = malls.length - 1; i >= 0; i--) {
+        const m = malls[i];
+        if (!m) continue;
+        const c = centerOf(m);
+        // bottom-left heuristic: x in left 25% and y in bottom 25%
+        if (c.x < WORLD.w * 0.25 && c.y > WORLD.h * 0.75) {
+          removedMalls.push(m);
+          malls.splice(i, 1);
+        }
+      }
+      // Remove removed malls from avoidList as well
+      if (removedMalls.length > 0) {
+        for (const rm of removedMalls) {
+          const idx = avoidList.indexOf(rm);
+          if (idx !== -1) avoidList.splice(idx, 1);
+        }
+        console.log('Removed malls in bottom-left corner:', removedMalls.length);
+      }
+    }catch(e){ console.warn('Error removing requested items', e); }
 
     // Distribuir instituciones gubernamentales uniformemente
   const govTypes = ['escuela', 'hospital', 'policia', 'estadio', 'central_electrica', 'bomberos'];
@@ -938,6 +926,60 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       return false;
     }
 
+    // Mover un edificio fuera de la calle/avenida si su centro está sobre una vía
+    function moveBuildingOffRoad(label){
+      try{
+        if(!label) return false;
+        const needle = (''+label).toString().trim().toLowerCase();
+        const lists = [...government.placed, ...shops, ...factories, ...banks, ...malls, ...houses];
+        const allOthers = [...government.placed, ...shops, ...factories, ...banks, ...malls, ...houses];
+        const isOnAnyRoad = (rect) => {
+          const c = centerOf(rect);
+          for(const r of [...avenidas, ...roadRects]){ if(inside(c, r)) return true; }
+          for(const ra of roundabouts){ const d = Math.hypot(c.x - ra.cx, c.y - ra.cy); if(d < ra.w/2) return true; }
+          return false;
+        };
+
+        for(const it of lists){
+          if(!it) continue;
+          const lab = (it.label || it.k || it.kind || it.type || '').toString().trim().toLowerCase();
+          if(lab !== needle) continue;
+          // if already moved before, skip
+          if(it.__movedOffRoad) return true;
+          if(!isOnAnyRoad(it)) { it.__movedOffRoad = true; return true; }
+          // try simple shifts first
+          if(tryShiftRect(it, allOthers, 40)){
+            if(!isOnAnyRoad(it)) { it.__movedOffRoad = true; return true; }
+          }
+          // spiral search for nearest free spot not on road
+          const startCx = Math.max(5, Math.min(WORLD.w - it.w - 5, it.x));
+          const startCy = Math.max(5, Math.min(WORLD.h - it.h - 5, it.y));
+          const step = 20;
+          const maxR = Math.max(WORLD.w, WORLD.h);
+          for(let r=step; r<=maxR; r+=step){
+            const steps = Math.max(8, Math.floor((2*Math.PI*r)/step));
+            for(let s=0;s<steps;s++){
+              const ang = (s/steps) * Math.PI * 2;
+              const nx = Math.round(startCx + Math.cos(ang) * r);
+              const ny = Math.round(startCy + Math.sin(ang) * r);
+              const cand = { x: Math.max(5, Math.min(WORLD.w - it.w - 5, nx)), y: Math.max(5, Math.min(WORLD.h - it.h - 5, ny)), w: it.w, h: it.h };
+              // avoid overlaps
+              const coll = allOthers.some(o => o !== it && rectsOverlapWithMargin(cand, o, 6));
+              if(coll) continue;
+              // ensure not on road
+              if(!isOnAnyRoad(cand)){
+                it.x = cand.x; it.y = cand.y; it.__movedOffRoad = true; return true;
+              }
+            }
+          }
+          // fallback: keep original but mark attempted
+          it.__movedOffRoad = true;
+          return false;
+        }
+        return false;
+      }catch(e){ console.warn('moveBuildingOffRoad error', e); return false; }
+    }
+
     // Si existen dos hospitales muy juntos, forzarlos a los extremos izquierdo/derecho
     try{
       const hosp = government.placed.filter(g => ((g.k||g.kind||'').toString().toLowerCase().includes('hospital')));
@@ -1019,10 +1061,121 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }catch(e){ console.warn('enforceSameTypeSeparation error', e); }
     }
 
+    // Forzar unicidad por sector: una sola instancia de cada tipo por sector (excepto casas)
+    function enforceSectorUniqueness(nx = 4, ny = 4){
+      try{
+        const allLists = [...government.placed, ...shops, ...factories, ...banks, ...malls];
+        const sectorW = Math.max(1, Math.floor(WORLD.w / nx));
+        const sectorH = Math.max(1, Math.floor(WORLD.h / ny));
+        const sectorHas = new Map(); // key: sx+','+sy -> Set of type keys
+
+        const getTypeKey = (it) => ('' + (it.k || it.kind || it.label || it.type || '')).toLowerCase();
+        const sectorOf = (x,y) => {
+          const sx = Math.min(nx-1, Math.max(0, Math.floor(x / sectorW)));
+          const sy = Math.min(ny-1, Math.max(0, Math.floor(y / sectorH)));
+          return `${sx},${sy}`;
+        };
+
+        // populate
+        for(const it of allLists){
+          if(!it) continue;
+          const t = getTypeKey(it);
+          if(!t) continue;
+          const c = centerOf(it);
+          const s = sectorOf(c.x, c.y);
+          const set = sectorHas.get(s) || new Set();
+          set.add(t);
+          sectorHas.set(s, set);
+        }
+
+        // Now enforce: for each item, if its sector already had same type more than once,
+        // move duplicates to nearest sector without that type.
+        const sectors = [];
+        for(let sx=0;sx<nx;sx++) for(let sy=0;sy<ny;sy++) sectors.push({sx,sy,x:sx*sectorW,y:sy*sectorH,w:sectorW,h:sectorH});
+
+        const findNearestAvailableSector = (fromS, typeKey) => {
+          const [fx,fy] = fromS.split(',').map(Number);
+          let best = null; let bestDist = Infinity;
+          for(const s of sectors){
+            const key = `${s.sx},${s.sy}`;
+            const set = sectorHas.get(key);
+            if(set && set.has(typeKey)) continue;
+            const cx = s.x + s.w/2, cy = s.y + s.h/2;
+            const dist = Math.hypot((fx*s.w + s.w/2) - cx, (fy*s.h + s.h/2) - cy);
+            if(dist < bestDist){ bestDist = dist; best = s; }
+          }
+          return best;
+        };
+
+        for(const it of allLists.slice()){ // clone to be safe
+          if(!it) continue;
+          const t = getTypeKey(it);
+          if(!t) continue;
+          // skip houses
+          if(t === 'house' || t === 'houses') continue;
+          const c = centerOf(it);
+          const sKey = sectorOf(c.x, c.y);
+          const set = sectorHas.get(sKey) || new Set();
+          // count how many of this type in this sector
+          let count = 0;
+          for(const o of allLists){ if(getTypeKey(o) === t && sectorOf(centerOf(o).x, centerOf(o).y) === sKey) count++; }
+          if(count <= 1) continue; // ok
+
+          // find nearest sector without this type
+          const target = findNearestAvailableSector(sKey, t);
+          if(target){
+            // move item to center of target with small jitter
+            const jitter = 20;
+            it.x = Math.max(5, Math.min(WORLD.w - it.w - 5, Math.round(target.x + (target.w/2) - it.w/2 + (Math.random()*jitter*2 - jitter))));
+            it.y = Math.max(5, Math.min(WORLD.h - it.h - 5, Math.round(target.y + (target.h/2) - it.h/2 + (Math.random()*jitter*2 - jitter))));
+            // try to shift if collision
+            const others = [...government.placed, ...shops, ...factories, ...banks, ...malls, ...houses];
+            tryShiftRect(it, others, 40);
+            // update maps
+            const oldSet = sectorHas.get(sKey);
+            if(oldSet) { oldSet.delete(t); }
+            const newKey = `${target.sx},${target.sy}`;
+            const newSet = sectorHas.get(newKey) || new Set();
+            newSet.add(t); sectorHas.set(newKey, newSet);
+          }
+        }
+      }catch(e){ console.warn('enforceSectorUniqueness error', e); }
+    }
+
     function removeRectFromCollections(r){
       const lists = [houses, government.placed, shops, factories, banks, malls];
       for(const lst of lists){ const idx = lst.indexOf(r); if(idx!==-1){ lst.splice(idx,1); return true; } }
       return false;
+    }
+
+    // Eliminar por lista de labels (case-insensitive) en todas las colecciones y en window.gameState
+    function removeByLabels(labels){
+      try{
+        const needle = (s) => (s || '').toString().trim().toLowerCase();
+        const set = new Set((labels||[]).map(l => (''+l).toString().trim().toLowerCase()));
+
+        const removeFromList = (lst) => {
+          for(let i = lst.length - 1; i >= 0; i--){
+            const it = lst[i];
+            const lab = needle(it && (it.label || it.k || it.kind || it.type));
+            if(lab && set.has(lab)) lst.splice(i,1);
+          }
+        };
+
+        removeFromList(government.placed);
+        removeFromList(shops);
+        removeFromList(factories);
+        removeFromList(banks);
+        removeFromList(malls);
+        removeFromList(houses);
+
+        // también limpiar estado del servidor si aplica
+        if(window.gameState){
+          if(Array.isArray(window.gameState.shops)) window.gameState.shops = window.gameState.shops.filter(s => !set.has(needle(s && (s.label || s.k || s.kind || s.type))));
+          if(window.gameState.government && Array.isArray(window.gameState.government.placed)) window.gameState.government.placed = window.gameState.government.placed.filter(g => !set.has(needle(g && (g.label || g.k || g.kind || g.type))));
+        }
+        console.log('removeByLabels executed for', Array.from(set));
+      }catch(e){ console.warn('removeByLabels error', e); }
     }
 
     function enforceNoOverlap(margin = 6){
@@ -1047,6 +1200,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
     }
 
+  // Forzar unicidad por sector antes de separar por tipo
+  enforceSectorUniqueness(4,4);
   // Intentar primero separar edificios iguales con una distancia mayor
   enforceSameTypeSeparation(220);
   // Ejecutar la limpieza final con un margen conservador
@@ -1125,10 +1280,22 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 }
 
   function drawAvenidas(){
+    const pat = getStreetPattern(ctx);
     for(const av of avenidas){
-      const p=toScreen(av.x,av.y);
-      ctx.fillStyle='rgba(75,85,99,0.95)'; ctx.fillRect(p.x,p.y,av.w*ZOOM,av.h*ZOOM);
-      ctx.strokeStyle='rgba(156,163,175,0.95)'; ctx.lineWidth=2*ZOOM; ctx.strokeRect(p.x,p.y,av.w*ZOOM,av.h*ZOOM);
+      const p = toScreen(av.x, av.y);
+      const w = av.w * ZOOM, h = av.h * ZOOM;
+      if(pat){
+        ctx.save();
+        // translate pattern origin so it moves with cam
+        ctx.translate(p.x, p.y);
+        ctx.fillStyle = pat;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }else{
+        ctx.fillStyle = 'rgba(75,85,99,0.95)';
+        ctx.fillRect(p.x, p.y, w, h);
+      }
+      ctx.strokeStyle='rgba(156,163,175,0.95)'; ctx.lineWidth=2*ZOOM; ctx.strokeRect(p.x,p.y,w,h);
     }
   }
   function drawRoundabouts(){
@@ -1191,6 +1358,15 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Asegurar que las panaderías no compradas se eliminen antes de dibujar
   try{ removeUnownedPanaderias(); }catch(e){}
 
+  // Eliminar etiquetas solicitadas por el usuario (ej: 'Hospital 3', 'Escuela 2', etc.)
+  try{
+  removeByLabels(['hospital 3','escuela 2','central electrica 2','policia 2','policia 4','central electrica 1','edificio 7','central eléctrica 2','panaderia 4','panaderia 5','panadería 4','panadería 5']);
+  }catch(e){ console.warn('Error invoking removeByLabels', e); }
+
+  // Las panaderías solo deben mostrarse cuando tengan ownerId; la función
+  // removeUnownedPanaderias() y los filtros en getVisibleShops() se encargan
+  // de ocultar las panaderías que no han sido compradas.
+
   // Fondo base del canvas (claro). Las imágenes de barrio se dibujan por barrio en drawBarrios
   ctx.fillStyle = '#fff8e1'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     // Dibujar el fondo tileado del mundo (se adapta a cam.x/cam.y y ZOOM)
@@ -1199,16 +1375,59 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     // Dibujar barrios (los barrios ya no necesitan pintar la imagen)
     drawBarrios();
     drawAvenidas(); drawRoundabouts();
-    for(const r of roadRects){const p=toScreen(r.x,r.y);ctx.fillStyle='rgba(75,85,99,0.95)';ctx.fillRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);}
+    for(const r of roadRects){
+      const p = toScreen(r.x, r.y);
+      const w = r.w * ZOOM, h = r.h * ZOOM;
+      const pat = getStreetPattern(ctx);
+      if(pat){
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.fillStyle = pat;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }else{
+        ctx.fillStyle='rgba(75,85,99,0.95)';
+        ctx.fillRect(p.x, p.y, w, h);
+      }
+      ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,w,h);
+    }
 
 
   // Preferir arrays sincronizadas desde el servidor cuando estén disponibles
-  // Ocultar solo panaderías sin dueño
   const renderShopsRaw = (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
-  const renderShops = renderShopsRaw.filter(s => !(s.kind === 'panadería' && !s.ownerId));
+  // Mostrar todas las tiendas, incluidas las panaderías
+  const renderShops = renderShopsRaw;
     const renderHouses = window.__netHouses || houses;
   const renderGovernmentPlaced = (window.gameState && window.gameState.government && Array.isArray(window.gameState.government.placed) && window.gameState.government.placed.length > 0) ? window.gameState.government.placed : government.placed;
   const usingServerGov = (window.gameState && window.gameState.government && Array.isArray(window.gameState.government.placed) && renderGovernmentPlaced === window.gameState.government.placed);
+
+  // Intento único de mover 'Central Eléctrica 1' fuera de una calle si está sobre ella
+  try{ moveBuildingOffRoad('Central Eléctrica 1'); }catch(e){ /* ignore */ }
+
+  // Mantener visible sólo UNA panadería al comienzo (prefiere una con ownerId si existe)
+  try{
+    if(!window.__keptOnePanaderia){
+      (function keepSinglePanaderia(){
+        try{
+          const allShops = (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
+          const isPan = s => (s && (s.k || s.kind || s.label || '').toString().toLowerCase().includes('panader'));
+          const panList = allShops.filter(isPan);
+          if(panList.length <= 1) return;
+          // prefer owned panaderia
+          let keeper = panList.find(p=>p.ownerId!=null && p.ownerId!=='' );
+          if(!keeper) keeper = panList[0];
+          // remove others from shops array
+          for(let i = shops.length-1; i>=0; i--){ if(isPan(shops[i]) && shops[i] !== keeper) shops.splice(i,1); }
+          // also from server shadow
+          if(window.gameState && Array.isArray(window.gameState.shops)){
+            window.gameState.shops = window.gameState.shops.filter(s => !isPan(s) || s === keeper);
+          }
+          window.__keptOnePanaderia = true;
+          console.log('keepSinglePanaderia: kept', keeper && (keeper.label||keeper.k||keeper.id||keeper._id)||'unknown');
+        }catch(e){ console.warn('keepSinglePanaderia error', e); }
+      })();
+    }
+  }catch(e){ }
 
     factories.forEach(f => {
       drawBuildingWithImage(f, 'factory', '#44403c', '#fbbf24');
@@ -1225,6 +1444,49 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     renderShops.forEach(s => {
       drawBuildingWithImage(s, s.kind, '#8B5CF6', '#c4b5fd');
     });
+
+    // ===== Dibujar etiquetas con nombre/label de cada edificio en el mapa grande =====
+    try{
+      // Reunir todas las entidades que se muestran en el mapa grande
+      const allVisible = [...renderGovernmentPlaced, ...renderShops, ...factories, ...banks, ...malls, ...renderHouses];
+      // Agrupar por tipo/base para numerar repetidos
+      const groups = new Map();
+      const getBaseName = (it) => {
+        let n = (it && (it.label || it.k || it.kind || it.type) || '').toString();
+        n = n.replace(/_+/g, ' ').trim();
+        // quitar numeración final si existe (ej: 'Biblioteca 1')
+        n = n.replace(/\s+#?\d+$/, '').replace(/\s+\d+$/, '').trim();
+        if(!n) n = 'edificio';
+        return n.charAt(0).toUpperCase() + n.slice(1);
+      };
+      for(const ent of allVisible){
+        if(!ent) continue;
+        const key = getBaseName(ent).toLowerCase();
+        const arr = groups.get(key) || [];
+        arr.push(ent);
+        groups.set(key, arr);
+      }
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      for(const [baseKey, arr] of groups.entries()){
+        for(let i=0;i<arr.length;i++){
+          const ent = arr[i];
+          if(!ent) continue;
+          const base = getBaseName(ent);
+          const display = (arr.length > 1) ? `${base} ${i+1}` : base;
+          const p = toScreen(ent.x, ent.y);
+          const w = (ent.w || 60) * ZOOM;
+          const tx = p.x + w/2;
+          const ty = p.y - 6 * ZOOM; // encima del edificio
+          ctx.lineWidth = Math.max(2, 2 * ZOOM);
+          ctx.font = `${Math.max(10, 12 * ZOOM)}px system-ui,Segoe UI,Arial`;
+          ctx.strokeText(display, tx, ty);
+          ctx.fillText(display, tx, ty);
+        }
+      }
+    }catch(e){ console.warn('Error drawing labels', e); }
 
     for(const inst of renderGovernmentPlaced){
       // Si los datos provienen del servidor, algunos campos (k/key/type) pueden faltar.
@@ -1812,12 +2074,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     setWorldSize(); 
     fitCanvas(); 
     regenInfrastructure(false);
-    // Limpieza: eliminar panaderías locales que no tengan ownerId (no deben aparecer al iniciar)
-    // Limpieza: eliminar panaderías locales que no tengan ownerId (no deben aparecer al iniciar)
-    for (let i = shops.length - 1; i >= 0; i--) {
-      const s = shops[i];
-      if (s && s.kind === 'panadería' && !s.ownerId) { shops.splice(i, 1); }
-    }
+  // Mantener las panaderías tal como vienen (no eliminar al iniciar)
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
     const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
@@ -1888,6 +2145,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }catch(e){}
 
   const allBuildings = [cemetery,government,...banks,...malls,...factories,...houses,...(window.__netHouses||[]),...roadRects,...getVisibleShops(), ...avenidas, ...roundabouts, ...government.placed];
+  // Eliminar Edificio 5 y Edificio 6 si existen (petición del usuario)
+  try{ removeByLabels(['edificio 5','edificio 6']); }catch(e){ }
 
     if(placingHouse){
       const u=agents.find(a=>a.id===placingHouse.ownerId); if(!u){ placingHouse=null; return; }
@@ -1905,6 +2164,30 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(u.houseIdx !== null && houses[u.houseIdx]) { houses[u.houseIdx].rentedBy = null; }
       houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
       toast('Casa propia construida 🏠'); return;
+    }
+
+    // Colocación de negocio desde el menú (ej: panadería). Debe aparecer justo donde se hace click.
+    if(placingShop){
+      const u = agents.find(a => a.id === placingShop.ownerId);
+      if(!u){ placingShop = null; return; }
+      const size = placingShop.size || {w: CFG.SHOP_W, h: CFG.SHOP_H};
+      const newShop = { x: pt.x - size.w/2, y: pt.y - size.h/2, w: size.w, h: size.h, kind: placingShop.kind.k || placingShop.kind, ownerId: u.id };
+      // comprobar colisiones
+      if(allBuildings.some(r => rectsOverlapWithMargin(r, newShop, 8))){ toast('No se puede colocar el negocio aquí (colisión).'); placingShop = null; return; }
+      if((u.money || 0) < (placingShop.price || 0)){ toast('Saldo insuficiente.'); placingShop = null; return; }
+      // enviar al servidor si corresponde
+      if(hasNet()){
+        window.sock?.emit('placeShop', newShop, (res) => {
+          if(res?.ok){ u.money -= (placingShop.price || 0); shops.push(newShop); placingShop = null; toast('Negocio colocado.'); }
+          else { toast(res?.msg || 'Error al colocar negocio'); placingShop = null; }
+        });
+      }else{
+        u.money -= (placingShop.price || 0);
+        shops.push(newShop);
+        placingShop = null;
+        toast('Negocio colocado (local).');
+      }
+      return;
     }
     if(placingShop){
       const u=agents.find(a=>a.id===placingShop.ownerId); if(!u){ placingShop=null; return; }
@@ -2218,3 +2501,5 @@ function assignRental(agent) {
   agent.houseIdx = houses.indexOf(randomHouse);
   return true;
 }
+
+// ... no street pattern cache/helpers
