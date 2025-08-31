@@ -1,10 +1,11 @@
 /* estilos.css - estilos básicos para Mundo Urbano Multijugador */
 :root {
-  --bg: #0f1720;
-  --card: #0b1220;
-  --accent: #2dd4bf;
-  --muted: #94a3b8;
-  --text: #e6eef6;
+  /* Fondo cambiado a tonos amarillos y texto a oscuro para contraste */
+  --bg: #ffd54f; /* amarillo principal */
+  --card: #fff8e1; /* tarjeta más clara */
+  --accent: #ff9800; /* acento naranja/amarillo */
+  --muted: #8b6b00;
+  --text: #222222; /* texto oscuro */
   --danger: #ef4444;
 }
 
@@ -12,7 +13,7 @@
 html, body { height: 100%; }
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background: linear-gradient(180deg, var(--bg) 0%, #07101a 100%);
+  background: linear-gradient(180deg, var(--bg) 0%, #fff8e1 100%);
   color: var(--text);
   line-height: 1.35;
   padding: 16px;
@@ -29,11 +30,11 @@ header.app-header h1 { font-size: 1.4rem; color: var(--accent); }
 
 /* tarjetas y bloques */
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.04);
+  background: linear-gradient(180deg, rgba(255,245,157,0.6), rgba(255,249,196,0.8));
+  border: 1px solid rgba(0,0,0,0.06);
   border-radius: 10px;
   padding: 12px;
-  box-shadow: 0 6px 14px rgba(2,6,23,0.6);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
 }
 
 /* elemento govDesc que mencionaste antes */

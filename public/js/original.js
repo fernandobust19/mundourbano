@@ -153,16 +153,17 @@ const BUILDING_IMAGES = {
   juguería: 'https://i.postimg.cc/Y0TbTcQZ/jugo.png',
   cafetería: 'https://i.postimg.cc/J4gfCv11/cafeteria.png',
   heladería: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
-  pizzería: 'https://i.postimg.cc/nhb3kJFQ/pizzería.png',
-  librería: 'https://i.postimg.cc/jSncineclubrWK8w/librería.png',
-  juguetería: 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
+  'pizzería': 'https://i.postimg.cc/nhb3kJFQ/pizzeria.png',
+  // usar imagen local de respaldo para librería (evita 404s si la remota falla)
+  'librería': '/assets/fondo1.jpg',
+  'juguetería': 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
   'yoga studio': 'https://i.postimg.cc/8Ps23NgK/yoga_estudio.png',
   'dance hall': 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
   'tienda deportes': 'https://i.postimg.cc/XvWDV0t0/deportes.png',
   'arte & galería': 'https://i.postimg.cc/VvZ36HnW/galeria.png',
-  cineclub: 'https://i.postimg.cc/8cz2TVJC/cine_club.png',
+  'cineclub': 'https://i.postimg.cc/8cz2TVJC/cine_club.png',
   'gamer zone': 'https://i.postimg.cc/c48DwHSS/gamer.png',
-  senderismo: 'https://i.postimg.cc/PrxHj1YM/senderismo.png',
+  'senderismo': 'https://i.postimg.cc/PrxHj1YM/senderismo.png',
   'foto-lab': 'https://i.postimg.cc/pVkv4shT/foto_club.png',
   'astro club': 'https://i.postimg.cc/c4bS46cG/astro_club.png',
   restaurante: 'https://i.postimg.cc/vHwKPbTd/20250827_070529.png',
@@ -209,6 +210,12 @@ function preloadImages() {
 
 // Ejecutar precarga inmediatamente
 preloadImages();
+
+// Imagen de fondo del mundo: usar el JPG local directamente para evitar 404 por PNG
+const BG_IMG = new Image();
+BG_IMG.onload = () => { console.log('Background image loaded:', BG_IMG.src); };
+BG_IMG.onerror = function() { console.warn('Background image not found at /assets/fondo1.jpg — usando color de respaldo'); };
+BG_IMG.src = '/assets/fondo1.jpg';
 
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
@@ -860,17 +867,55 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }
   function drawBarrios(){
     for(const b of barrios){
-      const p=toScreen(b.x,b.y);
-      ctx.fillStyle='rgba(12,18,42,0.55)'; ctx.fillRect(p.x,p.y,b.w*ZOOM,b.h*ZOOM);
-      ctx.strokeStyle='rgba(51,65,85,0.9)'; ctx.lineWidth=2*ZOOM; ctx.strokeRect(p.x,p.y,b.w*ZOOM,b.h*ZOOM);
-      ctx.font=`700 ${Math.max(10,14*ZOOM)}px system-ui,Segoe UI`; ctx.fillStyle='rgba(147,197,253,0.95)';
-      ctx.fillText(b.name, p.x+8*ZOOM, p.y+18*ZOOM);
+      const p = toScreen(b.x, b.y);
+      const bw = b.w * ZOOM, bh = b.h * ZOOM;
+      // Si hay una imagen de fondo global, no rellenamos el barrio (background ya está tileado)
+      if (!(BG_IMG && BG_IMG.complete && BG_IMG.naturalWidth > 0)) {
+        ctx.fillStyle = 'rgba(12,18,42,0.55)'; ctx.fillRect(p.x, p.y, bw, bh);
+      }
+      // Borde del barrio
+      ctx.strokeStyle = 'rgba(51,65,85,0.9)'; ctx.lineWidth = 2 * ZOOM; ctx.strokeRect(p.x, p.y, bw, bh);
+      // Etiqueta del barrio
+      ctx.font = `700 ${Math.max(10, 14 * ZOOM)}px system-ui,Segoe UI`;
+      ctx.fillStyle = 'rgba(34,34,34,0.95)';
+      // Dar sombra ligera para mejorar legibilidad
+      ctx.shadowColor = 'rgba(255,255,255,0.6)'; ctx.shadowBlur = 2 * ZOOM;
+      ctx.fillText(b.name, p.x + 8 * ZOOM, p.y + 18 * ZOOM);
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+    }
+  }
+
+  // Dibuja la imagen de fondo repetida (tile) a lo largo del mundo, ajustándose al zoom/cámara
+  function drawTiledBackground(){
+    if (!(BG_IMG && BG_IMG.complete && BG_IMG.naturalWidth > 0)) return;
+    const tileW = BG_IMG.naturalWidth;
+    const tileH = BG_IMG.naturalHeight;
+    // Región visible en coordenadas del mundo
+    const vx0 = cam.x, vy0 = cam.y;
+    const vw = canvas.width / ZOOM, vh = canvas.height / ZOOM;
+    // Indices de tiles a dibujar (añadir margen de 1 tile para evitar huecos)
+    const i0 = Math.max(Math.floor(vx0 / tileW) - 1, 0);
+    const j0 = Math.max(Math.floor(vy0 / tileH) - 1, 0);
+    const i1 = Math.min(Math.ceil((vx0 + vw) / tileW) + 1, Math.ceil(WORLD.w / tileW));
+    const j1 = Math.min(Math.ceil((vy0 + vh) / tileH) + 1, Math.ceil(WORLD.h / tileH));
+    for(let i = i0; i < i1; i++){
+      for(let j = j0; j < j1; j++){
+        const wx = i * tileW, wy = j * tileH;
+        const p = toScreen(wx, wy);
+        ctx.drawImage(BG_IMG, p.x, p.y, tileW * ZOOM, tileH * ZOOM);
+      }
     }
   }
 
   function drawWorld(){
-    ctx.fillStyle = '#0b1220';ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawGrid(); drawAvenidas(); drawRoundabouts();
+  // Fondo base del canvas (claro). Las imágenes de barrio se dibujan por barrio en drawBarrios
+  ctx.fillStyle = '#fff8e1'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Dibujar el fondo tileado del mundo (se adapta a cam.x/cam.y y ZOOM)
+    drawTiledBackground();
+    drawGrid();
+    // Dibujar barrios (los barrios ya no necesitan pintar la imagen)
+    drawBarrios();
+    drawAvenidas(); drawRoundabouts();
     for(const r of roadRects){const p=toScreen(r.x,r.y);ctx.fillStyle='rgba(75,85,99,0.95)';ctx.fillRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);}
 
     factories.forEach(f => {
@@ -1110,7 +1155,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if (ZOOM >= 0.7) {
         ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-        ctx.fillText(`${p.code||'P'}`, pt.x, pt.y - 8*ZOOM);
+  ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - 8*ZOOM);
       }
     }
   }
@@ -1269,7 +1314,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
         ctx.fillStyle='#fff'; ctx.textAlign='center';
         const age = (yearsSince(a.bornEpoch)|0);
-        ctx.fillText(`${a.code}·${age}`, p.x, p.y-8*ZOOM);
+  ctx.fillText(`${a.name||a.code}·${age}`, p.x, p.y-8*ZOOM);
       }
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
@@ -1457,7 +1502,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     agents.forEach(a => { if (assignRental(a)) { const home = houses[a.houseIdx]; if (home) { a.target = centerOf(home); a.targetRole = 'home'; } } });
     const b0=cityBlocks[0]; if(b0){ cam.x = Math.max(0, b0.x - 40); cam.y = Math.max(0, b0.y - 40); clampCam(); }
     updateGovDesc();
-    try{ const uiAvatar = document.getElementById('uiAvatar'); if(uiAvatar && user.avatar) uiAvatar.src = user.avatar; const userName = document.getElementById('userName'); if(userName) userName.textContent = user.code || user.name || 'Usuario'; }catch(e){}
+  try{ const uiAvatar = document.getElementById('uiAvatar'); if(uiAvatar && user.avatar) uiAvatar.src = user.avatar; const userName = document.getElementById('userName'); if(userName) userName.textContent = user.name || user.code || 'Usuario'; }catch(e){}
     loop();
   }
   const startHandler = ()=>{const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,gender,age,likes,usd});};
@@ -1585,7 +1630,16 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
   function drawMiniMap(){
     const w=miniCanvas.width, h=miniCanvas.height; mctx.clearRect(0,0,w,h);
-    mctx.fillStyle='#0b142b'; mctx.fillRect(0,0,w,h);
+    // Mini-mapa: usar la misma imagen de fondo (escalada) si está disponible
+    if (BG_IMG && BG_IMG.complete && BG_IMG.naturalWidth > 0) {
+      const iw = BG_IMG.naturalWidth, ih = BG_IMG.naturalHeight;
+      const scale = Math.max(w / iw, h / ih);
+      const iwScaled = iw * scale, ihScaled = ih * scale;
+      const dx = (w - iwScaled) / 2, dy = (h - ihScaled) / 2;
+      mctx.drawImage(BG_IMG, dx, dy, iwScaled, ihScaled);
+    } else {
+      mctx.fillStyle='#fff8e1'; mctx.fillRect(0,0,w,h);
+    }
     const sx = w / WORLD.w, sy = h / WORLD.h;
     const mrect=(r,fill)=>{ mctx.fillStyle=fill; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy)); };
     cityBlocks.forEach(r=>mrect(r,'#334155'));
@@ -1750,6 +1804,7 @@ function makeAgent(state, options = {}) {
   return {
     id,
     code,
+  name: options.name || code,
     state,
     gender,
     bornEpoch,
