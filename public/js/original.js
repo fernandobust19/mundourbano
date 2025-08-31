@@ -1,6 +1,18 @@
 // Archivo restaurado: sin <script> ni IIFE innecesario
   const $ = s => document.querySelector(s);
-  const show = (el, on=true)=> el.style.display = on? 'flex':'none';
+  const show = (el, on=true)=>{
+    if(!el) return;
+    try{
+      // Si es el panel principal, usar clase collapsed para animación
+      if(el.id === 'uiDock'){
+        if(on){ el.classList.remove('collapsed'); el.style.display='flex'; }
+        else { el.classList.add('collapsed'); /* dejar display para la animación y desactivar interacción */ setTimeout(()=>{ if(el.classList.contains('collapsed')) el.style.display='none'; }, 280); }
+        return;
+      }
+      // Modal-like elements: mantener comportamiento previo
+      el.style.display = on? 'flex':'none';
+    }catch(e){ console.warn('show() error', e); }
+  };
   const toastLimiter = { last: 0, gap: 400 }; // ms
   const toast = (msg)=>{
     const now = performance.now();
@@ -127,9 +139,9 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   // Mapeo directo de imágenes para edificaciones
 const BUILDING_IMAGES = {
   // Instituciones gubernamentales con URLs corregidas
-  parque: 'https://i.postimg.cc/C52F49Yd/20250827-033954.jpg',
+  parque: 'https://i.postimg.cc/2jwdggYM/20250826-110318.png',
   escuela: 'https://i.postimg.cc/x1PTBFPx/escuela.png', // URL alternativa 
-  biblioteca: 'https://i.postimg.cc/pdYZwHmh/biblioteca.png',
+  // biblioteca removed
   policia: 'https://i.postimg.cc/YCHr4sgt/policia.png',
   hospital: 'https://i.postimg.cc/y8yV0yXc/hospital.png',
   central_electrica: 'https://i.postimg.cc/8zfXn9dM/electrica.png', // ACTUALIZADA
@@ -145,17 +157,19 @@ const BUILDING_IMAGES = {
   gobierno: 'https://i.postimg.cc/PJ2mZvKT/20250826-103751.png',
   
   // Tiendas específicas
-  panadería: 'https://i.postimg.cc/sDHYgSvJ/20250827-065353.png',
   bar: 'https://i.postimg.cc/Pqfdyv2c/Bar.png',
+  panadería: 'https://i.postimg.cc/sDHYgSvJ/20250827-065353.png',
+  biblioteca: 'https://i.postimg.cc/rwmxy3tf/20250831_110133.png',
   
+  // Nuevas URLs agregadas para negocios faltantes
   // Nuevas URLs agregadas para negocios faltantes
   kiosco: 'https://i.postimg.cc/xjp7LhNK/kiosco.png',
   juguería: 'https://i.postimg.cc/Y0TbTcQZ/jugo.png',
   cafetería: 'https://i.postimg.cc/J4gfCv11/cafeteria.png',
   heladería: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
   'pizzería': 'https://i.postimg.cc/nhb3kJFQ/pizzeria.png',
-  // usar imagen local de respaldo para librería (evita 404s si la remota falla)
-  'librería': '/assets/fondo1.jpg',
+  // (se removió la entrada de librería por solicitud)
+  // 'librería': '/assets/fondo1.jpg',
   'juguetería': 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
   'yoga studio': 'https://i.postimg.cc/8Ps23NgK/yoga_estudio.png',
   'dance hall': 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
@@ -173,7 +187,7 @@ const BUILDING_IMAGES = {
   universidad: 'https://i.imgur.com/hvsZIsB.png', // URL alternativa
   tribunal: 'https://i.imgur.com/zZ8FVOB.png', // URL alternativa
   teatro: 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
-  estadio: 'https://i.imgur.com/BtFQu1V.png' // URL alternativa
+  estadio: 'https://i.postimg.cc/tgZKH7hS/20250827-052454.png' // URL solicitada por el usuario
 };
 
 // Precarga de imágenes para mejor rendimiento
@@ -210,6 +224,9 @@ function preloadImages() {
 
 // Ejecutar precarga inmediatamente
 preloadImages();
+
+// Limpiar cualquier entrada residual de 'librería' en el cache (por versiones antiguas)
+if (BUILDING_IMAGE_CACHE['librería']) { delete BUILDING_IMAGE_CACHE['librería']; }
 
 // Imagen de fondo del mundo: usar el JPG local directamente para evitar 404 por PNG
 const BG_IMG = new Image();
@@ -248,7 +265,6 @@ BG_IMG.src = '/assets/fondo1.jpg';
   const GOV_TYPES = [
     {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)'},
     {k:'escuela', label:'Escuela', cost:CFG.COST_SCHOOL, w:140,h:95, icon:'📚', fill:'rgba(51,65,85,0.92)', stroke:'rgba(148,163,184,0.95)'},
-    {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047'},
     {k:'policia', label:'Policía', cost:CFG.COST_POLICE, w:150,h:80, icon:'🚓', fill:'#3b82f6', stroke:'#dbeafe'},
     {k:'hospital', label:'Hospital', cost:CFG.COST_HOSPITAL, w:180,h:100, icon:'🏥', fill:'#f1f5f9', stroke:'#ef4444'},
     {k:'central_electrica', label:'Central Eléctrica', cost:CFG.COST_POWER, w:200,h:120, icon:'⚡', fill:'#475569', stroke:'#facc15'},
@@ -257,8 +273,9 @@ BG_IMG.src = '/assets/fondo1.jpg';
     {k:'universidad', label:'Universidad Pública', cost:300, w:200,h:120, icon:'🎓', fill:'#1e293b', stroke:'#93c5fd'},
     {k:'tribunal', label:'Tribunal / Corte', cost:260, w:170,h:95, icon:'⚖️', fill:'#111827', stroke:'#9ca3baf'},
     {k:'museo', label:'Museo', cost:200, w:160,h:90, icon:'🏛️', fill:'#3f3f46', stroke:'#cbd5e1'},
+  {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047'},
     {k:'teatro', label:'Teatro', cost:190, w:160,h:90, icon:'🎭', fill:'#1f2937', stroke:'#9ca3baf'},
-    {k:'estadio', label:'Estadio', cost:350, w:230,h:140, icon:'🏟️', fill:'#0b3a1e', stroke:'#10b981'},
+  {k:'estadio', label:'Estadio', cost:420, w:320,h:220, icon:'🏟️', fill:'#0b3a1e', stroke:'#10b981'},
     {k:'terminal', label:'Terminal Terrestre', cost:260, w:200,h:110, icon:'🚌', fill:'#0c4a6e', stroke:'#7dd3fc'},
     {k:'correos', label:'Correos del Estado', cost:170, w:150,h:85, icon:'📮', fill:'#0b1f3a', stroke:'#60a5fa'},
     {k:'banco_central', label:'Banco Central', cost:300, w:180,h:100, icon:'🏦', fill:'#2d3748', stroke:'#fde68a'},
@@ -275,14 +292,40 @@ BG_IMG.src = '/assets/fondo1.jpg';
 
   /* ===== Estructuras almacenadas ===== */
   const streets=[], factories=[], banks=[], malls=[], houses=[], barrios=[], deceased=[], avenidas=[], roundabouts=[], shops=[];
+
+  // helper: lista de negocios visibles en el mapa grande
+  function getVisibleShops(){
+    // Preferir el estado del servidor si existe, sino usar el array local
+    const raw = (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
+  // Ocultar solo las panaderías que no tienen dueño (deben comprarse antes de aparecer)
+  return raw.filter(s => !(s && s.kind === 'panadería' && !s.ownerId));
+  }
+
+  // helper: eliminar panaderías no compradas (robusto)
+  function removeUnownedPanaderias(){
+    try{
+      // Si el servidor envía shops, filtrar ahí también
+      if(window.gameState && Array.isArray(window.gameState.shops)){
+        const before = window.gameState.shops.length;
+        window.gameState.shops = window.gameState.shops.filter(s => !(s && s.kind === 'panadería' && !s.ownerId));
+        const after = window.gameState.shops.length;
+        if(before !== after) console.log(`Removed ${before-after} unowned panaderias from gameState.shops`);
+      }
+      // Limpiar la lista local
+      for(let i = shops.length - 1; i >= 0; i--){
+        const s = shops[i];
+        if(s && s.kind === 'panadería' && !s.ownerId){ shops.splice(i,1); }
+      }
+    }catch(e){ console.warn('removeUnownedPanaderias error', e); }
+  }
   const SHOP_TYPES = [
-      {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400},
+  {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400},
       {k:'kiosco', icon:'🏪', like:'kiosco', price:1, buyCost: 450},
       {k:'juguería', icon:'🥣', like:'jugos', price:1, buyCost: 500},
       {k:'cafetería', icon:'☕', like:'café', price:2, buyCost: 800},
       {k:'heladería', icon:'🍨', like:'helado', price:2, buyCost: 850},
       {k:'pizzería', icon:'🍕', like:'pizza', price:2, buyCost: 900},
-      {k:'librería', icon:'📚', like:'libros', price:2, buyCost: 1000},
+  // 'librería' removida por solicitud
       {k:'juguetería', icon:'🧸', like:'juguetes', price:2, buyCost: 1000},
       {k:'yoga studio', icon:'🧘', like:'yoga', price:2, buyCost: 1100},
       {k:'dance hall', icon:'💃', like:'baile', price:2, buyCost: 1100},
@@ -322,8 +365,10 @@ BG_IMG.src = '/assets/fondo1.jpg';
       }
       if (Array.isArray(payload?.shops)) {
         // Reemplazar el array local de tiendas con los datos del servidor
-        shops.length = 0;
-        shops.push(...payload.shops);
+  // filtrar panaderías sin propietario (no deben aparecer hasta comprarse)
+  shops.length = 0;
+  const filtered = payload.shops.filter(s => !(s && s.kind === 'panadería' && !s.ownerId));
+  shops.push(...filtered);
       }
     }catch(e){ console.warn('applyServerState error', e); }
   }
@@ -633,6 +678,25 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           label: `Parque ${i+1}`
         });
       });
+      // --- Colocar 4 bibliotecas distribuidas evitando solapamientos ---
+      try{
+        const bibliotecaType = GOV_TYPES.find(t => t.k === 'biblioteca');
+        if(bibliotecaType){
+          const libs = scatterRects(4, [bibliotecaType.w, bibliotecaType.w], [bibliotecaType.h, bibliotecaType.h], avoidList, null, 100);
+          libs.forEach((b, idx) => {
+            government.placed.push({...bibliotecaType, ...b, label: `Biblioteca ${idx+1}`} );
+          });
+          // añadir bibliotecas a la lista de evitación
+          avoidList.push(...libs);
+        }
+      }catch(e){ console.warn('Error placing bibliotecas', e); }
+      // Eliminar explícitamente 'Parque 8' si existe
+      for (let i = government.placed.length - 1; i >= 0; i--) {
+        const it = government.placed[i];
+        if (it && typeof it.label === 'string' && it.label.trim() === 'Parque 8') {
+          government.placed.splice(i, 1);
+        }
+      }
       
       // Agregar un parque grande especial en una zona alejada del mapa
       const bigParkLocation = scatterRects(
@@ -661,6 +725,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       // Agregar estos parques a la lista de evitación para otras estructuras
       avoidList.push(...parkLocations);
       if (bigParkLocation.length > 0) avoidList.push(bigParkLocation[0]);
+
+      // Eliminar parques situados en la esquina inferior derecha (no queremos parque allí)
+      const parkCornerThreshold = 100; // px desde borde
+      for (let i = government.placed.length - 1; i >= 0; i--) {
+        const g = government.placed[i];
+        if (g && g.k === 'parque') {
+          if ((g.x + (g.w || 0) > WORLD.w - parkCornerThreshold) && (g.y + (g.h || 0) > WORLD.h - parkCornerThreshold)) {
+            government.placed.splice(i, 1);
+          }
+        }
+      }
     }
 
     // Cementerio alejado (esquina inferior derecha)
@@ -688,15 +763,22 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }
 
     // Escuelas y hospitales cerca del centro, iconos grandes
-    const initialGovTypes = ['escuela', 'hospital', 'policia', 'biblioteca'];
-    for(const typeKey of initialGovTypes) {
-        const type = GOV_TYPES.find(t => t.k === typeKey);
-        if(type) {
-            const newBuildings = scatterRects(2, [type.w, type.w], [type.h, type.h], avoidList, null, 50);
-            newBuildings.forEach(b => government.placed.push({...type, ...b, icon: type.icon.repeat(3)}));
-            avoidList.push(...newBuildings);
-        }
+  // Asegurar que no se coloquen más de 1 estadio en total (conteo defensivo)
+  // declarar el contador aquí antes de usarlo
+  let estadioTotalCount = 0;
+  const initialGovTypes = ['escuela', 'hospital', 'policia'];
+  for(const typeKey of initialGovTypes) {
+  if (typeKey === 'estadio' && estadioTotalCount >= 1) continue;
+    const type = GOV_TYPES.find(t => t.k === typeKey);
+    if(type) {
+      const newBuildings = scatterRects(2, [type.w, type.w], [type.h, type.h], avoidList, null, 50);
+      newBuildings.forEach(b => {
+        government.placed.push({...type, ...b, icon: type.icon.repeat(3)});
+  if (type.k === 'estadio') estadioTotalCount++;
+      });
+      avoidList.push(...newBuildings);
     }
+  }
 
     // Negocios y fábricas con distribución organizada
     const sameTypeDist = 120; // Aumentado para garantizar más separación
@@ -717,6 +799,23 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       sameTypeDist
     );
     factories.push(...factoryPositions);
+    // Filtrar fábricas con tamaño fuera del rango (defensa contra tamaños raros)
+    const filteredFactories = factories.filter(f => {
+      const wOk = f.w >= 120 && f.w <= 200;
+      const hOk = f.h >= 70 && f.h <= 140;
+      return wOk && hOk;
+    });
+
+    // Asegurar separación entre fábricas (misma clase): no dejar dos fábricas muy cercanas
+    const minFactorySeparation = 140; // px
+    const finalFactories = [];
+    for (const f of filteredFactories) {
+      const tooClose = finalFactories.some(existing => rectsOverlapWithMargin(existing, f, minFactorySeparation));
+      if (!tooClose) finalFactories.push(f);
+    }
+
+    // Reemplazar factories con el set finalizado
+    factories.length = 0; factories.push(...finalFactories);
     avoidList.push(...factories);
 
     // Distribuir bancos ordenadamente
@@ -745,35 +844,213 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     avoidList.push(...malls);
 
     // Distribuir instituciones gubernamentales uniformemente
-    const govTypes = ['escuela', 'hospital', 'policia', 'biblioteca', 'central_electrica', 'bomberos'];
+  const govTypes = ['escuela', 'hospital', 'policia', 'estadio', 'central_electrica', 'bomberos'];
     const placedGovBuildings = [];
     let zoneIndex = 3; // Comenzamos con la última zona
 
     for(const typeKey of govTypes) {
+      // Si la clave es 'estadio' y ya alcanzamos el límite, saltarla
+  if (typeKey === 'estadio' && estadioTotalCount >= 1) continue;
       const type = GOV_TYPES.find(t => t.k === typeKey);
       if(type) {
+        // Nota: no incrementamos aún; lo haremos después de colocar realmente el/los estadios
         const zone = urbanZones[zoneIndex % urbanZones.length];
         zoneIndex++;
         
-        const positions = distributeEvenly(
-          2, // Dos de cada tipo
-          [type.w, type.w],
-          [type.h, type.h],
-          [...avoidList, ...placedGovBuildings],
-          zone,
-          sameTypeDist
-        );
-        
+        let positions = [];
+        // Si es estadio, intentar ubicar un solo estadio (preferir esquina inferior izquierda)
+        if (type.k === 'estadio') {
+          const w = type.w, h = type.h;
+          const marginCorner = 60; // margen inicial para la esquina
+
+          // helper: probar colocar en rect (con pequeño retroceso interior si colisiona)
+          const tryPlaceRect = (x0, y0) => {
+            const maxShift = 6; // intentos
+            const step = 40; // px por intento
+            for (let i = 0; i < maxShift; i++) {
+              const x = x0 + i * step; // desplazar hacia el interior a la derecha
+              const y = y0 - i * step; // desplazar hacia el interior hacia arriba
+              const rect = { x: Math.max(10, Math.min(x, WORLD.w - w - 10)), y: Math.max(10, Math.min(y, WORLD.h - h - 10)), w, h };
+              const collides = [...avoidList, ...placedGovBuildings].some(a => rectsOverlapWithMargin(rect, a, 50));
+              if (!collides) return rect;
+            }
+            return null;
+          };
+
+          // Intentar forzar el estadio en la esquina inferior izquierda (SW)
+          const swX = marginCorner;
+          const swY = WORLD.h - h - marginCorner;
+          const r = tryPlaceRect(swX, swY);
+          if (r) {
+            positions = [r];
+          } else {
+            // fallback: encontrar un solo lugar por distribución
+            positions = distributeEvenly(
+              1,
+              [type.w, type.w],
+              [type.h, type.h],
+              [...avoidList, ...placedGovBuildings],
+              zone,
+              sameTypeDist
+            );
+          }
+        } else {
+          positions = distributeEvenly(
+            2, // Dos de cada tipo
+            [type.w, type.w],
+            [type.h, type.h],
+            [...avoidList, ...placedGovBuildings],
+            zone,
+            sameTypeDist
+          );
+        }
+
         positions.forEach(pos => {
           const govBuilding = {...type, ...pos, icon: type.icon.repeat(3)};
           government.placed.push(govBuilding);
           placedGovBuildings.push(govBuilding);
         });
+        // Si hemos colocado estadios, aumentar el contador para evitar más colocaciones
+        if (type.k === 'estadio' && positions && positions.length > 0) {
+          estadioTotalCount += positions.length;
+        }
       }
     }
 
     // Agregar todos los edificios gubernamentales a la lista de evitación
     avoidList.push(...placedGovBuildings);
+
+    // --- Garantizar que no haya solapamientos entre casas, parques y edificaciones ---
+    function tryShiftRect(rect, others, margin) {
+      const step = 20;
+      const maxRadius = 600;
+      for (let r = step; r <= maxRadius; r += step) {
+        // probar 8 direcciones alrededor
+        const dirs = [[r,0],[-r,0],[0,r],[0,-r],[r,r],[-r,-r],[r,-r],[-r,r]];
+        for (const d of dirs) {
+          const nx = Math.max(5, Math.min(WORLD.w - rect.w - 5, rect.x + d[0]));
+          const ny = Math.max(5, Math.min(WORLD.h - rect.h - 5, rect.y + d[1]));
+          const cand = {x: nx, y: ny, w: rect.w, h: rect.h};
+          const coll = others.some(o => o !== rect && rectsOverlapWithMargin(cand, o, margin));
+          if (!coll) { rect.x = nx; rect.y = ny; return true; }
+        }
+      }
+      return false;
+    }
+
+    // Si existen dos hospitales muy juntos, forzarlos a los extremos izquierdo/derecho
+    try{
+      const hosp = government.placed.filter(g => ((g.k||g.kind||'').toString().toLowerCase().includes('hospital')));
+      if(hosp.length >= 2){
+        const a = hosp[0], b = hosp[1];
+        const ca = centerOf(a), cb = centerOf(b);
+        const closeThresh = 220;
+        if(Math.hypot(ca.x - cb.x, ca.y - cb.y) < closeThresh){
+          const marginEdge = 40;
+          // Ubicar uno a la izquierda y otro a la derecha, centrados verticalmente
+          a.x = Math.max(10, marginEdge);
+          a.y = Math.max(10, Math.min(WORLD.h - a.h - 10, Math.floor(WORLD.h/2 - a.h - 20)));
+          b.x = Math.max(10, WORLD.w - b.w - marginEdge);
+          b.y = Math.max(10, Math.min(WORLD.h - b.h - 10, Math.floor(WORLD.h/2 + 20)));
+          // Intentar desplazar ligeramente si colisionan con otras cosas
+          const all = [...government.placed, ...shops, ...factories, ...banks, ...malls, ...houses];
+          tryShiftRect(a, all, 60);
+          tryShiftRect(b, all, 60);
+          console.log('Hospitals repositioned to left/right to reduce clustering');
+        }
+      }
+    }catch(e){ console.warn('hospital reposition error', e); }
+
+    // Intentar separar edificios del mismo tipo para evitar que queden muy cercanos.
+    // Soporta distancias por tipo (ej: 'central_electrica' más separada).
+    function enforceSameTypeSeparation(minSeparation = 220){
+      try{
+        const groups = {};
+        const gather = (it) => {
+          if(!it) return null;
+          return it.k || it.kind || (it.label && it.label.toLowerCase());
+        };
+
+        // Distancias específicas por tipo (px). Añadir/ajustar según necesidad.
+        const perTypeSep = {
+          'central_electrica': 320,
+          'hospital': 260,
+          'biblioteca': 160,
+          'escuela': 160
+        };
+
+        const candidates = [...government.placed, ...shops, ...factories, ...banks, ...malls, ...houses];
+        for(const c of candidates){
+          const key = gather(c);
+          if(!key) continue;
+          const nk = (''+key).toString().toLowerCase();
+          (groups[nk] ||= []).push(c);
+        }
+
+        const getSepFor = (obj) => {
+          const key = (''+(obj.k || obj.kind || (obj.label||'')).toString()).toLowerCase();
+          return perTypeSep[key] || minSeparation;
+        };
+
+        for(const key in groups){
+          const arr = groups[key];
+          if(arr.length < 2) continue;
+          for(let i=0;i<arr.length;i++){
+            for(let j=i+1;j<arr.length;j++){
+              const a = arr[i], b = arr[j];
+              const ca = centerOf(a), cb = centerOf(b);
+              const dist = Math.hypot(ca.x - cb.x, ca.y - cb.y);
+              const sepA = getSepFor(a), sepB = getSepFor(b);
+              const needed = Math.max(sepA, sepB, minSeparation);
+              if(dist < needed){
+                const others = [...government.placed, ...shops, ...factories, ...banks, ...malls, ...houses];
+                // intentar mover b primero con margen 'needed'
+                if(!tryShiftRect(b, others, needed)){
+                  // intentar mover a
+                  if(!tryShiftRect(a, others, needed)){
+                    // intentar mover b con un margen aún mayor como último intento
+                    tryShiftRect(b, others, Math.max(needed, 420));
+                  }
+                }
+              }
+            }
+          }
+        }
+      }catch(e){ console.warn('enforceSameTypeSeparation error', e); }
+    }
+
+    function removeRectFromCollections(r){
+      const lists = [houses, government.placed, shops, factories, banks, malls];
+      for(const lst of lists){ const idx = lst.indexOf(r); if(idx!==-1){ lst.splice(idx,1); return true; } }
+      return false;
+    }
+
+    function enforceNoOverlap(margin = 6){
+      const all = [...houses, ...government.placed, ...shops, ...factories, ...banks, ...malls];
+      for (let i = 0; i < all.length; i++){
+        for (let j = i + 1; j < all.length; j++){
+          const a = all[i], b = all[j];
+          if (rectsOverlapWithMargin(a, b, margin)){
+            // intentar mover b primero
+            const others = all.slice();
+            if (!tryShiftRect(b, others, margin)){
+              // intentar mover a si b no pudo
+              if (!tryShiftRect(a, others, margin)){
+                // como último recurso, eliminar b
+                removeRectFromCollections(b);
+                // también sacarlo del array 'all' para no seguir comparándolo
+                all.splice(j,1); j--; continue;
+              }
+            }
+          }
+        }
+      }
+    }
+
+  // Intentar primero separar edificios iguales con una distancia mayor
+  enforceSameTypeSeparation(220);
+  // Ejecutar la limpieza final con un margen conservador
+  enforceNoOverlap(8);
   }
 
   /* AGREGAR FUNCIÓN PARA DIBUJAR EDIFICIOS CON IMÁGENES */
@@ -873,8 +1150,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if (!(BG_IMG && BG_IMG.complete && BG_IMG.naturalWidth > 0)) {
         ctx.fillStyle = 'rgba(12,18,42,0.55)'; ctx.fillRect(p.x, p.y, bw, bh);
       }
-      // Borde del barrio
-      ctx.strokeStyle = 'rgba(51,65,85,0.9)'; ctx.lineWidth = 2 * ZOOM; ctx.strokeRect(p.x, p.y, bw, bh);
+      // Borde del barrio: omitir si hay casas dentro (el usuario pidió quitar el recuadro en barrios con casas)
+      const hasHouseInBarrio = houses.some(hh => inside(centerOf(hh), b));
+      if (!hasHouseInBarrio) {
+        ctx.strokeStyle = 'rgba(51,65,85,0.9)'; ctx.lineWidth = 2 * ZOOM; ctx.strokeRect(p.x, p.y, bw, bh);
+      }
       // Etiqueta del barrio
       ctx.font = `700 ${Math.max(10, 14 * ZOOM)}px system-ui,Segoe UI`;
       ctx.fillStyle = 'rgba(34,34,34,0.95)';
@@ -908,6 +1188,9 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }
 
   function drawWorld(){
+  // Asegurar que las panaderías no compradas se eliminen antes de dibujar
+  try{ removeUnownedPanaderias(); }catch(e){}
+
   // Fondo base del canvas (claro). Las imágenes de barrio se dibujan por barrio en drawBarrios
   ctx.fillStyle = '#fff8e1'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     // Dibujar el fondo tileado del mundo (se adapta a cam.x/cam.y y ZOOM)
@@ -917,6 +1200,15 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     drawBarrios();
     drawAvenidas(); drawRoundabouts();
     for(const r of roadRects){const p=toScreen(r.x,r.y);ctx.fillStyle='rgba(75,85,99,0.95)';ctx.fillRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);ctx.strokeStyle='rgba(156,163,175,0.9)';ctx.lineWidth=1*ZOOM; ctx.strokeRect(p.x,p.y,r.w*ZOOM,r.h*ZOOM);}
+
+
+  // Preferir arrays sincronizadas desde el servidor cuando estén disponibles
+  // Ocultar solo panaderías sin dueño
+  const renderShopsRaw = (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
+  const renderShops = renderShopsRaw.filter(s => !(s.kind === 'panadería' && !s.ownerId));
+    const renderHouses = window.__netHouses || houses;
+  const renderGovernmentPlaced = (window.gameState && window.gameState.government && Array.isArray(window.gameState.government.placed) && window.gameState.government.placed.length > 0) ? window.gameState.government.placed : government.placed;
+  const usingServerGov = (window.gameState && window.gameState.government && Array.isArray(window.gameState.government.placed) && renderGovernmentPlaced === window.gameState.government.placed);
 
     factories.forEach(f => {
       drawBuildingWithImage(f, 'factory', '#44403c', '#fbbf24');
@@ -930,23 +1222,29 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     malls.forEach(m => {
       drawBuildingWithImage(m, 'mall', '#1e293b', '#38bdf8');
     });
-    shops.forEach(s => {
+    renderShops.forEach(s => {
       drawBuildingWithImage(s, s.kind, '#8B5CF6', '#c4b5fd');
     });
 
-    for(const inst of government.placed){
-      if(inst.k === 'gobierno'){
+    for(const inst of renderGovernmentPlaced){
+      // Si los datos provienen del servidor, algunos campos (k/key/type) pueden faltar.
+      // Asumir que los objetos dentro de government.placed del servidor son instituciones
+      // y forzar su tratamiento como 'gobierno' cuando falte la clave.
+      const heuristicsGov = (inst.k === 'gobierno') || (inst.key === 'gobierno') || (inst.type === 'gobierno') || (inst.label && typeof inst.label === 'string' && inst.label.toLowerCase().includes('gobierno'));
+      const isGov = heuristicsGov || usingServerGov || (inst.kind && (inst.kind === 'gobierno' || inst.kind === 'government'));
+      if(isGov){
+        const iw = inst.w || (government.w || 240);
+        const ih = inst.h || (government.h || 140);
         const p = toScreen(inst.x, inst.y);
-        const w = inst.w * 2 * ZOOM, h = inst.h * 2 * ZOOM;
+        const w = iw * 2 * ZOOM, h = ih * 2 * ZOOM;
         // Centrar la imagen en el mismo punto central
-        const px = p.x + (inst.w * ZOOM)/2 - w/2;
-        const py = p.y + (inst.h * ZOOM)/2 - h/2;
-        
+        const px = p.x + (iw * ZOOM)/2 - w/2;
+        const py = p.y + (ih * ZOOM)/2 - h/2;
+
         // Usar la imagen del objeto BUILDING_IMAGES
         const img = BUILDING_IMAGE_CACHE['gobierno'];
-        
+
         if (img && img.complete && img.naturalWidth !== 0 && !img.error) {
-          // Si la imagen está cargada correctamente, dibujarla
           ctx.drawImage(img, px, py, w, h);
         } else {
           // Fallback si la imagen no está disponible
@@ -984,7 +1282,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
     }
 
-    houses.forEach(h => {
+    renderHouses.forEach(h => {
       drawBuildingWithImage(h, 'house', '#334155', h.ownerId ? '#22d3ee' : '#94a3b8');
     });
   }
@@ -1183,8 +1481,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         const myWorkplace = shops.find(s => s.id === a.employedAtShopId);
         if (myWorkplace) { a.target = centerOf(myWorkplace); a.targetRole = 'work_shop'; }
       }
-      if (!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle') && nowS >= (a.nextWorkAt || 0)) {
-        const myOwnedShops = shops.filter(s => s.ownerId === a.id);
+  if (!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle') && nowS >= (a.nextWorkAt || 0)) {
+  const myOwnedShops = shops.filter(s => s.ownerId === a.id);
         if (myOwnedShops.length > 0 && Math.random() < CFG.OWNER_MANAGE_VS_WORK_RATIO) {
           const shopToManage = myOwnedShops[(Math.random() * myOwnedShops.length) |  0];
           a.target = centerOf(shopToManage);
@@ -1211,9 +1509,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           else { a.target=null, a.targetRole='idle'; }
         }
       }
-      if(!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle' || a.targetRole==='home')) {
+        if(!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle' || a.targetRole==='home')) {
         if (!a.forcedShopId && Math.random() < CFG.VISIT_RATE) {
-          const liked = shops.filter(s=> a.likes.includes(s.like) && s.ownerId !== a.id);
+          // Sólo considerar negocios que ya tienen dueño (comprados). Las panaderías y otros tipos
+          // que no estén comprados no deberían atraer visitas porque no existen físicamente.
+          const liked = shops.filter(s => s.ownerId && a.likes.includes(s.like) && s.ownerId !== a.id);
           if(liked.length){
 
 
@@ -1348,22 +1648,31 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   function bankReport(){
     const lines = [];
     const player = agents.find(a => a.id === USER_ID);
-    if (player) lines.push(`Jugador (${player.code}): $${Math.floor(player.money)}`);
+    if (player){
+      const playerDisplay = player.name || player.fullName || player.code || player.id;
+      lines.push(`Jugador: ${playerDisplay} (${player.code || player.id}): $${Math.floor(player.money)}`);
+    }
     const otherAgents = agents.filter(a => a.id !== USER_ID && a.state !== 'child');
     if (otherAgents.length > 0) {
         if (player) lines.push('---');
-        const agentLines = otherAgents.map(a => `${a.code}: $${Math.floor(a.money)}`);
+    // Mostrar nombre completo si está disponible, si no mostrar código
+    const agentLines = otherAgents.map(a => {
+      const display = a.name || a.fullName || a.code || a.id;
+      return `${display}: $${Math.floor(a.money)}`;
+    });
         lines.push(...agentLines.sort());
     }
     return lines.join('\n') || 'Sin fondos por ahora.';
   }
   function fullDocument(){
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
-    const player = agents.find(a => a.id === USER_ID);
-    const playerName = player ? player.code : '—';
+  const player = agents.find(a => a.id === USER_ID);
+  // Mostrar nombre completo cuando esté disponible, si no usar código
+  const playerName = player ? (player.name || player.code || '—') : '—';
     const lines=[];
-    lines.push('# Documento');
-    lines.push(`Jugador: ${playerName}`);
+  lines.push('# Documento');
+  const playerDisplayName = player ? (player.name || player.fullName || player.code || player.id) : '—';
+  lines.push(`Jugador: ${playerDisplayName} (${player ? (player.code || player.id) : '—'})`);
   // Quitar la línea antigua de población, solo mostrar créditos, fondo, negocios e instituciones
   lines.push(`Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
     lines.push('');
@@ -1371,16 +1680,31 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     // Mostrar todos los usuarios conectados en tiempo real (de gameState)
     let users = [];
     if (window.gameState && Array.isArray(window.gameState.players)) {
-      users = window.gameState.players;
+      // Si hay players desde el servidor, usarlos, pero preferir el nombre local si existe
+      users = window.gameState.players.map(p => {
+        // intentar casar con agente local por id o código
+        const local = agents.find(a => (p.id && a.id === p.id) || (p.code && a.code === p.code));
+        if(local){
+          return Object.assign({}, p, { _localName: local.name, _localCode: local.code || local.id });
+        }
+        return p;
+      });
     } else {
       users = agents;
     }
     // Filtrar solo humanos (no bots) y no niños si quieres
     const filtered = users.filter(u => !u.isBot && (!u.state || u.state !== 'child'));
-    lines.push(`Población conectada: ${filtered.length}`);
+  lines.push(`Población conectada: ${filtered.length} — Jugador: ${playerName}`);
     if(filtered.length > 0){
       for(const u of filtered){
-        lines.push(`- ${u.code || u.name || u.id}`);
+        // Si se aportó un nombre local (_localName) usarlo
+        let displayName = u._localName || u.name || u.fullName || u.displayName || '';
+        // Si el nombre es muy corto o vacío, usar code del objeto o el localCode
+        const codeRef = (u._localCode || u.code || u.id || '');
+        if(!displayName || displayName.trim().length <= 2){
+          displayName = codeRef || 'Usuario';
+        }
+        lines.push(`- ${displayName}${codeRef ? ' (' + codeRef + ')' : ''}`);
       }
     }else{
       lines.push('No hay usuarios conectados.');
@@ -1466,8 +1790,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(e.clientX < gd.left || e.clientX > gd.right || e.clientY < gd.top || e.clientY > gd.bottom){ closeGovPanel(); }
     }catch(e){}
   }, {passive:true});
-  $("#uiHideBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(-130%)'; show($("#uiShowBtn"),true); };
-  $("#uiShowBtn").onclick = ()=>{ $("#uiDock").style.transform='translateY(0)'; show($("#uiShowBtn"),false); };
+  $("#uiHideBtn").onclick = ()=>{ show($("#uiDock"), false); show($("#uiShowBtn"), true); };
+  $("#uiShowBtn").onclick = ()=>{ show($("#uiDock"), true); show($("#uiShowBtn"), false); };
   panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; toast('Depósito realizado.'); };
 
   function setVisibleWorldUI(on){
@@ -1488,6 +1812,12 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     setWorldSize(); 
     fitCanvas(); 
     regenInfrastructure(false);
+    // Limpieza: eliminar panaderías locales que no tengan ownerId (no deben aparecer al iniciar)
+    // Limpieza: eliminar panaderías locales que no tengan ownerId (no deben aparecer al iniciar)
+    for (let i = shops.length - 1; i >= 0; i--) {
+      const s = shops[i];
+      if (s && s.kind === 'panadería' && !s.ownerId) { shops.splice(i, 1); }
+    }
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
     const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
@@ -1502,7 +1832,34 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     agents.forEach(a => { if (assignRental(a)) { const home = houses[a.houseIdx]; if (home) { a.target = centerOf(home); a.targetRole = 'home'; } } });
     const b0=cityBlocks[0]; if(b0){ cam.x = Math.max(0, b0.x - 40); cam.y = Math.max(0, b0.y - 40); clampCam(); }
     updateGovDesc();
-  try{ const uiAvatar = document.getElementById('uiAvatar'); if(uiAvatar && user.avatar) uiAvatar.src = user.avatar; const userName = document.getElementById('userName'); if(userName) userName.textContent = user.name || user.code || 'Usuario'; }catch(e){}
+    try{
+      const uiAvatar = document.getElementById('uiAvatar');
+      if(uiAvatar && user.avatar) uiAvatar.src = user.avatar;
+      const userName = document.getElementById('userName');
+      if(userName){
+        const full = user.name || user.code || 'Usuario';
+        // Set immediately
+        userName.textContent = full;
+        userName.setAttribute('data-fullname', full);
+
+        // If something else (CSS/other script) ends up leaving only an initial,
+        // retry a few times to ensure the full name is shown (handles race conditions).
+        if((userName.textContent || '').length <= 2 && (full || '').length > 2){
+          setTimeout(()=>{ try{ document.getElementById('userName').textContent = full; }catch(e){} }, 100);
+          setTimeout(()=>{ try{ document.getElementById('userName').textContent = full; }catch(e){} }, 1000);
+          let _sync = null;
+          _sync = setInterval(()=>{
+            try{
+              const el = document.getElementById('userName');
+              if(!el) return;
+              if(el.textContent === full){ clearInterval(_sync); return; }
+              el.textContent = full;
+            }catch(e){}
+          }, 1500);
+          setTimeout(()=>{ try{ clearInterval(_sync); }catch(e){} }, 8000);
+        }
+      }
+    }catch(e){}
     loop();
   }
   const startHandler = ()=>{const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,gender,age,likes,usd});};
@@ -1530,7 +1887,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
     }catch(e){}
 
-  const allBuildings = [cemetery,government,...banks,...malls,...factories,...houses,...(window.__netHouses||[]),...roadRects,...shops, ...avenidas, ...roundabouts, ...government.placed];
+  const allBuildings = [cemetery,government,...banks,...malls,...factories,...houses,...(window.__netHouses||[]),...roadRects,...getVisibleShops(), ...avenidas, ...roundabouts, ...government.placed];
 
     if(placingHouse){
       const u=agents.find(a=>a.id===placingHouse.ownerId); if(!u){ placingHouse=null; return; }
@@ -1602,7 +1959,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }
 
     for(const b of banks){ if(inside(pt,b)){const you = USER_ID? agents.find(a=>a.id===USER_ID) : null; if(you){ const your$ = Math.floor((you.money||0) + (you.pendingDeposit||0)); accBankBody.innerHTML = `Saldo de ${you.code}: <span class="balance-amount">${your$}</span>`; } else { accBankBody.textContent = 'Crea tu persona primero.'; } toast('Banco abierto');return;} }
-    for(const s of shops){
+    for(const s of getVisibleShops()){
       if(inside(pt,s) && s.ownerId === USER_ID){
         if(s.hasEmployee){
           const employee = agents.find(a => a.id === s.employeeId);
@@ -1644,7 +2001,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     const mrect=(r,fill)=>{ mctx.fillStyle=fill; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy)); };
     cityBlocks.forEach(r=>mrect(r,'#334155'));
     roadRects.forEach(r=>mrect(r,'#9ca3af')); factories.forEach(r=>mrect(r,'#8b5cf6'));
-    banks.forEach(r=>mrect(r,'#fde047')); malls.forEach(r=>mrect(r,'#ef4444')); shops.forEach(r=>mrect(r,'#94a3b8'));
+  banks.forEach(r=>mrect(r,'#fde047')); malls.forEach(r=>mrect(r,'#ef4444')); getVisibleShops().forEach(r=>mrect(r,'#94a3b8'));
     mrect(cemetery,'#cbd5e1'); mrect(government,'#60a5fa');
     government.placed.forEach(r=>{
       if(r.k === 'carcel'){
@@ -1683,7 +2040,14 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       sortedShops.forEach(t=>{
           const b=document.createElement('button');
           b.className='btn';
-          b.textContent=`${t.icon} ${t.k} (Costo: ${t.buyCost}, Venta: $${t.price})`;
+          // miniatura de la imagen si existe
+          const imgUrl = (BUILDING_IMAGES && BUILDING_IMAGES[t.k]) ? BUILDING_IMAGES[t.k] : null;
+          if(imgUrl){
+            const img = document.createElement('img'); img.src = imgUrl; img.alt = t.k; img.style.width='40px'; img.style.height='40px'; img.style.objectFit='cover'; img.style.borderRadius='8px'; img.style.marginRight='8px'; img.style.verticalAlign='middle';
+            b.appendChild(img);
+          }
+          const span = document.createElement('span'); span.textContent = `${t.icon} ${t.k} (Costo: ${t.buyCost}, Venta: $${t.price})`;
+          b.appendChild(span);
           b.onclick=()=>{
               if(u.money < t.buyCost){ $("#shopMsg").textContent=`No te alcanza. Necesitas ${t.buyCost}.`; return; }
               placingShop = {ownerId:u.id, kind:t, price:t.buyCost, size:{w:CFG.SHOP_W,h:CFG.SHOP_H}};
