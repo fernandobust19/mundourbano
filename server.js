@@ -2,6 +2,8 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,10 +17,235 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+// Body parsers para API JSON/URL-encoded
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Silenciar el error de favicon.ico en la consola del navegador
 app.get('/favicon.ico', (req, res) => res.status(204).send());
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// === Registro de usuarios (persistencia simple en archivo de texto JSONL) ===
+const REG_DIR = path.join(__dirname, 'registro');
+const REG_FILE = path.join(REG_DIR, 'usuarios.txt');
+const REG_SPACE_FILE = path.join(REG_DIR, 'usuarios_space.txt'); // líneas legibles separadas por espacios
+
+function ensureRegistro() {
+  try { fs.mkdirSync(REG_DIR, { recursive: true }); } catch (e) {}
+  try { if (!fs.existsSync(REG_FILE)) fs.writeFileSync(REG_FILE, '', 'utf8'); } catch (e) {}
+  try { if (!fs.existsSync(REG_SPACE_FILE)) fs.writeFileSync(REG_SPACE_FILE, '', 'utf8'); } catch (e) {}
+}
+ensureRegistro();
+
+function hashPassword(pw) {
+  return crypto.createHash('sha256').update(String(pw)).digest('hex');
+}
+
+function appendJsonLine(obj){
+  try {
+    fs.appendFileSync(REG_FILE, JSON.stringify(obj) + '\n', 'utf8');
+  } catch (e) {
+    throw e;
+  }
+}
+
+function appendSpaceLine(fields){
+  try {
+    const line = fields.map(v=> String(v).replace(/\s+/g,'_')).join(' ');
+    fs.appendFileSync(REG_SPACE_FILE, line + '\n', 'utf8');
+  } catch (e) {
+    // no bloquear por errores del archivo legible
+  }
+}
+
+function readAllUsersFile(){
+  try{ return fs.readFileSync(REG_FILE, 'utf8'); }catch(e){ return ''; }
+}
+
+function findUserRecord(username){
+  const content = readAllUsersFile();
+  let base = null;
+  for(const line of content.split(/\r?\n/)){
+    if(!line.trim()) continue;
+    try{
+      const rec = JSON.parse(line);
+      if(rec && rec.username === username && rec.passHash){ base = rec; }
+    }catch(_){ /* skip */ }
+  }
+  return base;
+}
+
+function findLastProgress(username){
+  const content = readAllUsersFile();
+  let last = null;
+  for(const line of content.split(/\r?\n/)){
+    if(!line.trim()) continue;
+    try{
+      const rec = JSON.parse(line);
+      if(rec && rec.type === 'progress' && rec.username === username){ last = rec; }
+    }catch(_){ /* skip */ }
+  }
+  return last;
+}
+
+// POST /api/register { username, password }
+app.post('/api/register', async (req, res) => {
+  try {
+    ensureRegistro();
+    const username = (req.body?.username || '').trim();
+    const password = String(req.body?.password || '');
+  const deviceId = (req.body?.deviceId || '').trim() || null;
+  const ua = req.headers['user-agent'] || '';
+
+    if (!username || !password) {
+      return res.status(400).json({ ok: false, msg: 'Usuario y contraseña son obligatorios.' });
+    }
+    if (username.length < 3 || username.length > 24) {
+      return res.status(400).json({ ok: false, msg: 'El usuario debe tener entre 3 y 24 caracteres.' });
+    }
+    if (password.length < 4 || password.length > 64) {
+      return res.status(400).json({ ok: false, msg: 'La contraseña debe tener entre 4 y 64 caracteres.' });
+    }
+
+    // Comprobar si ya existe
+    let exists = false;
+    try {
+      const content = fs.readFileSync(REG_FILE, 'utf8');
+      for (const line of content.split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        try {
+          const rec = JSON.parse(line);
+          if (rec && rec.username === username) { exists = true; break; }
+        } catch (_) {}
+      }
+    } catch (e) {}
+
+    if (exists) {
+      return res.status(409).json({ ok: false, msg: 'El usuario ya existe.' });
+    }
+
+    const record = {
+      username,
+      passHash: hashPassword(password),
+      createdAt: new Date().toISOString(),
+      ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || null,
+      deviceId,
+      ua
+    };
+    try {
+      appendJsonLine(record);
+      appendSpaceLine(['REGISTER', record.createdAt, username, deviceId||'-', record.ip||'-']);
+    } catch (e) {
+      return res.status(500).json({ ok: false, msg: 'No se pudo guardar el registro.' });
+    }
+
+    res.json({ ok: true, username });
+  } catch (err) {
+    console.error('register error', err);
+    res.status(500).json({ ok: false, msg: 'Error interno.' });
+  }
+});
+
+// POST /api/register-character { username, character: { name, likes[], avatar } }
+app.post('/api/register-character', async (req, res) => {
+  try {
+    ensureRegistro();
+    const username = (req.body?.username || '').trim();
+    const character = req.body?.character || {};
+    const chName = (character?.name || '').trim();
+    const likes = Array.isArray(character?.likes) ? character.likes.slice(0, 12) : [];
+    const avatar = character?.avatar || null;
+    const deviceId = (req.body?.deviceId || '').trim() || null;
+
+    if (!username) {
+      return res.status(400).json({ ok: false, msg: 'username requerido.' });
+    }
+    if (!chName) {
+      return res.status(400).json({ ok: false, msg: 'Nombre de personaje requerido.' });
+    }
+
+    const record = {
+      username,
+      character: { name: chName, likes, avatar },
+      createdAt: new Date().toISOString(),
+      ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || null,
+      deviceId
+    };
+    try {
+      appendJsonLine(record);
+      appendSpaceLine(['CHAR', record.createdAt, username, deviceId||'-', chName, (likes||[]).slice(0,5).join(',')||'-']);
+    } catch (e) {
+      return res.status(500).json({ ok: false, msg: 'No se pudo guardar el personaje.' });
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('register-character error', err);
+    res.status(500).json({ ok: false, msg: 'Error interno.' });
+  }
+});
+
+// POST /api/login { username, password, deviceId? }
+app.post('/api/login', async (req, res) => {
+  try{
+    ensureRegistro();
+    const username = (req.body?.username || '').trim();
+    const password = String(req.body?.password || '');
+    const deviceId = (req.body?.deviceId || '').trim() || null;
+    if(!username || !password){ return res.status(400).json({ ok:false, msg:'Usuario y contraseña requeridos.' }); }
+
+    const userRec = findUserRecord(username);
+    if(!userRec){ return res.status(404).json({ ok:false, msg:'Usuario no encontrado.' }); }
+    const passOk = userRec.passHash === hashPassword(password);
+    if(!passOk){ return res.status(401).json({ ok:false, msg:'Credenciales inválidas.' }); }
+
+    const last = findLastProgress(username);
+    const payload = { ok:true, username, state: last?.state || null, lastSavedAt: last?.ts || null };
+    appendSpaceLine(['LOGIN', new Date().toISOString(), username, deviceId||'-', 'OK']);
+    return res.json(payload);
+  }catch(err){
+    console.error('login error', err);
+    return res.status(500).json({ ok:false, msg:'Error interno.' });
+  }
+});
+
+// POST /api/save { username, deviceId, socketId?, port?, state }
+app.post('/api/save', async (req, res) => {
+  try{
+    ensureRegistro();
+    const username = (req.body?.username || '').trim();
+    const deviceId = (req.body?.deviceId || '').trim() || null;
+    const socketId = (req.body?.socketId || '').trim() || null;
+    const port = (req.body?.port || '').toString() || null;
+    const state = req.body?.state || null;
+    if(!username || !state){ return res.status(400).json({ ok:false, msg:'username y state requeridos.' }); }
+
+    const rec = {
+      type: 'progress',
+      username,
+      deviceId,
+      socketId,
+      port,
+      state,
+      ts: new Date().toISOString(),
+      ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || null
+    };
+    appendJsonLine(rec);
+    const summary = [
+      'SAVE', rec.ts, username, deviceId||'-',
+      `money=${Math.floor(Number(state?.money||0))}`,
+      `shops=${Array.isArray(state?.shopsOwned)?state.shopsOwned.length:0}`,
+      `houses=${Array.isArray(state?.housesOwned)?state.housesOwned.length:0}`,
+      `vehicle=${state?.vehicle||'-'}`
+    ];
+    appendSpaceLine(summary);
+    return res.json({ ok:true });
+  }catch(err){
+    console.error('save error', err);
+    return res.status(500).json({ ok:false, msg:'Error interno.' });
+  }
+});
 
 const state = {
   players: {},

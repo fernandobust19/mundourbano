@@ -109,6 +109,33 @@
 </head> 
 <body>
 
+<!-- Modal de Registro (bloquea hasta completar) -->
+<div id="registerModal" style="position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center">
+  <div class="card" style="width:min(460px,94vw);padding:16px">
+    <h3 style="margin:0 0 8px 0">Registro de Usuario</h3>
+    <p class="hint" style="margin-top:0">Crea tu usuario para ingresar al mundo y poder crear tu personaje.</p>
+    <div class="field" style="margin-top:8px">
+      <label>Usuario</label>
+      <input id="regUser" class="input" type="text" maxlength="24" placeholder="tu_usuario" />
+    </div>
+    <div class="field" style="margin-top:8px">
+      <label>Contraseña</label>
+      <input id="regPass" class="input" type="password" maxlength="64" placeholder="••••" />
+    </div>
+    <div id="regErr" class="err" style="display:none;margin-top:6px"></div>
+    <div class="actions" style="margin-top:12px">
+      <button id="btnDoRegister" class="btn primary">Registrarme</button>
+      <button id="btnDoLogin" class="btn" style="background:#9aa7b3; color:white">Iniciar sesión</button>
+    </div>
+    <div id="loginHint" class="hint" style="margin-top:8px;display:none"></div>
+  </div>
+  
+  <!-- Outline focus trap para accesibilidad -->
+  <button aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">trap</button>
+  <button aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">trap</button>
+  
+</div>
+
 <div id="formBar" role="dialog" aria-modal="true">
   <form id="formInner" autocomplete="off">
     <h2>Crear tu persona (24h = 1 año · fallece a los 90)</h2>
@@ -204,6 +231,9 @@
       <button id="toggleLines" class="btn">Líneas ON/OFF</button>
       <button id="btnHouse" class="btn good">Comprar Casa</button>
       <button id="btnShop" class="btn">Comprar Negocio</button>
+    </div>
+    <div class="actions" style="margin-top:6px">
+      <button id="btnLogout" class="btn" style="background:#ef4444;color:#fff">Cerrar sesión</button>
     </div>
   </div>
 

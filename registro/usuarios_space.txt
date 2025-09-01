@@ -1,0 +1,2 @@
+CHAR 2025-09-02T03:10:35.930Z fernando2000 dev-mewye2bg2jrmf1z0tc6 F deporte,animales,historia,idiomas,juguetes
+SAVE 2025-09-02T03:10:36.203Z fernando2000 dev-mewye2bg2jrmf1z0tc6 money=200 shops=0 houses=0 vehicle=-

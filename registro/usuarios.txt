@@ -1,0 +1,2 @@
+{"username":"fernando2000","character":{"name":"F","likes":["deporte","animales","historia","idiomas","juguetes"],"avatar":"https://i.postimg.cc/x8cc0drr/20250820-102743.png"},"createdAt":"2025-09-02T03:10:35.930Z","ip":"::1","deviceId":"dev-mewye2bg2jrmf1z0tc6"}
+{"type":"progress","username":"fernando2000","deviceId":"dev-mewye2bg2jrmf1z0tc6","socketId":"RDWhhftaZ1S0gjfqAAAB","port":"3000","state":{"money":200,"bank":0,"vehicle":null,"shopsOwned":[],"housesOwned":[],"x":1080,"y":1189},"ts":"2025-09-02T03:10:36.203Z","ip":"::1"}
