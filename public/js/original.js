@@ -44,8 +44,8 @@
   };
 
     /* ===== FORMULARIO ===== */
-  const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
-  const fGenderPreview = document.getElementById('fGenderPreview');
+  const formBar = $("#formBar"), fName=$("#fName"), fUsd=$("#fUsd");
+  const fGenderPreview = { get src(){ return document.getElementById('uiAvatar')?.src; }, set src(v){ try{ const img=document.getElementById('uiAvatar'); if(img) img.src=v; }catch(e){} } };
   const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
   const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
   const MALE_IMG_2 = 'https://i.postimg.cc/vHf2KjGK/20250831_015656.png';
@@ -53,7 +53,6 @@
 
   // Avatar grid clickable thumbnails
   const avatarGrid = document.getElementById('avatarGrid');
-  const uiAvatarEl = document.getElementById('uiAvatar');
   function clearAvatarSelection(){ if(!avatarGrid) return; avatarGrid.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected')); }
   if(avatarGrid){
     avatarGrid.addEventListener('click', (ev)=>{
@@ -62,34 +61,26 @@
       if(!src) return;
       clearAvatarSelection(); btn.classList.add('selected');
       // set preview and UI avatar
-      try{ fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(e){}
-      // set the select value too for form persistence (safe check if avatarSelect isn't declared)
-      try{ if(typeof avatarSelect !== 'undefined' && avatarSelect) avatarSelect.value = src; }catch(e){}
-      // persist selection so it survives reloads and is applied to UI avatar
-      try{ localStorage.setItem('selectedAvatar', src); }catch(e){}
+      try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){}
+      // set the select value too for form persistence
+      // if(avatarSelect) avatarSelect.value = src; // This was removed from HTML, causing a ReferenceError.
     });
-    // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
-    try{
-      const saved = localStorage.getItem('selectedAvatar');
-      if(saved){
-        // mark matching option selected
-        const match = avatarGrid.querySelector(`.avatar-option[data-src="${saved}"]`);
-        if(match){ clearAvatarSelection(); match.classList.add('selected'); fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved; }
-        else {
-          // fallback to applying saved src directly
-          fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved;
-        }
-      } else {
-        const first = avatarGrid.querySelector('.avatar-option');
-        if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
-      }
-    }catch(e){
-      // ignore localStorage errors
-      const first = avatarGrid.querySelector('.avatar-option'); if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
+    // pre-select first and reflect in preview + UI
+    const first = avatarGrid.querySelector('.avatar-option');
+    if(first){
+      first.classList.add('selected');
+      const src = first.getAttribute('data-src');
+      if(src){ try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){} }
     }
   }
-  function updateGenderPreview(){ try{ if(!fGender || !fGender.value) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
-  if(fGender){ fGender.addEventListener('change', updateGenderPreview); updateGenderPreview(); }
+  function updateGenderPreview(){
+    try{
+      const selBtn = document.querySelector('#avatarGrid .avatar-option.selected');
+      const chosen = selBtn && selBtn.getAttribute('data-src');
+      fGenderPreview.src = chosen || MALE_IMG;
+    }catch(e){}
+  }
+  updateGenderPreview();
   const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
   const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
   const getBoxes=()=> Array.from(likesWrap.querySelectorAll('input[type="checkbox"]'));
@@ -157,9 +148,9 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   function srand(a, b) { return a + seededRandom() * (b - a); }
   function setWorldSize(){
     const vw = innerWidth, vh = innerHeight;
-    // Usuario pidió duplicar el mapa: mantenemos los multiplicadores aumentados
-    WORLD.w = Math.floor(vw * (isMobile() ? 14.4 : 11.2));
-    WORLD.h = Math.floor(vh * (isMobile() ? 6.4 : 5.2));
+    // Doblar la extensión horizontal del mapa grande: multiplicadores duplicados
+    WORLD.w = Math.floor(vw * (isMobile() ? 7.2 : 5.6));
+    WORLD.h = Math.floor(vh * (isMobile() ? 3.2 : 2.6));
   }
 
   function fitCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; clampCam(); }
@@ -312,7 +303,7 @@ BG_IMG.src = '/assets/fondo1.jpg';
 
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
-  LINES_ON:true, PARKS:8, SCHOOLS:8, FACTORIES:12, BANKS:8, MALLS:4, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:24,  // Más infraestructuras y casas iniciales
+  LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:10,  // Aumentado HOUSE_SIZE de 22 a 70
     R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
     YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
     HOUSE_BUY_COST:3000,
@@ -439,39 +430,6 @@ BG_IMG.src = '/assets/fondo1.jpg';
   const randi=(a,b)=> (Math.random()*(b-a)+a)|0, rand=(a,b)=> a + Math.random()*(b-a), clamp=(v,a,b)=> Math.max(a,Math.min(b,v));
   const centerOf=r=> ({x:r.x+r.w/2, y:r.y+r.h/2});
   const rectsOverlap=(a,b)=> !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
-  // Función global para remover elementos por labels (case-insensitive) de las colecciones visibles
-  function removeByLabels(labels){
-    try{
-      const needle = (s) => (s || '').toString().trim().toLowerCase();
-      const set = new Set((labels||[]).map(l => (''+l).toString().trim().toLowerCase()));
-      const removeFromList = (lst) => {
-        for(let i = lst.length - 1; i >= 0; i--){
-          const it = lst[i];
-          const lab = needle(it && (it.label || it.k || it.kind || it.type));
-          if(lab && set.has(lab)) lst.splice(i,1);
-        }
-      };
-      // listas globales
-      try{ removeFromList(government.placed); }catch(e){}
-      try{ removeFromList(shops); }catch(e){}
-      try{ removeFromList(factories); }catch(e){}
-      try{ removeFromList(banks); }catch(e){}
-      try{ removeFromList(malls); }catch(e){}
-      try{ removeFromList(houses); }catch(e){}
-      try{ // También limpiar listas de vías y roundabouts si etiquetadas
-        if(Array.isArray(roadRects)){ for(let i=roadRects.length-1;i>=0;i--){ const it = roadRects[i]; const lab = needle(it && (it.label||it.k||it.kind||it.type)); if(lab && set.has(lab)) roadRects.splice(i,1); } }
-        if(Array.isArray(avenidas)){ for(let i=avenidas.length-1;i>=0;i--){ const it = avenidas[i]; const lab = needle(it && (it.label||it.k||it.kind||it.type)); if(lab && set.has(lab)) avenidas.splice(i,1); } }
-        if(Array.isArray(roundabouts)){ for(let i=roundabouts.length-1;i>=0;i--){ const it = roundabouts[i]; const lab = needle(it && (it.label||it.k||it.kind||it.type)); if(lab && set.has(lab)) roundabouts.splice(i,1); } }
-      }catch(e){}
-      // también limpiar estado del servidor si aplica
-      if(window.gameState){
-        try{ if(Array.isArray(window.gameState.shops)) window.gameState.shops = window.gameState.shops.filter(s => !set.has(needle(s && (s.label || s.k || s.kind || s.type)))); }catch(e){}
-        try{ if(window.gameState.government && Array.isArray(window.gameState.government.placed)) window.gameState.government.placed = window.gameState.government.placed.filter(g => !set.has(needle(g && (g.label || g.k || g.kind || g.type)))); }catch(e){}
-      }
-  // Use debug logging to avoid spamming the console every frame; enable by setting window.__verboseRemoval = true
-  if (window.__verboseRemoval) console.debug('removeByLabels executed for', Array.from(set));
-    }catch(e){ console.warn('removeByLabels error', e); }
-  }
   const inside=(pt,r)=> pt.x>=r.x && pt.x<=r.x+r.w && pt.y>=r.y && pt.y<=r.y+r.h;
   const rectsOverlapWithMargin = (rectA, rectB, margin) => {
     const paddedB = { x: rectB.x - margin, y: rectB.y - margin, w: rectB.w + margin*2, h: rectB.h + margin*2 };
@@ -608,9 +566,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   function buildAvenidas(urbanArea, avoidRect = null){
     avenidas.length=0; roundabouts.length=0;
     const avW=26;
-    // Más divisiones para un mapa más denso (más avenidas/calles)
-    const vDivs = Math.max(6, Math.floor((urbanArea.w/1200))); // vertical divisiones crecientes según ancho
-    const hDivs = Math.max(4, Math.floor((urbanArea.h/900)));  // horizontales según alto
+    const vDivs = 4, hDivs = 3;
     const vPoints = [], hPoints = [];
     for (let i = 1; i < vDivs; i++) vPoints.push(urbanArea.x + Math.floor(urbanArea.w * i / vDivs));
     for (let i = 1; i < hDivs; i++) hPoints.push(urbanArea.y + Math.floor(urbanArea.h * i / hDivs));
@@ -660,6 +616,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     // Distribuir parques más pequeños por el mapa
     const parkType = GOV_TYPES.find(t=>t.k==='parque');
     if(parkType) {
+      const parksCount = (CFG && typeof CFG.PARKS === 'number') ? CFG.PARKS : 4;
       // Definir tamaños más pequeños para los parques
       const smallParkW = 100; // reducido de ~220
       const smallParkH = 70;  // reducido de ~140
@@ -668,25 +625,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       
       // Crear lista de áreas a evitar
       const avoidList = [
-        government, 
-        cemetery, 
-        ...avenidas, 
-        ...roundabouts, 
-        ...houses, 
+        government,
+        cemetery,
+        ...avenidas,
+        ...roundabouts,
+        ...houses,
         ...barrios,
-        // Crear un área de exclusión alrededor del gobierno (margen extra)
-        {
-          x: government.x - 300, 
-          y: government.y - 300, 
-          w: government.w + 600, 
-          h: government.h + 600
-        }
+        // Área de exclusión alrededor del gobierno (margen extra)
+        { x: government.x - 160, y: government.y - 160, w: government.w + 320, h: government.h + 320 }
       ];
-      
-      // Generar parques pequeños distribuidos por el mapa usando CFG.PARKS
-      const parksCount = CFG.PARKS || 8;
       const parkLocations = scatterRects(
-        parksCount,
+        parksCount, 
         [smallParkW, mediumParkW], 
         [smallParkH, mediumParkH], 
         avoidList, 
@@ -1229,8 +1178,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       return false;
     }
 
-  // removeByLabels definida en ámbito global más arriba
-
     function enforceNoOverlap(margin = 6){
       const all = [...houses, ...government.placed, ...shops, ...factories, ...banks, ...malls];
       for (let i = 0; i < all.length; i++){
@@ -1407,18 +1354,47 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }
   }
 
+  // Eliminar por lista de labels (case-insensitive) en todas las colecciones y en window.gameState
+  function removeByLabels(labels){
+    try{
+      const needle = (s) => (s || '').toString().trim().toLowerCase();
+      const set = new Set((labels||[]).map(l => (''+l).toString().trim().toLowerCase()));
+
+      const removeFromList = (lst) => {
+        for(let i = lst.length - 1; i >= 0; i--){
+          const it = lst[i];
+          const lab = needle(it && (it.label || it.k || it.kind || it.type));
+          if(lab && set.has(lab)) lst.splice(i,1);
+        }
+      };
+
+      removeFromList(government.placed);
+      removeFromList(shops);
+      removeFromList(factories);
+      removeFromList(banks);
+      removeFromList(malls);
+      removeFromList(houses);
+
+      // también limpiar estado del servidor si aplica
+      if(window.gameState){
+        if(Array.isArray(window.gameState.shops)) window.gameState.shops = window.gameState.shops.filter(s => !set.has(needle(s && (s.label || s.k || s.kind || s.type))));
+        if(window.gameState.government && Array.isArray(window.gameState.government.placed)) window.gameState.government.placed = window.gameState.government.placed.filter(g => !set.has(needle(g && (g.label || g.k || g.kind || g.type))));
+      }
+  // Silenciado: esta operación puede ejecutarse muchas veces; evitar ruido en consola.
+    }catch(e){ console.warn('removeByLabels error', e); }
+  }
+
   function drawWorld(){
   // Asegurar que las panaderías no compradas se eliminen antes de dibujar
   try{ removeUnownedPanaderias(); }catch(e){}
 
-  // Eliminar etiquetas solicitadas por el usuario (ej: 'Hospital 3', 'Escuela 2', etc.)
-  // Esta operación solo debe ejecutarse una vez por sesión para evitar spam de CPU
-  try{
-    if(!window.__labelsRemoved){
+  // Eliminar etiquetas solicitadas por el usuario (ej: 'Hospital 3', 'Escuela 2', etc.) solo una vez
+  if(!window.__labelsRemovedOnce){
+    try{
       removeByLabels(['hospital 3','escuela 2','central electrica 2','policia 2','policia 4','central electrica 1','edificio 7','central eléctrica 2','panaderia 4','panaderia 5','panadería 4','panadería 5']);
-      window.__labelsRemoved = true;
-    }
-  }catch(e){ console.warn('Error invoking removeByLabels', e); }
+    }catch(e){ console.warn('Error invoking removeByLabels', e); }
+    window.__labelsRemovedOnce = true;
+  }
 
   // Las panaderías solo deben mostrarse cuando tengan ownerId; la función
   // removeUnownedPanaderias() y los filtros en getVisibleShops() se encargan
@@ -2124,7 +2100,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     docDock.style.display = 'none'; govDock.style.display = 'none';
   }
 
-  function startWorldWithUser({name,gender,age,likes,usd}){
+  function startWorldWithUser({name,likes}){
     $("#formBar").style.display='none'; 
     setVisibleWorldUI(true); 
     STARTED=true; 
@@ -2134,26 +2110,18 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Mantener las panaderías tal como vienen (no eliminar al iniciar)
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
-    const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
-    let startMoney = 400 + addCredits;
-    const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
+  let startMoney = 200;
+  const gender = 'M'; // neutral default; rendering no longer depends on chosen gender
+  const age = 20;
+  const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
+    // Prefer the selected avatar from grid (fallback to preview/default by gender)
     try{
-      // Prefer avatar explicitly selected by the user (persisted in localStorage or present in UI)
-      let selected = null;
-      try{ selected = localStorage.getItem('selectedAvatar') || null; }catch(e){}
-      try{ if(!selected){ const _ui = document.getElementById('uiAvatar'); if(_ui && _ui.src) selected = _ui.src; } }catch(e){}
-      if(selected) user.avatar = selected;
-      else user.avatar = (gender === 'M') ? 'https://i.postimg.cc/x8cc0drr/20250820-102743.png' : 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
-      // If gender is undefined placeholder 'U', try to infer from avatar filename (basic heuristic)
-      if((!gender || gender === 'U') && user.avatar){
-        const low = user.avatar.toLowerCase();
-        if(low.includes('female') || low.includes('f') || low.includes('103145') || low.includes('015636')) gender = 'F';
-        else gender = 'M';
-        user.gender = gender;
-      }
+      const selBtn = document.querySelector('#avatarGrid .avatar-option.selected');
+  const chosen = selBtn?.getAttribute('data-src') || fGenderPreview?.src || MALE_IMG;
+      user.avatar = chosen;
     }catch(e){}
     agents.push(user); USER_ID=user.id;
-    try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
+  try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
     if(!hasNet()){
       for(let i=0;i<CFG.N_INIT;i++) {agents.push(makeAgent('adult',{ageYears:rand(18,60)}));}
     }
@@ -2190,7 +2158,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }catch(e){}
     loop();
   }
-  const startHandler = ()=>{const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,gender,age,likes,usd});};
+  const startHandler = ()=>{const name=fName.value.trim(),likes=getChecked().map(x=>x.value);if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,likes});};
   btnStart.addEventListener('click', startHandler);
   $("#formInner").addEventListener('submit',(e)=>{ e.preventDefault(); startHandler(); });
 

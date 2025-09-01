@@ -5,8 +5,12 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = require('socket.io')(server, {
-  cors: { origin: '*' }
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins
+    methods: ["GET", "POST"]
+  }
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
@@ -65,8 +69,8 @@ function ensureBots(n = 3) {
       socketId: null,
       code: randomPersonName(gender),
       x: Math.random() * 800 + 50,
-      y: Math.random() * 500 + 50,
-      money: 400,
+  y: Math.random() * 500 + 50,
+  money: 200,
       gender,
       avatar: null,
       isBot: true,
@@ -170,7 +174,7 @@ io.on('connection', (socket) => {
       code: data.code || ('Player' + id),
       x: data.x || 100,
       y: data.y || 100,
-      money: (data.startMoney != null) ? data.startMoney : 400,
+  money: (data.startMoney != null) ? data.startMoney : 200,
       gender: data.gender || 'M',
       avatar: data.avatar || null,
       createdAt: now(),

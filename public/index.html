@@ -55,8 +55,7 @@
   .avatar-option.selected{outline:2px solid rgba(100,160,220,0.85);box-shadow:0 4px 14px rgba(16,24,32,0.45)}
 
 
-  /* Mostrar canvas principal por defecto (antes estaba oculto) */
-  #world{display:block;width:100vw;height:100vh;position:fixed;inset:0;z-index:10}
+  #world{display:none;width:100vw;height:100vh;position:fixed;inset:0;z-index:10}
   .card{background:var(--card);border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:10px 12px;backdrop-filter:blur(4px);position:relative}
   /* UI menus shown inside the map: darker bluish with more transparency for subtle overlay */
   #uiDock .card, #docDock .card, #govDock .card {
@@ -82,7 +81,7 @@
   pre{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;max-height:40vh;overflow:auto;margin:0}
 
 
-  #zoomFab{position:fixed;right:12px;bottom:12px;z-index:26;display:flex;flex-direction:column;gap:10px;pointer-events:auto}
+  #zoomFab{position:fixed;right:12px;bottom:12px;z-index:26;display:none;flex-direction:column;gap:10px;pointer-events:auto}
   .fab{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--brand);border:1px solid rgba(0,0,0,0.06);box-shadow:0 8px 20px rgba(0,0,0,.06);font-size:22px;cursor:pointer;user-select:none;color:var(--text)}
   .fab:active{transform:scale(.96)}
   
@@ -100,7 +99,7 @@
   #shopList{display:grid;grid-template-columns:1fr;gap:8px;max-height:260px;overflow-y:auto;padding:8px;border:1px solid rgba(0,0,0,0.06);border-radius:10px;background:var(--card)}
 
 
-  #mini{position:fixed;right:12px;top:12px;z-index:26;display:block;width:200px;height:130px;border:1px solid rgba(0,0,0,0.06);border-radius:10px;background:var(--card);box-shadow:0 6px 22px rgba(0,0,0,.04);cursor:crosshair;pointer-events:auto}
+  #mini{position:fixed;right:12px;top:12px;z-index:26;display:none;width:200px;height:130px;border:1px solid rgba(0,0,0,0.06);border-radius:10px;background:var(--card);box-shadow:0 6px 22px rgba(0,0,0,.04);cursor:crosshair;pointer-events:auto}
   #mini canvas{width:100%;height:100%;display:block}
   #mini .hint{position:absolute;left:6px;bottom:4px;font-size:10px;opacity:.7}
 
@@ -113,22 +112,21 @@
 <div id="formBar" role="dialog" aria-modal="true">
   <form id="formInner" autocomplete="off">
     <h2>Crear tu persona (24h = 1 año · fallece a los 90)</h2>
-    <div class="field col-3">
-      <!-- Gender select removed: avatars are selectable only. Keep hidden field to avoid JS errors. -->
-      <input type="hidden" id="fGender" value="U" />
-      <div style="display:flex;align-items:center;gap:8px;">
-        <img id="fGenderPreview" src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="preview" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2b3553;background:#fff" />
-      </div>
-      <div id="avatarGrid" style="margin-top:8px">
-        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/x8cc0drr/20250820-102743.png"><img src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="H1"/></button>
-        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png"><img src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png" alt="F1"/></button>
-        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png"><img src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png" alt="H2"/></button>
-        <button type="button" class="avatar-option" data-src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png"><img src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png" alt="F2"/></button>
+    <div class="field col-12">
+      <label>Avatar y Nombre</label>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div id="avatarGrid" style="margin-top:0">
+          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/x8cc0drr/20250820-102743.png"><img src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="H1"/></button>
+          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png"><img src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png" alt="F1"/></button>
+          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png"><img src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png" alt="H2"/></button>
+          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png"><img src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png" alt="F2"/></button>
+        </div>
+        <div style="min-width:220px">
+          <input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/>
+        </div>
       </div>
     </div>
-  <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/></div>
-    <div class="field col-3"><label>Edad</label><input id="fAge" type="number" min="0" max="120" value="20" class="input"/></div>
-  <div class="field col-3"><label>Créditos iniciales</label><input id="fUsd" type="number" min="0" max="0" step="1" value="0" class="input" disabled/><div class="hint">Todos comienzan con 400 créditos gratis.</div></div>
+  <div class="field col-3"><label>Créditos iniciales</label><input id="fUsd" type="number" value="200" class="input" disabled/><div class="hint">Fijos: 200 credi-puntos.</div></div>
     <div class="field col-12">
       <label>Elige exactamente 5 gustos</label>
       <div id="likesWrap" aria-label="Lista de gustos">
