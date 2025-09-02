@@ -1,0 +1,20 @@
+fecha,evento,usuario,detalle
+2025-09-02T16:18:31.436Z,registro,fernando,nuevo usuario
+2025-09-02T16:18:34.576Z,login,fernando,inicio de sesión
+2025-09-02T16:19:04.641Z,save,fernando,money=200 casas=0 negocios=0
+2025-09-02T16:19:24.637Z,save,fernando,money=200 casas=0 negocios=0
+2025-09-02T16:19:44.649Z,save,fernando,money=200 casas=0 negocios=0
+2025-09-02T16:20:04.646Z,save,fernando,money=200 casas=0 negocios=0
+2025-09-02T16:20:24.641Z,save,fernando,money=200 casas=0 negocios=0
+2025-09-02T16:20:44.760Z,save,fernando,money=150 casas=0 negocios=0
+2025-09-02T16:21:04.643Z,save,fernando,money=150 casas=0 negocios=0
+2025-09-02T16:21:24.639Z,save,fernando,money=150 casas=0 negocios=0
+2025-09-02T16:21:54.462Z,registro,pedro,nuevo usuario
+2025-09-02T16:21:56.454Z,login,pedro,inicio de sesión
+2025-09-02T16:23:01.062Z,login,fernando,inicio de sesión
+2025-09-02T16:26:14.506Z,login,fernando,inicio de sesión
+2025-09-02T16:26:38.703Z,save,fernando,money=150 casas=0 negocios=0
+2025-09-02T16:55:25.921Z,login,fernando,inicio de sesión
+2025-09-02T17:06:43.370Z,login,fernando,inicio de sesión
+2025-09-02T17:07:01.827Z,save,fernando,money=150 casas=0 negocios=0
+2025-09-02T17:07:08.925Z,save,fernando,money=150 casas=0 negocios=0

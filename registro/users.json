@@ -1,0 +1,28 @@
+[
+  {
+    "username": "fernando",
+    "salt": "738dfd1b0dfe6235a23ccf9bdefb9e8e",
+    "hash": "89ac58c187f17d64cdcf30a793326ecc53844b7cc8ca756c14937e10f207ee54",
+    "profile": {
+      "name": "FER",
+      "avatar": "https://i.postimg.cc/x8cc0drr/20250820-102743.png",
+      "stats": {
+        "money": 150,
+        "bank": 0
+      },
+      "assets": {
+        "houses": [],
+        "shops": []
+      },
+      "savedAt": 1756832828924
+    },
+    "createdAt": 1756829911435
+  },
+  {
+    "username": "pedro",
+    "salt": "076e1dbbc5c499b68a143e59079bba66",
+    "hash": "377ffad5bd269d1acc910138d35ca729f5e2e2cf6eb66642158a090d1b713344",
+    "profile": null,
+    "createdAt": 1756830114461
+  }
+]

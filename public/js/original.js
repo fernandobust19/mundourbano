@@ -1,167 +1,637 @@
 // Archivo restaurado: sin <script> ni IIFE innecesario
-const $ = s => document.querySelector(s);
-const show = (el, on=true)=>{
-  if(!el) return;
-  try{
-    if(el.id === 'uiDock'){
-      if(on){ el.classList.remove('collapsed'); el.style.display='flex'; }
-      else { el.classList.add('collapsed'); setTimeout(()=>{ if(el.classList.contains('collapsed')) el.style.display='none'; }, 280); }
-      return;
+  const $ = s => document.querySelector(s);
+  const show = (el, on=true)=>{
+    if(!el) return;
+    try{
+      // Si es el panel principal, usar clase collapsed para animación
+      if(el.id === 'uiDock'){
+        if(on){ el.classList.remove('collapsed'); el.style.display='flex'; }
+        else { el.classList.add('collapsed'); /* dejar display para la animación y desactivar interacción */ setTimeout(()=>{ if(el.classList.contains('collapsed')) el.style.display='none'; }, 280); }
+        return;
+      }
+      // Modal-like elements: mantener comportamiento previo
+      el.style.display = on? 'flex':'none';
+    }catch(e){ console.warn('show() error', e); }
+  };
+  const toastLimiter = { last: 0, gap: 400 }; // ms
+  const toast = (msg)=>{
+    const now = performance.now();
+    if (now - toastLimiter.last < toastLimiter.gap) return;
+    toastLimiter.last = now;
+    const _t = document.querySelector("#toast"); // Quitar las comillas extras
+    if(_t){ _t.textContent=msg; _t.style.display='block'; clearTimeout(toast._id); toast._id=setTimeout(()=>_t.style.display='none',2400); }
+  };
+
+  window.addEventListener('error', e => { try{toast('⚠️ Error: '+(e.message||'JS'));}catch(_){} });
+  window.addEventListener('unhandledrejection', e => { try{toast('⚠️ Promesa: '+(e.reason?.message||'error'));}catch(_){} });
+
+  // Red: helpers para multijugador
+  const hasNet = () => !!(window.sock && window.sock.connected);
+  let __lastNetSend = 0;
+  let __lastSentState = { x: -1, y: -1, money: -1 };
+
+  // ====== SUAVIZADO REMOTO (nuevo) ======
+  const REMOTE = {
+    BUFFER: {},     // id -> [{x,y,t}, ...]
+    SMOOTH: {},     // id -> {x,y,vx,vy}
+    STATS: {},      // id -> {delay, iat:[], lastTs:0}
+    BASE_DELAY: 110,     // ms mínimo (sube a 120 si ves micro-tirón)
+    DELAY_MAX: 170,      // ms tope
+    EXTRA_GUARD: 10,     // ms sobre p80
+    MAX_BUF: 24,         // snapshots guardados
+    K: 18.0,             // rigidez del filtro crítico (12–24)
+    DEADZONE: 0.18       // px: evita microtemblores
+  };
+
+    /* ===== FORMULARIO ===== */
+  const formBar = $("#formBar"), fName=$("#fName"), fUsd=$("#fUsd");
+  // ===== AUTENTICACIÓN (login/registro) =====
+  const authModal = document.getElementById('authModal');
+  const authUser = document.getElementById('authUser');
+  const authPass = document.getElementById('authPass');
+  const btnDoLogin = document.getElementById('btnDoLogin');
+  const btnDoRegister = document.getElementById('btnDoRegister');
+  const authMsg = document.getElementById('authMsg');
+  const btnLogout = document.getElementById('btnLogout');
+
+  const API = {
+    token: localStorage.getItem('authToken') || null,
+    setToken(t){ this.token=t; if(t) localStorage.setItem('authToken', t); else localStorage.removeItem('authToken'); },
+    async post(path, body){
+      const res = await fetch(path, { method:'POST', headers: { 'Content-Type':'application/json', ...(this.token?{'x-auth':this.token}:{}) }, body: JSON.stringify(body||{}) });
+      const data = await res.json().catch(()=>({ ok:false, msg:'error' }));
+      if(!res.ok) throw Object.assign(new Error(data.msg||'Error'), { data });
+      return data;
+    },
+    async get(path){
+      const res = await fetch(path, { headers: { ...(this.token?{'x-auth':this.token}:{}) } });
+      const data = await res.json().catch(()=>({ ok:false, msg:'error' }));
+      if(!res.ok) throw Object.assign(new Error(data.msg||'Error'), { data });
+      return data;
     }
-    el.style.display = on? 'flex':'none';
-  }catch(e){ console.warn('show() error', e); }
+  };
+
+  async function loadProfileIfAny(){
+    if(!API.token) return null;
+    try { const r = await API.get('/api/profile'); return r.profile || null; }
+    catch { return null; }
+  }
+
+  function applyProfile(profile){
+    if(!profile) return;
+    try{
+      // Restaurar dinero, vehículo y UI del usuario si ya existe el agente
+      const u = USER_ID && agents.find(a=>a.id===USER_ID);
+      if(u){
+        if(typeof profile.money === 'number') u.money = profile.money;
+        if(profile.vehicle) u.vehicle = profile.vehicle;
+      }
+      // Restaurar casas y negocios posicionados desde perfil
+      if(Array.isArray(profile.houses)){
+        for(const h of profile.houses){
+          if(!h || typeof h.x!=='number') continue;
+          houses.push({ x:h.x,y:h.y,w:h.w,h:h.h, ownerId: USER_ID, rentedBy: h.rentedBy||null });
+        }
+      }
+      if(Array.isArray(profile.shops)){
+        for(const s of profile.shops){
+          if(!s || typeof s.x!=='number') continue;
+          shops.push({ id: 'S'+(shops.length+1), x:s.x,y:s.y,w:s.w,h:s.h, kind:s.kind, ownerId: USER_ID, cashbox: s.cashbox||0 });
+        }
+      }
+      // Restaurar estado familiar básico
+      if(profile.spouseId){
+        const u2 = USER_ID && agents.find(a=>a.id===USER_ID);
+        if(u2){ u2.spouseId = profile.spouseId; u2.state = 'paired'; }
+      }
+      if(Array.isArray(profile.children)){
+        // Crear agentes niño vinculados
+        for(const kid of profile.children){
+          const baby = makeAgent('child', { parents:[USER_ID, profile.spouseId||null], ageYears: kid.ageYears||0 });
+          baby.x = (kid.x||rand(100,WORLD.w-100)); baby.y = (kid.y||rand(100,WORLD.h-100));
+          agents.push(baby);
+        }
+      }
+    }catch(e){ console.warn('applyProfile error', e); }
+  }
+
+  function buildProfileSnapshot(){
+    const u = USER_ID && agents.find(a=>a.id===USER_ID);
+    const ownedHouses = houses.filter(h=>h.ownerId===USER_ID).map(h=>({ x:h.x,y:h.y,w:h.w,h:h.h, rentedBy:h.rentedBy||null }));
+    const ownedShops = shops.filter(s=>s.ownerId===USER_ID).map(s=>({ x:s.x,y:s.y,w:s.w,h:s.h, kind:s.kind, cashbox:s.cashbox||0 }));
+    // Familia: cónyuge (si el cónyuge existe) y niños (ids con state child y parents incluyen USER_ID)
+    const uAgent = u || null;
+    const spouseId = uAgent?.spouseId || null;
+    const children = agents.filter(a=>a.state==='child' && Array.isArray(a.parents) && a.parents.includes(USER_ID)).map(k=>({ ageYears: yearsSince(k.bornEpoch), x:k.x, y:k.y }));
+    return {
+      username: window.__authUser || null,
+      money: Math.floor(uAgent?.money||0),
+      vehicle: uAgent?.vehicle || null,
+      houses: ownedHouses,
+      shops: ownedShops,
+      spouseId,
+      children,
+      stats: { money: Math.floor(uAgent?.money||0) },
+      assets: { houses: ownedHouses, shops: ownedShops }
+    };
+  }
+
+  async function saveProfile(reason='manual'){
+    if(!API.token) return; // requiere login
+    try{
+      const profile = buildProfileSnapshot();
+      await API.post('/api/save', { profile });
+      console.log('Perfil guardado:', reason);
+    }catch(e){ console.warn('No se pudo guardar perfil', e?.data||e); }
+  }
+
+  function showFormAfterLogin(){
+    try{ if(authModal) authModal.style.display='none'; }catch(e){}
+    try{ document.querySelector('#formBar')?.style && (document.querySelector('#formBar').style.display='block'); }catch(e){}
+  }
+
+  async function tryAutoLogin(){
+    const prof = await loadProfileIfAny();
+    if(prof){ window.__pendingProfile = prof; showFormAfterLogin(); }
+    else { if(authModal) authModal.style.display='flex'; }
+  }
+
+  if(btnDoRegister){ btnDoRegister.addEventListener('click', async ()=>{
+    authMsg.textContent = '';
+    const u=(authUser?.value||'').trim(), p=(authPass?.value||'').trim();
+    if(!u||!p){ authMsg.textContent='Completa usuario y contraseña.'; return; }
+    try{ const r = await API.post('/api/register', { username:u, password:p }); authMsg.textContent='Registro exitoso, ahora inicia sesión.'; }
+    catch(e){ authMsg.textContent = e?.data?.msg || 'Error al registrar'; }
+  }); }
+
+  if(btnDoLogin){ btnDoLogin.addEventListener('click', async ()=>{
+    authMsg.textContent = '';
+    const u=(authUser?.value||'').trim(), p=(authPass?.value||'').trim();
+    if(!u||!p){ authMsg.textContent='Completa usuario y contraseña.'; return; }
+    try{ const r = await API.post('/api/login', { username:u, password:p }); API.setToken(r.token); window.__authUser = u; showFormAfterLogin(); window.__pendingProfile = r.profile||null; }
+    catch(e){ authMsg.textContent = e?.data?.msg || 'Error al iniciar sesión'; }
+  }); }
+
+  if(btnLogout){ btnLogout.addEventListener('click', ()=>{ API.setToken(null); window.location.reload(); }); }
+  const fGenderPreview = { get src(){ return document.getElementById('uiAvatar')?.src; }, set src(v){ try{ const img=document.getElementById('uiAvatar'); if(img) img.src=v; }catch(e){} } };
+  const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
+  const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
+  const MALE_IMG_2 = 'https://i.postimg.cc/vHf2KjGK/20250831_015656.png';
+  const FEMALE_IMG_2 = 'https://i.postimg.cc/hjZ1J8cT/20250831_015636.png';
+
+  // Avatar grid clickable thumbnails
+  const avatarGrid = document.getElementById('avatarGrid');
+  function clearAvatarSelection(){ if(!avatarGrid) return; avatarGrid.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected')); }
+  if(avatarGrid){
+    avatarGrid.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('.avatar-option'); if(!btn) return;
+      const src = btn.getAttribute('data-src');
+      if(!src) return;
+      clearAvatarSelection(); btn.classList.add('selected');
+      // set preview and UI avatar
+      try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){}
+      // set the select value too for form persistence
+      // if(avatarSelect) avatarSelect.value = src; // This was removed from HTML, causing a ReferenceError.
+    });
+    // pre-select first and reflect in preview + UI
+    const first = avatarGrid.querySelector('.avatar-option');
+    if(first){
+      first.classList.add('selected');
+      const src = first.getAttribute('data-src');
+      if(src){ try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){} }
+    }
+  }
+  function updateGenderPreview(){
+    try{
+      const selBtn = document.querySelector('#avatarGrid .avatar-option.selected');
+      const chosen = selBtn && selBtn.getAttribute('data-src');
+      fGenderPreview.src = chosen || MALE_IMG;
+    }catch(e){}
+  }
+  updateGenderPreview();
+  const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
+  const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
+  const getBoxes=()=> Array.from(likesWrap.querySelectorAll('input[type="checkbox"]'));
+  const getChecked=()=> getBoxes().filter(x=>x.checked);
+  function updateLikesUI(){
+    const count = getChecked().length;
+    likesCount.textContent = count;
+    const disableOthers = count >= 5;
+    getBoxes().forEach(cb=>{
+      if(!cb.checked){
+        cb.disabled = disableOthers;
+        cb.closest('.chip')?.classList.toggle('disabled', disableOthers);
+      }else{
+        cb.disabled = false;
+        cb.closest('.chip')?.classList.remove('disabled');
+      }
+    });
+    // Habilitar/deshabilitar el botón Comenzar según validación
+    const nameOk = fName && fName.value.trim().length > 0;
+    btnStart.disabled = !(nameOk && count === 5);
+  }
+  function attachLimit(){getBoxes().forEach(cb=>{['click','change','touchend'].forEach(ev=>{cb.addEventListener(ev, ()=>{const checked=getChecked();if(checked.length>5){cb.checked=false;}updateLikesUI();},{passive:true});});});}
+  attachLimit(); updateLikesUI();
+  if(fName){
+    fName.addEventListener('input', updateLikesUI);
+  }
+  btnRandLikes.onclick = ()=>{getBoxes().forEach(cb=>{ cb.checked=false; cb.disabled=false; cb.closest('.chip')?.classList.remove('disabled'); });const boxes = getBoxes(); let picks = 0;while(picks<5){ const i=(Math.random()*boxes.length)|0; if(!boxes[i].checked){ boxes[i].checked=true; picks++; } }updateLikesUI();};
+// Asegurar que el botón Comenzar esté habilitado/deshabilitado al azar también
+btnRandLikes.addEventListener('click', updateLikesUI);
+
+  /* ===== CANVAS / MUNDO ===== */
+  const canvas=$("#world"), ctx=canvas.getContext('2d', {alpha: false});
+  const uiDock=$("#uiDock"), uiHideBtn=$("#uiHideBtn"), uiShowBtn=$("#uiShowBtn");
+  const zoomFab=$("#zoomFab"), zoomIn=$("#zoomIn"), zoomOut=$("#zoomOut"), docDock=$("#docDock"), govDock=$("#govDock"), topBar=$("#top-bar");
+  const mini=$("#mini"), miniCanvas=$("#miniCanvas"), mctx=miniCanvas.getContext('2d');
+  const stats=$("#stats"), toggleLinesBtn=$("#toggleLines");
+  const btnShowDoc=$("#btnShowDoc"), accDocBody=$("#docBody");
+  const panelDepositAll=$("#panelDepositAll"), accBankBody=$("#bankBody");
+  const btnHouse=$("#btnHouse"), btnShop=$("#btnShop");
+  const btnShowMarried = $("#btnShowMarried"), marriedDock = $("#marriedDock"), marriedList = $("#marriedList");
+  const builderModal=$("#builderModal"), btnBuy=$("#btnBuy"), btnBuilderClose=$("#btnBuilderClose"), builderMsg=$("#builderMsg");
+  const shopModal=$("#shopModal"), shopList=$("#shopList"), shopMsg=$("#shopMsg"), btnShopClose=$("#btnShopClose");
+  const govFundsEl=$("#govFunds"), govDescEl = $("#govDesc");
+  const govSelectEl=$("#govSelect"), btnGovPlace=$("#btnGovPlace");
+
+  const btnGovClose = $("#btnGovClose");
+  if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
+  let placingGov = null, placingHouse = null, placingShop = null;
+
+  const isMobile = ()=> innerWidth<=768;
+  let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
+  const WORLD={w:0,h:0}; const cam={x:0,y:0};
+
+  // --- Generador de números aleatorios determinista (semilla fija para el mundo) ---
+  let _seed = 20250824; // Usa la fecha de hoy como semilla fija
+  function seededRandom() {
+    // LCG: https://en.wikipedia.org/wiki/Linear_congruential_generator
+    _seed = (_seed * 1664525 + 1013904223) % 4294967296;
+    return _seed / 4294967296;
+  }
+  function setSeed(s) { _seed = s >>> 0; }
+
+  // Versiones deterministas de randi y rand para la generación del mundo
+  function srandi(a, b) { return (seededRandom() * (b - a) + a) | 0; }
+  function srand(a, b) { return a + seededRandom() * (b - a); }
+  function setWorldSize(){
+    const vw = innerWidth, vh = innerHeight;
+    // Doblar la extensión horizontal del mapa grande: multiplicadores duplicados
+    WORLD.w = Math.floor(vw * (isMobile() ? 7.2 : 5.6));
+    WORLD.h = Math.floor(vh * (isMobile() ? 3.2 : 2.6));
+  }
+
+  function fitCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; clampCam(); }
+  function clampCam(){const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;const maxX = Math.max(0, WORLD.w - vw);const maxY = Math.max(0, WORLD.h - vh);cam.x = Math.max(0, Math.min(cam.x, maxX));cam.y = Math.max(0, Math.min(cam.y, maxY));}
+  function toScreen(x,y){ return {x:(x-cam.x)*ZOOM, y:(y-cam.y)*ZOOM}; }
+  function toWorld(px,py){ return {x: px/ZOOM + cam.x, y: py/ZOOM + cam.y}; }
+  setWorldSize(); fitCanvas();
+  // Intento de auto-login
+  tryAutoLogin();
+  addEventListener('resize', fitCanvas, {passive:true});
+
+  /* ===== PAN/ZOOM ===== */
+  const activePointers = new Map();let panPointerId = null;let pinchBaseDist = 0, pinchBaseZoom = 1, pinchCx = 0, pinchCy = 0;
+  function isOverUI(sx,sy){const rects = [];const addRect = (el)=>{if(!el) return;const cs = getComputedStyle(el);if(cs.display==='none' || cs.visibility==='hidden') return;rects.push(el.getBoundingClientRect());};addRect(uiDock); addRect(docDock); addRect(govDock); addRect(topBar); addRect(mini); addRect(zoomFab); addRect(uiShowBtn); addRect(marriedDock); return rects.some(r => sx>=r.left && sx<=r.right && sy>=r.top && sy<=r.bottom);}
+  function setZoom(newZ, anchorX=null, anchorY=null){const before = toWorld(anchorX??(canvas.width/2), anchorY??(canvas.height/2));ZOOM = Math.max(ZMIN, Math.min(ZMAX, newZ));const after  = toWorld(anchorX??(canvas.width/2), anchorY??(canvas.height/2));cam.x += (before.x - after.x); cam.y += (before.y - after.y); clampCam();}
+  canvas.addEventListener('wheel', (e)=>{ e.preventDefault();if(isOverUI(e.clientX,e.clientY)) return;setZoom(ZOOM + (Math.sign(e.deltaY)>0?-ZSTEP:ZSTEP), e.clientX, e.clientY);}, {passive:false});
+  canvas.addEventListener('pointerdown', (e)=>{if(isOverUI(e.clientX,e.clientY)) return;canvas.setPointerCapture(e.pointerId);activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});if(activePointers.size===1){panPointerId = e.pointerId;}else if(activePointers.size===2){const pts=[...activePointers.values()];pinchBaseDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);pinchBaseZoom = ZOOM;pinchCx = (pts[0].x + pts[1].x)/2;pinchCy = (pts[0].y + pts[1].y)/2;panPointerId = null;}}, {passive:true});
+  canvas.addEventListener('pointermove', (e)=>{if(!activePointers.has(e.pointerId)) return;const prev = activePointers.get(e.pointerId);activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});if(activePointers.size===1 && panPointerId===e.pointerId){const dx = (e.clientX - prev.x)/ZOOM;const dy = (e.clientY - prev.y)/ZOOM;cam.x -= dx; cam.y -= dy; clampCam();}else if(activePointers.size===2){const pts=[...activePointers.values()];const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y) || 1;const factor = dist / (pinchBaseDist||dist);setZoom(pinchBaseZoom * factor, pinchCx, pinchCy);}}, {passive:true});
+  const clearPointer = (id)=>{if(!activePointers.has(id)) return;activePointers.delete(id);if(panPointerId===id) panPointerId=null;if(activePointers.size<2){ pinchBaseDist=0; }};
+  canvas.addEventListener('pointerup',   e=> clearPointer(e.pointerId), {passive:true});
+  canvas.addEventListener('pointercancel', e=> clearPointer(e.pointerId), {passive:true});
+  $("#zoomIn").onclick = ()=> setZoom(ZOOM+ZSTEP, canvas.width/2, canvas.height/2);
+  $("#zoomOut").onclick= ()=> setZoom(ZOOM-ZSTEP, canvas.width/2, canvas.height/2);
+
+  // Mapeo directo de imágenes para edificaciones
+const BUILDING_IMAGES = {
+  // Instituciones gubernamentales con URLs corregidas
+  parque: 'https://i.postimg.cc/2jwdggYM/20250826-110318.png',
+  escuela: 'https://i.postimg.cc/x1PTBFPx/escuela.png', // URL alternativa 
+  // biblioteca removed
+  policia: 'https://i.postimg.cc/YCHr4sgt/policia.png',
+  hospital: 'https://i.postimg.cc/y8yV0yXc/hospital.png',
+  central_electrica: 'https://i.postimg.cc/8zfXn9dM/electrica.png', // ACTUALIZADA
+  cemetery: 'https://i.postimg.cc/0NzPkDMD/20250827-081702.jpg',
+  // Edificios generales
+  house: 'https://i.postimg.cc/BQpptNmR/20250827-030930.png',
+  bank: 'https://i.postimg.cc/4x5TcfRw/banco.png',
+  factory: 'https://i.postimg.cc/y8JFgdRC/20250826-102250.png',
+  mall: 'https://i.postimg.cc/13ykskVF/mall.png',
+  shop: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
+  
+  // Gobierno
+  gobierno: 'https://i.postimg.cc/PJ2mZvKT/20250826-103751.png',
+  
+  // Tiendas específicas
+  bar: 'https://i.postimg.cc/Pqfdyv2c/Bar.png',
+  panadería: 'https://i.postimg.cc/sDHYgSvJ/20250827-065353.png',
+  biblioteca: 'https://i.postimg.cc/rwmxy3tf/20250831_110133.png',
+  
+  // Nuevas URLs agregadas para negocios faltantes
+  // Nuevas URLs agregadas para negocios faltantes
+  kiosco: 'https://i.postimg.cc/xjp7LhNK/kiosco.png',
+  juguería: 'https://i.postimg.cc/Y0TbTcQZ/jugo.png',
+  cafetería: 'https://i.postimg.cc/J4gfCv11/cafeteria.png',
+  heladería: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
+  'pizzería': 'https://i.postimg.cc/nhb3kJFQ/pizzeria.png',
+  // (se removió la entrada de librería por solicitud)
+  // 'librería': '/assets/fondo1.jpg',
+  'juguetería': 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
+  'yoga studio': 'https://i.postimg.cc/8Ps23NgK/yoga_estudio.png',
+  'dance hall': 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
+  'tienda deportes': 'https://i.postimg.cc/XvWDV0t0/deportes.png',
+  'arte & galería': 'https://i.postimg.cc/VvZ36HnW/galeria.png',
+  'cineclub': 'https://i.postimg.cc/8cz2TVJC/cine_club.png',
+  'gamer zone': 'https://i.postimg.cc/c48DwHSS/gamer.png',
+  'senderismo': 'https://i.postimg.cc/PrxHj1YM/senderismo.png',
+  'foto-lab': 'https://i.postimg.cc/pVkv4shT/foto_club.png',
+  'astro club': 'https://i.postimg.cc/c4bS46cG/astro_club.png',
+  restaurante: 'https://i.postimg.cc/vHwKPbTd/20250827_070529.png',
+  
+  // Otras instituciones
+  bomberos: 'https://i.postimg.cc/KYzPHMhV/bomberos.png', // ACTUALIZADA
+  universidad: 'https://i.imgur.com/hvsZIsB.png', // URL alternativa
+  tribunal: 'https://i.imgur.com/zZ8FVOB.png', // URL alternativa
+  teatro: 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
+  estadio: 'https://i.postimg.cc/tgZKH7hS/20250827-052454.png' // URL solicitada por el usuario
 };
-const toastLimiter = { last: 0, gap: 400 };
-const toast = (msg)=>{
-  const now = performance.now();
-  if (now - toastLimiter.last < toastLimiter.gap) return;
-  toastLimiter.last = now;
-  const _t = document.querySelector('#toast');
-  if(_t){ _t.textContent=msg; _t.style.display='block'; clearTimeout(toast._id); toast._id=setTimeout(()=>_t.style.display='none',2400); }
-};
 
-window.addEventListener('error', e => { try{toast('⚠️ Error: '+(e.message||'JS'));}catch(_){} });
-window.addEventListener('unhandledrejection', e => { try{toast('⚠️ Promesa: '+(e.reason?.message||'error'));}catch(_){} });
+// Precarga de imágenes para mejor rendimiento
+const BUILDING_IMAGE_CACHE = {};
 
-// Red: helpers para multijugador (placeholders; inicialización real más abajo)
-const hasNet = () => !!(window.sock && window.sock.connected);
-let __lastNetSend = 0;
-let __lastSentState = { x: -1, y: -1, money: -1 };
+// Street texture image & pattern cache
+const STREET_IMG = new Image();
+STREET_IMG.src = '/assets/calle1.jpg';
+const STREET_PATTERN_CACHE = { pattern: null, lastZoom: null, lastCam: {x:0,y:0} };
 
-// ====== SUAVIZADO REMOTO (nuevo) ======
-const REMOTE = {
-  BUFFER: {}, SMOOTH: {}, STATS: {},
-  BASE_DELAY: 110, DELAY_MAX: 170, EXTRA_GUARD: 10,
-  MAX_BUF: 24, K: 18.0, DEADZONE: 0.18
-};
+function getStreetPattern(ctx){
+  try{
+    if(!STREET_IMG || !STREET_IMG.complete || STREET_IMG.naturalWidth === 0) return null;
+    // If zoom or cam changed significantly, recreate pattern
+    const key = `${Math.round(ZOOM*100)}_${Math.round(cam.x)}_${Math.round(cam.y)}`;
+    if(STREET_PATTERN_CACHE.key === key && STREET_PATTERN_CACHE.pattern) return STREET_PATTERN_CACHE.pattern;
 
-/* ===== FORMULARIO ===== */
-const formBar = $("#formBar"), fName=$("#fName"), fUsd=$("#fUsd");
-const fGenderPreview = { get src(){ return document.getElementById('uiAvatar')?.src; }, set src(v){ try{ const img=document.getElementById('uiAvatar'); if(img) img.src=v; }catch(e){} } };
-const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
-const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
-const MALE_IMG_2 = 'https://i.postimg.cc/vHf2KjGK/20250831_015656.png';
-const FEMALE_IMG_2 = 'https://i.postimg.cc/hjZ1J8cT/20250831_015636.png';
+    const patternCanvas = document.createElement('canvas');
+    const iw = STREET_IMG.naturalWidth, ih = STREET_IMG.naturalHeight;
+    // scale image to maintain appearance at current zoom (avoid distortion)
+    patternCanvas.width = Math.max(64, Math.round(iw * Math.max(1, ZOOM)));
+    patternCanvas.height = Math.max(64, Math.round(ih * Math.max(1, ZOOM)));
+    const pc = patternCanvas.getContext('2d');
+    pc.clearRect(0,0,patternCanvas.width, patternCanvas.height);
+    // draw the source image scaled to canvas size preserving aspect
+    pc.drawImage(STREET_IMG, 0, 0, patternCanvas.width, patternCanvas.height);
+    const pat = ctx.createPattern(patternCanvas, 'repeat');
+    STREET_PATTERN_CACHE.pattern = pat;
+    STREET_PATTERN_CACHE.key = key;
+    return pat;
+  }catch(e){ console.warn('getStreetPattern error', e); return null; }
+}
 
-// Avatar grid clickable thumbnails
-const avatarGrid = document.getElementById('avatarGrid');
-function clearAvatarSelection(){ if(!avatarGrid) return; avatarGrid.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected')); }
-if(avatarGrid){
-  avatarGrid.addEventListener('click', (ev)=>{
-    const btn = ev.target.closest('.avatar-option'); if(!btn) return;
-    const src = btn.getAttribute('data-src');
-    if(!src) return;
-    clearAvatarSelection(); btn.classList.add('selected');
-    try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){}
-  });
-  const first = avatarGrid.querySelector('.avatar-option');
-  if(first){
-    first.classList.add('selected');
-    const src = first.getAttribute('data-src');
-    if(src){ try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){} }
+function preloadImages() {
+  console.log("Iniciando precarga de imágenes con manejo de errores mejorado...");
+  
+  for (const key in BUILDING_IMAGES) {
+    try {
+      const img = new Image();
+      
+      img.onload = function() {
+        console.log(`Imagen cargada: ${key}`);
+      };
+      
+      img.onerror = function() {
+        console.warn(`Error al cargar la imagen: ${key}. Usando fallback.`);
+        // Crear un fallback simple que no cause errores
+        BUILDING_IMAGE_CACHE[key] = { 
+          error: true, 
+          complete: true,
+          naturalWidth: 100
+        };
+      };
+      
+      img.src = BUILDING_IMAGES[key];
+      BUILDING_IMAGE_CACHE[key] = img;
+    } catch(e) {
+      console.error(`Error general con imagen ${key}:`, e);
+    }
   }
 }
-function updateGenderPreview(){
-  try{
-    const selBtn = document.querySelector('#avatarGrid .avatar-option.selected');
-    const chosen = selBtn && selBtn.getAttribute('data-src');
-    fGenderPreview.src = chosen || MALE_IMG;
-  }catch(e){}
-}
-updateGenderPreview();
 
-const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
+// Ejecutar precarga inmediatamente
+preloadImages();
 
-// === Registro simple (frontend) ===
-const registerModal = document.getElementById('registerModal');
-const regUser = document.getElementById('regUser');
-const regPass = document.getElementById('regPass');
-const regErr = document.getElementById('regErr');
-const btnDoRegister = document.getElementById('btnDoRegister');
-const LS_KEY = 'mu_registered_user_v1';
-const btnDoLogin = document.getElementById('btnDoLogin');
-const loginHint = document.getElementById('loginHint');
-const LS_PROGRESS = 'mu_progress_v1';
-const DEVICE_KEY = 'mu_device_id_v1';
-function getDeviceId(){
-  try{
-    let id = localStorage.getItem(DEVICE_KEY);
-    if(!id){ id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(DEVICE_KEY, id); }
-    return id;
-  }catch(e){ return null; }
-}
-function isRegistered(){ try{ const raw = localStorage.getItem(LS_KEY); if(!raw) return false; const obj = JSON.parse(raw); return !!obj?.username; }catch(e){ return false; } }
-function setRegistered(username){ try{ localStorage.setItem(LS_KEY, JSON.stringify({ username, at: Date.now() })); }catch(e){} }
-function getRegistered(){ try{ const raw = localStorage.getItem(LS_KEY); return raw? JSON.parse(raw): null; }catch(e){ return null; } }
+// Limpiar cualquier entrada residual de 'librería' en el cache (por versiones antiguas)
+if (BUILDING_IMAGE_CACHE['librería']) { delete BUILDING_IMAGE_CACHE['librería']; }
 
-async function doRegister(){
-  const u = (regUser?.value||'').trim();
-  const p = String(regPass?.value||'');
-  if(!u || !p){ if(regErr){ regErr.textContent='Ingresa usuario y contraseña.'; regErr.style.display='block'; } return; }
-  try{
-    if(btnDoRegister) btnDoRegister.disabled = true;
-    const resp = await fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: u, password: p, deviceId: getDeviceId() }) });
-    const data = await resp.json().catch(()=>({ ok:false, msg:'Respuesta inválida.' }));
-    if(!resp.ok || !data?.ok){ throw new Error(data?.msg || 'No se pudo registrar.'); }
-    setRegistered(data.username || u);
-    if(registerModal) registerModal.style.display = 'none';
-    toast('Registro exitoso. ¡Bienvenido!');
-  }catch(err){ if(regErr){ regErr.textContent = err.message || 'Error de registro.'; regErr.style.display='block'; } }
-  finally{ if(btnDoRegister) btnDoRegister.disabled = false; }
-}
-if(btnDoRegister) btnDoRegister.addEventListener('click', doRegister);
+// Imagen de fondo del mundo: usar el JPG local directamente para evitar 404 por PNG
+const BG_IMG = new Image();
+BG_IMG.onload = () => { console.log('Background image loaded:', BG_IMG.src); };
+BG_IMG.onerror = function() { console.warn('Background image not found at /assets/fondo1.jpg — usando color de respaldo'); };
+BG_IMG.src = '/assets/fondo1.jpg';
 
-async function doLogin(){
-  const u = (regUser?.value||'').trim();
-  const p = String(regPass?.value||'');
-  if(!u || !p){ if(regErr){ regErr.textContent='Ingresa usuario y contraseña.'; regErr.style.display='block'; } return; }
-  try{
-    if(btnDoLogin) btnDoLogin.disabled = true;
-    const resp = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: u, password: p, deviceId: getDeviceId() }) });
-    const data = await resp.json().catch(()=>({ ok:false, msg:'Respuesta inválida.' }));
-    if(!resp.ok || !data?.ok){ throw new Error(data?.msg || 'No se pudo iniciar sesión.'); }
-    setRegistered(data.username || u);
-    try{ if(data.state){ localStorage.setItem(LS_PROGRESS, JSON.stringify(data.state)); } }catch(e){}
-    if(registerModal) registerModal.style.display = 'none';
-    if(loginHint){ const when = data.lastSavedAt ? new Date(data.lastSavedAt).toLocaleString() : 'sin guardados previos'; loginHint.textContent = `Inicio de sesión correcto (${when}).`; loginHint.style.display='block'; }
-    toast('Inicio de sesión exitoso.');
-  }catch(err){ if(regErr){ regErr.textContent = err.message || 'Error al iniciar sesión.'; regErr.style.display='block'; } }
-  finally{ if(btnDoLogin) btnDoLogin.disabled = false; }
-}
-if(btnDoLogin) btnDoLogin.addEventListener('click', doLogin);
+// ... no street texture feature (restored to solid fills)
 
-// bloquear UI de creación hasta estar registrado
-(function initRegisterGate(){
-  if(!isRegistered()){
-    if(registerModal) registerModal.style.display = 'flex';
-    if(btnStart) btnStart.disabled = true;
-  } else {
-    if(registerModal) registerModal.style.display = 'none';
+  /* ===== CONFIGURACIÓN ===== */
+  const CFG = {
+  LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:10,  // Aumentado HOUSE_SIZE de 22 a 70
+    R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+    YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
+    HOUSE_BUY_COST:3000,
+    GOV_TAX_EVERY: 20*60,      // cada 20 min
+    WEALTH_TAX_BASE: 0.01,     // 1.0% base
+    INSTITUTION_TAX_PER: 0.001,// +0.1% por institución
+    WEALTH_TAX_MAX: 0.06,      // 6% tope de seguridad
+    EMPLOYEE_SALARY: 25, SALARY_PAY_EVERY: 120,
+    GOV_RENT_EVERY: 10*60, GOV_RENT_AMOUNT: 5, 
+    COST_ROAD: 40,
+    COST_PARK: 80, COST_SCHOOL: 120, COST_LIBRARY: 150, COST_POLICE: 200, COST_HOSPITAL: 250, COST_POWER: 350,
+    SHOP_W:120, SHOP_H:80, VISIT_RADIUS:220, VISIT_RATE: 0.003, PRICE_MIN:1, PRICE_MAX:3,
+    SHOP_DWELL: 5, NEW_SHOP_FORCE_WINDOW: 120,
+    SHOP_PAYOUT_CHUNK: 100,
+    OWNER_MANAGE_VS_WORK_RATIO: 0.3, // 30% de probabilidad de gestionar negocio vs trabajar
+  };
+
+  const VEHICLES = {
+    bicicleta:      { name:'Bicicleta',      cost:50,   speed: 100, icon:'🚲' },
+    moto:           { name:'Motocicleta',    cost:200,  speed: 180, icon:'🛵' },
+    auto_compacto:  { name:'Auto Compacto',  cost:800,  speed: 260, icon:'🚗' },
+    auto_deportivo: { name:'Auto Deportivo', cost:2500, speed: 360, icon:'🏎️' }
+  };
+
+  /* ===== Tipos de Instituciones (25) ===== */
+  const GOV_TYPES = [
+    {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)'},
+    {k:'escuela', label:'Escuela', cost:CFG.COST_SCHOOL, w:140,h:95, icon:'📚', fill:'rgba(51,65,85,0.92)', stroke:'rgba(148,163,184,0.95)'},
+    {k:'policia', label:'Policía', cost:CFG.COST_POLICE, w:150,h:80, icon:'🚓', fill:'#3b82f6', stroke:'#dbeafe'},
+    {k:'hospital', label:'Hospital', cost:CFG.COST_HOSPITAL, w:180,h:100, icon:'🏥', fill:'#f1f5f9', stroke:'#ef4444'},
+    {k:'central_electrica', label:'Central Eléctrica', cost:CFG.COST_POWER, w:200,h:120, icon:'⚡', fill:'#475569', stroke:'#facc15'},
+    {k:'bomberos', label:'Cuerpo de Bomberos', cost:220, w:160,h:85, icon:'🚒', fill:'#7c2d12', stroke:'#fecaca'},
+    {k:'registro_civil', label:'Registro Civil', cost:180, w:150,h:85, icon:'🪪', fill:'#0f172a', stroke:'#94a3b8'},
+    {k:'universidad', label:'Universidad Pública', cost:300, w:200,h:120, icon:'🎓', fill:'#1e293b', stroke:'#93c5fd'},
+    {k:'tribunal', label:'Tribunal / Corte', cost:260, w:170,h:95, icon:'⚖️', fill:'#111827', stroke:'#9ca3baf'},
+    {k:'museo', label:'Museo', cost:200, w:160,h:90, icon:'🏛️', fill:'#3f3f46', stroke:'#cbd5e1'},
+  {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047'},
+    {k:'teatro', label:'Teatro', cost:190, w:160,h:90, icon:'🎭', fill:'#1f2937', stroke:'#9ca3baf'},
+  {k:'estadio', label:'Estadio', cost:420, w:320,h:220, icon:'🏟️', fill:'#0b3a1e', stroke:'#10b981'},
+    {k:'terminal', label:'Terminal Terrestre', cost:260, w:200,h:110, icon:'🚌', fill:'#0c4a6e', stroke:'#7dd3fc'},
+    {k:'correos', label:'Correos del Estado', cost:170, w:150,h:85, icon:'📮', fill:'#0b1f3a', stroke:'#60a5fa'},
+    {k:'banco_central', label:'Banco Central', cost:300, w:180,h:100, icon:'🏦', fill:'#2d3748', stroke:'#fde68a'},
+    {k:'aduana', label:'Aduana', cost:240, w:170,h:95, icon:'🚢', fill:'#1e3a8a', stroke:'#93c5fd'},
+    {k:'carcel', label:'Centro de Rehabilitación', cost:280, w:200,h:110, icon:'🗝️', fill:'#111827', stroke:'#64748b'},
+    {k:'planta_agua', label:'Planta de Agua', cost:260, w:190,h:110, icon:'🚰', fill:'#0e7490', stroke:'#67e8f9'},
+    {k:'reciclaje', label:'Planta de Reciclaje', cost:220, w:180,h:100, icon:'♻️', fill:'#14532d', stroke:'#86efac'},
+    {k:'centro_cultural', label:'Centro Cultural', cost:190, w:160,h:90, icon:'🎨', fill:'#3b0764', stroke:'#d8b4fe'},
+    {k:'mercado_central', label:'Mercado Central', cost:210, w:180,h:100, icon:'🥚', fill:'#78350f', stroke:'#fde68a'},
+    {k:'instituto_tecnologico', label:'Instituto Tecnológico', cost:230, w:180,h:100, icon:'🧪', fill:'#0f172a', stroke:'#60a5fa'},
+    {k:'centro_investigacion', label:'Centro de Investigación', cost:260, w:190,h:105, icon:'🔬', fill:'#164e63', stroke:'#a5f3fc'},
+    {k:'observatorio', label:'Observatorio', cost:240, w:170,h:95, icon:'🔭', fill:'#1e293b', stroke:'#c7d2fe'}
+  ];
+
+  /* ===== Estructuras almacenadas ===== */
+  const streets=[], factories=[], banks=[], malls=[], houses=[], barrios=[], deceased=[], avenidas=[], roundabouts=[], shops=[];
+
+  // helper: lista de negocios visibles en el mapa grande
+  function getVisibleShops(){
+    // Preferir el estado del servidor si existe, sino usar el array local
+  // Devolver todas las tiendas (incluyendo panaderías). El usuario pidió que se muestren todas las panaderías en el mapa grande.
+  return (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
   }
-})();
 
-const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
-const getBoxes=()=> Array.from(likesWrap.querySelectorAll('input[type="checkbox"]'));
-const getChecked=()=> getBoxes().filter(x=>x.checked);
-function updateLikesUI(){
-  const count = getChecked().length;
-  likesCount.textContent = count;
-  const disableOthers = count >= 5;
-  getBoxes().forEach(cb=>{
-    if(!cb.checked){
-      cb.disabled = disableOthers;
-      cb.closest('.chip')?.classList.toggle('disabled', disableOthers);
-    }else{
-      cb.disabled = false;
-      cb.closest('.chip')?.classList.remove('disabled');
+  // helper: eliminar panaderías no compradas (robusto)
+  function removeUnownedPanaderias(){
+  // NO-OP: previously removed unowned panaderias; left empty to keep panaderias visible
+  return;
+  }
+  const SHOP_TYPES = [
+  {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400},
+      {k:'kiosco', icon:'🏪', like:'kiosco', price:1, buyCost: 450},
+      {k:'juguería', icon:'🥣', like:'jugos', price:1, buyCost: 500},
+      {k:'cafetería', icon:'☕', like:'café', price:2, buyCost: 800},
+      {k:'heladería', icon:'🍨', like:'helado', price:2, buyCost: 850},
+      {k:'pizzería', icon:'🍕', like:'pizza', price:2, buyCost: 900},
+  // 'librería' removida por solicitud
+      {k:'juguetería', icon:'🧸', like:'juguetes', price:2, buyCost: 1000},
+      {k:'yoga studio', icon:'🧘', like:'yoga', price:2, buyCost: 1100},
+      {k:'dance hall', icon:'💃', like:'baile', price:2, buyCost: 1100},
+      {k:'tienda deportes', icon:'🏅', like:'deporte', price:2, buyCost: 1200},
+      {k:'arte & galería', icon:'🎨', like:'arte', price:2, buyCost: 1300},
+      {k:'cineclub', icon:'🎬', like:'cine', price:2, buyCost: 1400},
+      {k:'gamer zone', icon:'🎮', like:'videojuegos', price:2, buyCost: 1400},
+      {k:'senderismo', icon:'🧾', like:'naturaleza', price:2, buyCost: 1500},
+      {k:'foto-lab', icon:'📷', like:'fotografía', price:2, buyCost: 1500},
+      {k:'astro club', icon:'🔭', like:'astronomía', price:2, buyCost: 1600},
+      {k:'restaurante', icon:'🍽️', like:'comida', price:3, buyCost: 2500},
+      {k:'electrónica', icon:'🔌', like:'electrónica', price:3, buyCost: 3000},
+      {k:'tech hub', icon:'🖥️', like:'tecnología', price:3, buyCost: 3500},
+      {k:'bar', icon:'🍻', like:'bebidas', price:2, buyCost: 1200},
+  ];
+
+  // porcentaje de ganancia adicional por cada venta basado en el costo de compra
+  CFG.SHOP_PROFIT_FACTOR = CFG.SHOP_PROFIT_FACTOR || 0.002;
+
+  /* Áreas clave */
+  const builder={x:0,y:0,w:220,h:110}, cemetery={x:0,y:0,w:CFG.CEM_W,h:CFG.CEM_H}, government={x:0,y:0,w:240,h:140,funds:0, placed:[]};
+  const roadRects=[];
+  const cityBlocks = [];
+  let urbanZone = {x:0, y:0, w:0, h:0};
+
+  // Aplicar estado del servidor a estructuras locales visibles
+  function applyServerState(payload){
+    try{
+      if(payload?.government){
+        if(typeof payload.government.funds === 'number') government.funds = payload.government.funds;
+        government.placed.length = 0;
+        (payload.government.placed||[]).forEach(g=> government.placed.push({...g}));
+        if(typeof window.updateGovDesc === 'function') window.updateGovDesc();
+      }
+      if(Array.isArray(payload?.houses)){
+        window.__netHouses = payload.houses.map(h=> ({...h}));
+      }
+      if (Array.isArray(payload?.shops)) {
+        // Reemplazar el array local de tiendas con los datos del servidor
+  // Cargar todas las tiendas tal cual vienen del servidor (incluyendo panaderías)
+  shops.length = 0;
+  shops.push(...payload.shops);
+      }
+    }catch(e){ console.warn('applyServerState error', e); }
+  }
+
+  /* Utils */
+  const randi=(a,b)=> (Math.random()*(b-a)+a)|0, rand=(a,b)=> a + Math.random()*(b-a), clamp=(v,a,b)=> Math.max(a,Math.min(b,v));
+  const centerOf=r=> ({x:r.x+r.w/2, y:r.y+r.h/2});
+  const rectsOverlap=(a,b)=> !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
+  const inside=(pt,r)=> pt.x>=r.x && pt.x<=r.x+r.w && pt.y>=r.y && pt.y<=r.y+r.h;
+  const rectsOverlapWithMargin = (rectA, rectB, margin) => {
+    const paddedB = { x: rectB.x - margin, y: rectB.y - margin, w: rectB.w + margin*2, h: rectB.h + margin*2 };
+    return rectsOverlap(rectA, paddedB);
+  };
+
+  function isOnRoad(agent) {
+    const pt = { x: agent.x, y: agent.y };
+    if (avenidas.some(r => inside(pt, r))) return true;
+    if (roadRects.some(r => inside(pt, r))) return true;
+    if (roundabouts.some(r => {
+      const dist = Math.hypot(pt.x - r.cx, pt.y - r.cy);
+      return dist < r.w / 2;
+    })) return true;
+    return false;
+  }
+  function getCurrentRoad(agent) {
+    const pt = { x: agent.x, y: agent.y };
+    for (const road of [...avenidas, ...roadRects]) { if (inside(pt, road)) return road; }
+    for (const r of roundabouts) { const dist = Math.hypot(pt.x - r.cx, pt.y - r.cy); if (dist < r.w / 2) return r; }
+    return null;
+  }
+
+  function scatterRects(n, [wmin,wmax], [hmin,hmax], avoid=[] , bounds=null, sameTypeMargin = 8){
+    const placed=[]; const wr=bounds || {x:0,y:0,w:WORLD.w,h:WORLD.h}; let tries=0; const generalMargin = 8;
+    while(placed.length<n && tries<3000){tries++;
+      const w = srandi(wmin, wmax), h=srandi(hmin,hmax);
+      const x = srandi(wr.x+30, wr.x+wr.w-w-30), y = srandi(wr.y+30, wr.y+wr.h-h-30);
+      const rect={x,y,w,h};
+      if(placed.some(r=>rectsOverlapWithMargin(r,rect, sameTypeMargin))) continue;
+      if(avoid.some(r=>rectsOverlapWithMargin(r,rect, generalMargin))) continue;
+      placed.push(rect);
     }
-  });
-  const nameOk = fName && fName.value.trim().length > 0;
-  const regOk = isRegistered();
-  if (btnStart) btnStart.disabled = !(nameOk && count === 5 && regOk);
-}
+    return placed;
+  }
 
-/* ===== Duplicate block removed to prevent redeclarations ===== */
+  /**
+ * Distribuye edificios uniformemente en una zona dada
+ * @param {number} n - Número de edificios a colocar
+ * @param {array} widthRange - Rango de anchura [min, max]
+ * @param {array} heightRange - Rango de altura [min, max]
+ * @param {array} avoid - Edificios a evitar
+ * @param {object} zone - Zona donde distribuir (x,y,w,h)
+ * @param {number} margin - Margen mínimo entre edificios
+ */
+function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
+  const placed = [];
+  const [wmin, wmax] = widthRange;
+  const [hmin, hmax] = heightRange;
+
+  const maxAttempts = Math.max(500, n * 400);
+  let attempts = 0;
+
+  while (placed.length < n && attempts < maxAttempts) {
+    attempts++;
+    const w = randi(wmin, wmax);
+    const h = randi(hmin, hmax);
+    const x = rand(Math.max(zone.x + 8, 0), Math.max(zone.x + 8, zone.x + zone.w - w - 8));
+    const y = rand(Math.max(zone.y + 8, 0), Math.max(zone.y + 8, zone.y + zone.h - h - 8));
+    const rect = { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+
+    const collides = [...avoid, ...placed].some(o => rectsOverlapWithMargin(rect, o, margin));
+    if (!collides) placed.push(rect);
+  }
+
+  if (placed.length < n && typeof scatterRects === 'function') {
+    const remaining = scatterRects(n - placed.length, widthRange, heightRange, [...avoid, ...placed], zone, margin);
+    placed.push(...remaining);
+  }
+
+  return placed;
+}
 
   function makeBarriosYCasas(totalNeeded, urbanArea, avoidList = []) {
     barrios.length = 0;
@@ -325,26 +795,18 @@ function updateLikesUI(){
           label: `Parque ${i+1}`
         });
       });
-  try{
+      // --- Colocar 4 bibliotecas distribuidas evitando solapamientos ---
+      try{
         const bibliotecaType = GOV_TYPES.find(t => t.k === 'biblioteca');
-        if (bibliotecaType) {
-          const libs = scatterRects(
-            4,
-            [bibliotecaType.w, bibliotecaType.w],
-            [bibliotecaType.h, bibliotecaType.h],
-            avoidList,
-            null,
-            100
-          );
+        if(bibliotecaType){
+          const libs = scatterRects(4, [bibliotecaType.w, bibliotecaType.w], [bibliotecaType.h, bibliotecaType.h], avoidList, null, 100);
           libs.forEach((b, idx) => {
-            government.placed.push({ ...bibliotecaType, ...b, label: `Biblioteca ${idx + 1}` });
+            government.placed.push({...bibliotecaType, ...b, label: `Biblioteca ${idx+1}`} );
           });
           // añadir bibliotecas a la lista de evitación
           avoidList.push(...libs);
         }
-      } catch (e) {
-        console.warn('Error placing bibliotecas', e);
-      }
+      }catch(e){ console.warn('Error placing bibliotecas', e); }
       // Eliminar explícitamente 'Parque 8' si existe
       for (let i = government.placed.length - 1; i >= 0; i--) {
         const it = government.placed[i];
@@ -1285,6 +1747,7 @@ function updateLikesUI(){
             a.cooldownSocial = 120; b.cooldownSocial = 120;
             a.justMarried = performance.now(); b.justMarried = performance.now();
             toast(`${a.code} y ${b.code} se han casado! 💕`);
+            try{ saveProfile('married'); }catch(e){}
 
             let targetHome = null;
             if (aOwnsHouse) {
@@ -1558,6 +2021,7 @@ function updateLikesUI(){
                       const baby = makeAgent('child', { parents: [a.id, spouse.id], ageYears: 0 });
                       baby.x = home.x + home.w/2; baby.y = home.y + home.h/2; baby.houseIdx = a.houseIdx;
                       agents.push(baby); toast(`¡Ha nacido un bebé en la familia de ${a.code} y ${spouse.code}!`);
+                      try{ saveProfile('baby'); }catch(e){}
                       a.cooldownSocial = 120; spouse.cooldownSocial = 120;
                   }
               }
@@ -1627,30 +2091,6 @@ function updateLikesUI(){
     }
     return lines.join('\n') || 'Sin fondos por ahora.';
   }
-  // ====== Guardado periódico del progreso ======
-  function collectProgress(){
-    const me = agents.find(a=>a.id===USER_ID);
-    const myShops = shops.filter(s=>s.ownerId === USER_ID).map(s=>({ id: s.id, x:s.x,y:s.y,w:s.w,h:s.h,kind:s.kind, price:s.price, like:s.like, buyCost:s.buyCost, cashbox:s.cashbox||0 }));
-    const myHouses = houses.filter(h=>h.ownerId === USER_ID).map(h=>({ x:h.x,y:h.y,w:h.w,h:h.h }));
-    return {
-      money: Math.floor(me?.money||0),
-      bank: Math.floor(me?.bank||0),
-      vehicle: me?.vehicle||null,
-      shopsOwned: myShops,
-      housesOwned: myHouses,
-      x: Math.floor(me?.x||0), y: Math.floor(me?.y||0)
-    };
-  }
-  function saveProgressLocal(){ try{ localStorage.setItem(LS_PROGRESS, JSON.stringify(collectProgress())); }catch(e){} }
-  async function saveProgressRemote(){
-    try{
-      const reg = getRegistered(); if(!reg) return;
-      const state = collectProgress();
-      saveProgressLocal();
-      await fetch('/api/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: reg.username, deviceId: getDeviceId(), socketId: (window.sock?.id||null), port: location.port || null, state }) });
-    }catch(e){ /* ignorar errores transitorios */ }
-  }
-  setInterval(()=>{ if(STARTED && USER_ID) saveProgressRemote(); }, 15000);
   function fullDocument(){
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
   const player = agents.find(a => a.id === USER_ID);
@@ -1699,7 +2139,7 @@ function updateLikesUI(){
     lines.push('');
     lines.push('## Finanzas por Agente');
     lines.push(bankReport());
-    return lines.join('\n') || 'Sin fondos por ahora.';
+    return lines.join('\n');
   }
   function generateMarriedList() {
       const lines = [];
@@ -1812,29 +2252,9 @@ function updateLikesUI(){
   const chosen = selBtn?.getAttribute('data-src') || fGenderPreview?.src || MALE_IMG;
       user.avatar = chosen;
     }catch(e){}
+  // Progreso guardado: se aplicará justo después si existe window.__pendingProfile
     agents.push(user); USER_ID=user.id;
   try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
-    // Enviar registro de personaje al backend (apéndice en usuarios.txt)
-    try{
-      const reg = getRegistered();
-      const payload = {
-        username: reg?.username || null,
-        character: {
-          name: user.code,
-          likes,
-          avatar: user.avatar || null,
-          createdAt: new Date().toISOString()
-        },
-        deviceId: getDeviceId()
-      };
-      // Usar navigator.sendBeacon si está, sino fetch en background
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      if(navigator.sendBeacon){
-        navigator.sendBeacon('/api/register-character', blob);
-      }else{
-        fetch('/api/register-character', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
-      }
-    }catch(_){}
     if(!hasNet()){
       for(let i=0;i<CFG.N_INIT;i++) {agents.push(makeAgent('adult',{ageYears:rand(18,60)}));}
     }
@@ -1869,42 +2289,28 @@ function updateLikesUI(){
         }
       }
     }catch(e){}
-    loop();
+  // Guardado automático ligero cada 20s
+  setInterval(()=>{
+      try{
+    if(!API?.token) return;
+        const you = agents.find(a=>a.id===USER_ID);
+        const profile = {
+          name: you?.name || name,
+          avatar: you?.avatar || null,
+          stats: { money: Math.floor(you?.money||0), bank: Math.floor(you?.bank||0) },
+          assets: {
+            houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})),
+            shops: (window.gameState?.shops||shops).filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)}))
+          }
+        };
+    API.post('/api/save', { profile }).catch(()=>{});
+      }catch(e){}
+    }, 20000);
+  // Aplicar perfil pendiente del login (si existe)
+  if(window.__pendingProfile){ try{ applyProfile(window.__pendingProfile); }catch(e){} window.__pendingProfile=null; }
+  loop();
   }
-  const startHandler = ()=>{
-    if(!isRegistered()){
-      if(registerModal) registerModal.style.display = 'flex';
-      toast('Debes registrarte primero.');
-      return;
-    }
-    const name=fName.value.trim(),likes=getChecked().map(x=>x.value);
-    if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }
-    errBox.style.display='none';
-    startWorldWithUser({name,likes});
-    // Restaurar progreso local si existe
-    try{
-      const raw = localStorage.getItem(LS_PROGRESS);
-      if(raw){
-        const st = JSON.parse(raw);
-        const me = agents.find(a=>a.id===USER_ID);
-        if(me && st){
-          if(typeof st.money === 'number') me.money = st.money;
-          if(typeof st.bank === 'number') me.bank = st.bank;
-          if(st.vehicle) me.vehicle = st.vehicle;
-        }
-        if(Array.isArray(st.shopsOwned)){
-          for(const s of st.shopsOwned){
-            shops.push({ x: s.x, y: s.y, w: s.w||120, h: s.h||80, kind: s.kind, ownerId: USER_ID, id: s.id||('S'+(Math.random().toString(36).slice(2,7))) , price: s.price||2, like: s.like||'comida', buyCost: s.buyCost||1000, cashbox: s.cashbox||0 });
-          }
-        }
-        if(Array.isArray(st.housesOwned)){
-          for(const h of st.housesOwned){
-            houses.push({ x: h.x, y: h.y, w: h.w||CFG.HOUSE_SIZE, h: h.h||CFG.HOUSE_SIZE, ownerId: USER_ID, rentedBy: null });
-          }
-        }
-      }
-    }catch(e){}
-  };
+  const startHandler = ()=>{const name=fName.value.trim(),likes=getChecked().map(x=>x.value);if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,likes});};
   btnStart.addEventListener('click', startHandler);
   $("#formInner").addEventListener('submit',(e)=>{ e.preventDefault(); startHandler(); });
 
@@ -1948,7 +2354,9 @@ function updateLikesUI(){
       u.money -= placingHouse.cost;
       if(u.houseIdx !== null && houses[u.houseIdx]) { houses[u.houseIdx].rentedBy = null; }
       houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
-      toast('Casa propia construida 🏠'); return;
+  toast('Casa propia construida 🏠');
+  try{ saveProfile('house'); }catch(e){}
+      return;
     }
 
     // Colocación de negocio desde el menú (ej: panadería). Debe aparecer justo donde se hace click.
@@ -1963,14 +2371,23 @@ function updateLikesUI(){
       // enviar al servidor si corresponde
       if(hasNet()){
         window.sock?.emit('placeShop', newShop, (res) => {
-          if(res?.ok){ u.money -= (placingShop.price || 0); shops.push(newShop); placingShop = null; toast('Negocio colocado.'); }
-          else { toast(res?.msg || 'Error al colocar negocio'); placingShop = null; }
+          if(res?.ok){
+            u.money -= (placingShop.price || 0);
+            shops.push(newShop);
+            placingShop = null;
+            toast('Negocio colocado.');
+            try{ saveProfile('shop'); }catch(e){}
+          } else {
+            toast(res?.msg || 'Error al colocar negocio');
+            placingShop = null;
+          }
         });
       }else{
         u.money -= (placingShop.price || 0);
         shops.push(newShop);
         placingShop = null;
-        toast('Negocio colocado (local).');
+  toast('Negocio colocado (local).');
+  try{ saveProfile('shop'); }catch(e){}
       }
       return;
     }
@@ -1995,14 +2412,26 @@ function updateLikesUI(){
         console.log("Intentando colocar negocio vía red...");
         window.sock?.emit('placeShop', newShop, (res)=>{
           console.log("Respuesta del servidor:", res);
-          if(res?.ok){ u.money -= placingShop.price; newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop); placingShop=null; toast('Negocio colocado 🏪'); }
-          else { toast(res?.msg||'Error al colocar negocio'); placingShop=null; }
+          if(res?.ok){
+            u.money -= placingShop.price;
+            newShop.id='S'+(shops.length+1);
+            newShop.cashbox=0;
+            shops.push(newShop);
+            placingShop=null;
+            toast('Negocio colocado 🏪');
+            try{ saveProfile('shop'); }catch(e){}
+          } else {
+            toast(res?.msg||'Error al colocar negocio');
+            placingShop=null;
+          }
         });
         return;
       }
       u.money -= placingShop.price;
       newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop);
-      placingShop=null; toast('Negocio colocado 🏪'); return;
+  placingShop=null; toast('Negocio colocado 🏪');
+  try{ saveProfile('shop'); }catch(e){}
+    return;
     }
     if(placingGov){
       const rectX = { x: pt.x - placingGov.w/2, y: pt.y - placingGov.h/2, w: placingGov.w, h: placingGov.h, label: placingGov.label, icon: placingGov.icon, fill: placingGov.fill, stroke: placingGov.stroke, k: placingGov.k };
@@ -2076,7 +2505,6 @@ function updateLikesUI(){
         mctx.fillStyle = '#111'; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy));
         mctx.fillStyle = '#fff'; const bars = 3; const bx = Math.max(0,r.x*sx), by = Math.max(0,r.y*sy), bw = Math.max(1,r.w*sx), bh = Math.max(1,r.h*sy);
         for(let i=0;i<bars;i++){ const px = bx + 4 + i*(bw-8)/(bars-1); mctx.fillRect(px, by+4, 2, bh-8); }
-        mctx.fillStyle = '#fff'; ctx.font=`700 ${Math.max(10, 14*ZOOM)}px system-ui`; ctx.textAlign='center'; ctx.fillText('CÁRCEL', p.x + w/2, p.y + 18*ZOOM);
       } else { mrect(r, r.fill || '#94a3b8'); }
     });
     const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;
@@ -2131,26 +2559,6 @@ function updateLikesUI(){
   btnHouse.onclick = ()=> openBuilderMenu();
   btnShop.onclick  = ()=> openShopMenu();
 
-  // Cerrar sesión: borrar credenciales locales y reabrir el modal de registro
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', () => {
-      try {
-        localStorage.removeItem('mu_registered_user_v1');
-        localStorage.removeItem('mu_progress_v1');
-        // Nota: conservamos mu_device_id_v1 para reconocer el dispositivo
-      } catch (e) {}
-      try {
-        const modal = document.getElementById('registerModal');
-        if (modal) modal.style.display = 'flex';
-        const start = document.getElementById('btnStart');
-        if (start) start.disabled = true;
-      } catch (e) {}
-      // Si ya está el mundo iniciado, recargar para limpiar estado
-      try { if (typeof STARTED !== 'undefined' && STARTED) location.reload(); } catch (e) {}
-    });
-  }
-
   function populateGovSelect(){
     govSelectEl.innerHTML = '';
     GOV_TYPES.forEach(t=>{
@@ -2178,40 +2586,7 @@ function updateLikesUI(){
     toast(`Modo colocación: ${typ.label}. Haz clic en el mapa.`);
   }
 
-  // (interval moved below after likes UI wiring)
-
-  // Limitar a 5 gustos y enganchar eventos
-  function attachLimit(){
-    try{
-      getBoxes().forEach(cb=>{
-        ['click','change','touchend'].forEach(ev=>{
-          cb.addEventListener(ev, ()=>{
-            const checked=getChecked();
-            if(checked.length>5){ cb.checked=false; }
-            updateLikesUI();
-          }, {passive:true});
-        });
-      });
-    }catch(e){}
-  }
-  attachLimit(); updateLikesUI();
-  if(fName){ try{ fName.addEventListener('input', updateLikesUI); }catch(e){} }
-  if(btnRandLikes){
-    btnRandLikes.onclick = ()=>{
-      try{
-        getBoxes().forEach(cb=>{ cb.checked=false; cb.disabled=false; cb.closest('.chip')?.classList.remove('disabled'); });
-        const boxes = getBoxes(); let picks = 0;
-        while(picks<5){ const i=(Math.random()*boxes.length)|0; if(!boxes[i].checked){ boxes[i].checked=true; picks++; } }
-        updateLikesUI();
-      }catch(e){}
-    };
-    // asegurar refresco
-    try{ btnRandLikes.addEventListener('click', updateLikesUI); }catch(e){}
-  }
-
-  // Recaudación periódica de impuesto a la riqueza (solo en modo local)
-  setInterval(()=>{
-    if(!STARTED) return; if(hasNet()) return;
+  setInterval(()=>{if(!STARTED) return; if(hasNet()) return;
     const n = government.placed.length;
     const effRate = Math.min(CFG.WEALTH_TAX_MAX, CFG.WEALTH_TAX_BASE + n*CFG.INSTITUTION_TAX_PER);
     let collected = 0;
@@ -2220,10 +2595,7 @@ function updateLikesUI(){
       if(a.money >= taxAmount){ a.money -= taxAmount; collected += taxAmount; }
     }
     government.funds += collected;
-    if(collected > 0){
-      govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)} (+${Math.round(collected)})`;
-      toast(`Gobierno recaudó ${Math.round(collected)} créditos (tasa ${(effRate*100).toFixed(1)}%).`);
-    }
+    if(collected > 0){ govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)} (+${Math.round(collected)})`; toast(`Gobierno recaudó ${Math.round(collected)} créditos (tasa ${(effRate*100).toFixed(1)}%).`); }
     updateGovDesc();
   }, CFG.GOV_TAX_EVERY*1000);
 
@@ -2249,7 +2621,7 @@ function updateLikesUI(){
       const vType = carTypeSelect.value;
       if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
       const vehicle = VEHICLES[vType];
-      if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); }
+  if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); saveProfile('vehicle'); }
       else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
   });
 
@@ -2344,568 +2716,4 @@ function assignRental(agent) {
   return true;
 }
 
-if(false){ // duplicate disabled
-/* === DUPLICADO COMENTADO (bloque repetido a partir de aquí) ===
-// (contenido duplicado omitido intencionalmente)
-*/
-}
-// Archivo restaurado duplicado — omitido
-btnRandLikes.addEventListener('click', updateLikesUI);
-
-  /* ===== CANVAS / MUNDO ===== */
-  const canvas=$("#world"), ctx=canvas.getContext('2d', {alpha: false});
-  const uiDock=$("#uiDock"), uiHideBtn=$("#uiHideBtn"), uiShowBtn=$("#uiShowBtn");
-  const zoomFab=$("#zoomFab"), zoomIn=$("#zoomIn"), zoomOut=$("#zoomOut"), docDock=$("#docDock"), govDock=$("#govDock"), topBar=$("#top-bar");
-  const mini=$("#mini"), miniCanvas=$("#miniCanvas"), mctx=miniCanvas.getContext('2d');
-  const stats=$("#stats"), toggleLinesBtn=$("#toggleLines");
-  const btnShowDoc=$("#btnShowDoc"), accDocBody=$("#docBody");
-  const panelDepositAll=$("#panelDepositAll"), accBankBody=$("#bankBody");
-  const btnHouse=$("#btnHouse"), btnShop=$("#btnShop");
-  const btnShowMarried = $("#btnShowMarried"), marriedDock = $("#marriedDock"), marriedList = $("#marriedList");
-  const builderModal=$("#builderModal"), btnBuy=$("#btnBuy"), btnBuilderClose=$("#btnBuilderClose"), builderMsg=$("#builderMsg");
-  const shopModal=$("#shopModal"), shopList=$("#shopList"), shopMsg=$("#shopMsg"), btnShopClose=$("#btnShopClose");
-  const govFundsEl=$("#govFunds"), govDescEl = $("#govDesc");
-  const govSelectEl=$("#govSelect"), btnGovPlace=$("#btnGovPlace");
-
-  const btnGovClose = $("#btnGovClose");
-  if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
-  let placingGov = null, placingHouse = null, placingShop = null;
-
-  const isMobile = ()=> innerWidth<=768;
-  let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
-  const WORLD={w:0,h:0}; const cam={x:0,y:0};
-
-  // --- Generador de números aleatorios determinista (semilla fija para el mundo) ---
-  let _seed = 20250824; // Usa la fecha de hoy como semilla fija
-  function seededRandom() {
-    // LCG: https://en.wikipedia.org/wiki/Linear_congruential_generator
-    _seed = (_seed * 1664525 + 1013904223) % 4294967296;
-    return _seed / 4294967296;
-  }
-  function setSeed(s) { _seed = s >>> 0; }
-
-  // Versiones deterministas de randi y rand para la generación del mundo
-  function srandi(a, b) { return (seededRandom() * (b - a) + a) | 0; }
-  function srand(a, b) { return a + seededRandom() * (b - a); }
-  function setWorldSize(){
-    const vw = innerWidth, vh = innerHeight;
-    // Doblar la extensión horizontal del mapa grande: multiplicadores duplicados
-    WORLD.w = Math.floor(vw * (isMobile() ? 7.2 : 5.6));
-    WORLD.h = Math.floor(vh * (isMobile() ? 3.2 : 2.6));
-  }
-
-  function fitCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; clampCam(); }
-  function clampCam(){const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;const maxX = Math.max(0, WORLD.w - vw);const maxY = Math.max(0, WORLD.h - vh);cam.x = Math.max(0, Math.min(cam.x, maxX));cam.y = Math.max(0, Math.min(cam.y, maxY));}
-  function toScreen(x,y){ return {x:(x-cam.x)*ZOOM, y:(y-cam.y)*ZOOM}; }
-  function toWorld(px,py){ return {x: px/ZOOM + cam.x, y: py/ZOOM + cam.y}; }
-  setWorldSize(); fitCanvas();
-  addEventListener('resize', fitCanvas, {passive:true});
-
-  /* ===== PAN/ZOOM ===== */
-  const activePointers = new Map();let panPointerId = null;let pinchBaseDist = 0, pinchBaseZoom = 1, pinchCx = 0, pinchCy = 0;
-  function isOverUI(sx,sy){const rects = [];const addRect = (el)=>{if(!el) return;const cs = getComputedStyle(el);if(cs.display==='none' || cs.visibility==='hidden') return;rects.push(el.getBoundingClientRect());};addRect(uiDock); addRect(docDock); addRect(govDock); addRect(topBar); addRect(mini); addRect(zoomFab); addRect(uiShowBtn); addRect(marriedDock); return rects.some(r => sx>=r.left && sx<=r.right && sy>=r.top && sy<=r.bottom);}
-  function setZoom(newZ, anchorX=null, anchorY=null){const before = toWorld(anchorX??(canvas.width/2), anchorY??(canvas.height/2));ZOOM = Math.max(ZMIN, Math.min(ZMAX, newZ));const after  = toWorld(anchorX??(canvas.width/2), anchorY??(canvas.height/2));cam.x += (before.x - after.x); cam.y += (before.y - after.y); clampCam();}
-  canvas.addEventListener('wheel', (e)=>{ e.preventDefault();if(isOverUI(e.clientX,e.clientY)) return;setZoom(ZOOM + (Math.sign(e.deltaY)>0?-ZSTEP:ZSTEP), e.clientX, e.clientY);}, {passive:false});
-  canvas.addEventListener('pointerdown', (e)=>{if(isOverUI(e.clientX,e.clientY)) return;canvas.setPointerCapture(e.pointerId);activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});if(activePointers.size===1){panPointerId = e.pointerId;}else if(activePointers.size===2){const pts=[...activePointers.values()];pinchBaseDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);pinchBaseZoom = ZOOM;pinchCx = (pts[0].x + pts[1].x)/2;pinchCy = (pts[0].y + pts[1].y)/2;panPointerId = null;}}, {passive:true});
-  canvas.addEventListener('pointermove', (e)=>{if(!activePointers.has(e.pointerId)) return;const prev = activePointers.get(e.pointerId);activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});if(activePointers.size===1 && panPointerId===e.pointerId){const dx = (e.clientX - prev.x)/ZOOM;const dy = (e.clientY - prev.y)/ZOOM;cam.x -= dx; cam.y -= dy; clampCam();}else if(activePointers.size===2){const pts=[...activePointers.values()];const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y) || 1;const factor = dist / (pinchBaseDist||dist);setZoom(pinchBaseZoom * factor, pinchCx, pinchCy);}}, {passive:true});
-  const clearPointer = (id)=>{if(!activePointers.has(id)) return;activePointers.delete(id);if(panPointerId===id) panPointerId=null;if(activePointers.size<2){ pinchBaseDist=0; }};
-  canvas.addEventListener('pointerup',   e=> clearPointer(e.pointerId), {passive:true});
-  canvas.addEventListener('pointercancel', e=> clearPointer(e.pointerId), {passive:true});
-  $("#zoomIn").onclick = ()=> setZoom(ZOOM+ZSTEP, canvas.width/2, canvas.height/2);
-  $("#zoomOut").onclick= ()=> setZoom(ZOOM-ZSTEP, canvas.width/2, canvas.height/2);
-
-  // Mapeo directo de imágenes para edificaciones
-const BUILDING_IMAGES = {
-  // Instituciones gubernamentales con URLs corregidas
-  parque: 'https://i.postimg.cc/2jwdggYM/20250826-110318.png',
-  escuela: 'https://i.postimg.cc/x1PTBFPx/escuela.png', // URL alternativa 
-  // biblioteca removed
-  policia: 'https://i.postimg.cc/YCHr4sgt/policia.png',
-  hospital: 'https://i.postimg.cc/y8yV0yXc/hospital.png',
-  central_electrica: 'https://i.postimg.cc/8zfXn9dM/electrica.png', // ACTUALIZADA
-  cemetery: 'https://i.postimg.cc/0NzPkDMD/20250827-081702.jpg',
-  // Edificios generales
-  house: 'https://i.postimg.cc/BQpptNmR/20250827-030930.png',
-  bank: 'https://i.postimg.cc/4x5TcfRw/banco.png',
-  factory: 'https://i.postimg.cc/y8JFgdRC/20250826-102250.png',
-  mall: 'https://i.postimg.cc/13ykskVF/mall.png',
-  shop: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
-  
-  // Gobierno
-  gobierno: 'https://i.postimg.cc/PJ2mZvKT/20250826-103751.png',
-  
-  // Tiendas específicas
-  bar: 'https://i.postimg.cc/Pqfdyv2c/Bar.png',
-  panadería: 'https://i.postimg.cc/sDHYgSvJ/20250827-065353.png',
-  biblioteca: 'https://i.postimg.cc/rwmxy3tf/20250831_110133.png',
-  
-  // Nuevas URLs agregadas para negocios faltantes
-  // Nuevas URLs agregadas para negocios faltantes
-  kiosco: 'https://i.postimg.cc/xjp7LhNK/kiosco.png',
-  juguería: 'https://i.postimg.cc/Y0TbTcQZ/jugo.png',
-  cafetería: 'https://i.postimg.cc/J4gfCv11/cafeteria.png',
-  heladería: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
-  'pizzería': 'https://i.postimg.cc/nhb3kJFQ/pizzeria.png',
-  // (se removió la entrada de librería por solicitud)
-  // 'librería': '/assets/fondo1.jpg',
-  'juguetería': 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
-  'yoga studio': 'https://i.postimg.cc/8Ps23NgK/yoga_estudio.png',
-  'dance hall': 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
-  'tienda deportes': 'https://i.postimg.cc/XvWDV0t0/deportes.png',
-  'arte & galería': 'https://i.postimg.cc/VvZ36HnW/galeria.png',
-  'cineclub': 'https://i.postimg.cc/8cz2TVJC/cine_club.png',
-  'gamer zone': 'https://i.postimg.cc/c48DwHSS/gamer.png',
-  'senderismo': 'https://i.postimg.cc/PrxHj1YM/senderismo.png',
-  'foto-lab': 'https://i.postimg.cc/pVkv4shT/foto_club.png',
-  'astro club': 'https://i.postimg.cc/c4bS46cG/astro_club.png',
-  restaurante: 'https://i.postimg.cc/vHwKPbTd/20250827_070529.png',
-  
-  // Otras instituciones
-  bomberos: 'https://i.postimg.cc/KYzPHMhV/bomberos.png', // ACTUALIZADA
-  universidad: 'https://i.imgur.com/hvsZIsB.png', // URL alternativa
-  tribunal: 'https://i.imgur.com/zZ8FVOB.png', // URL alternativa
-  teatro: 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
-  estadio: 'https://i.postimg.cc/tgZKH7hS/20250827-052454.png' // URL solicitada por el usuario
-};
-
-// Precarga de imágenes para mejor rendimiento
-const BUILDING_IMAGE_CACHE = {};
-
-// Street texture image & pattern cache
-const STREET_IMG = new Image();
-STREET_IMG.src = '/assets/calle1.jpg';
-const STREET_PATTERN_CACHE = { pattern: null, lastZoom: null, lastCam: {x:0,y:0} };
-
-function getStreetPattern(ctx){
-  try{
-    if(!STREET_IMG || !STREET_IMG.complete || STREET_IMG.naturalWidth === 0) return null;
-    // If zoom or cam changed significantly, recreate pattern
-    const key = `${Math.round(ZOOM*100)}_${Math.round(cam.x)}_${Math.round(cam.y)}`;
-    if(STREET_PATTERN_CACHE.key === key && STREET_PATTERN_CACHE.pattern) return STREET_PATTERN_CACHE.pattern;
-
-    const patternCanvas = document.createElement('canvas');
-    const iw = STREET_IMG.naturalWidth, ih = STREET_IMG.naturalHeight;
-    // scale image to maintain appearance at current zoom (avoid distortion)
-    patternCanvas.width = Math.max(64, Math.round(iw * Math.max(1, ZOOM)));
-    patternCanvas.height = Math.max(64, Math.round(ih * Math.max(1, ZOOM)));
-    const pc = patternCanvas.getContext('2d');
-    pc.clearRect(0,0,patternCanvas.width, patternCanvas.height);
-    // draw the source image scaled to canvas size preserving aspect
-    pc.drawImage(STREET_IMG, 0, 0, patternCanvas.width, patternCanvas.height);
-    const pat = ctx.createPattern(patternCanvas, 'repeat');
-    STREET_PATTERN_CACHE.pattern = pat;
-    STREET_PATTERN_CACHE.key = key;
-    return pat;
-  }catch(e){ console.warn('getStreetPattern error', e); return null; }
-}
-
-function preloadImages() {
-  console.log("Iniciando precarga de imágenes con manejo de errores mejorado...");
-  
-  for (const key in BUILDING_IMAGES) {
-    try {
-      const img = new Image();
-      
-      img.onload = function() {
-        console.log(`Imagen cargada: ${key}`);
-      };
-      
-      img.onerror = function() {
-        console.warn(`Error al cargar la imagen: ${key}. Usando fallback.`);
-        // Crear un fallback simple que no cause errores
-        BUILDING_IMAGE_CACHE[key] = { 
-          error: true, 
-          complete: true,
-          naturalWidth: 100
-        };
-      };
-      
-      img.src = BUILDING_IMAGES[key];
-      BUILDING_IMAGE_CACHE[key] = img;
-    } catch(e) {
-      console.error(`Error general con imagen ${key}:`, e);
-    }
-  }
-}
-
-// Ejecutar precarga inmediatamente
-preloadImages();
-
-// Limpiar cualquier entrada residual de 'librería' en el cache (por versiones antiguas)
-if (BUILDING_IMAGE_CACHE['librería']) { delete BUILDING_IMAGE_CACHE['librería']; }
-
-// Imagen de fondo del mundo: usar el JPG local directamente para evitar 404 por PNG
-const BG_IMG = new Image();
-BG_IMG.onload = () => { console.log('Background image loaded:', BG_IMG.src); };
-BG_IMG.onerror = function() { console.warn('Background image not found at /assets/fondo1.jpg — usando color de respaldo'); };
-BG_IMG.src = '/assets/fondo1.jpg';
-
-// ... no street texture feature (restored to solid fills)
-
-  /* ===== CONFIGURACIÓN ===== */
-  const CFG = {
-  LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:10,  // Aumentado HOUSE_SIZE de 22 a 70
-    R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
-    YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
-    HOUSE_BUY_COST:3000,
-    GOV_TAX_EVERY: 20*60,      // cada 20 min
-    WEALTH_TAX_BASE: 0.01,     // 1.0% base
-    INSTITUTION_TAX_PER: 0.001,// +0.1% por institución
-    WEALTH_TAX_MAX: 0.06,      // 6% tope de seguridad
-    EMPLOYEE_SALARY: 25, SALARY_PAY_EVERY: 120,
-    GOV_RENT_EVERY: 10*60, GOV_RENT_AMOUNT: 5, 
-    COST_ROAD: 40,
-    COST_PARK: 80, COST_SCHOOL: 120, COST_LIBRARY: 150, COST_POLICE: 200, COST_HOSPITAL: 250, COST_POWER: 350,
-    SHOP_W:120, SHOP_H:80, VISIT_RADIUS:220, VISIT_RATE: 0.003, PRICE_MIN:1, PRICE_MAX:3,
-    SHOP_DWELL: 5, NEW_SHOP_FORCE_WINDOW: 120,
-    SHOP_PAYOUT_CHUNK: 100,
-    OWNER_MANAGE_VS_WORK_RATIO: 0.3, // 30% de probabilidad de gestionar negocio vs trabajar
-  };
-
-  const VEHICLES = {
-    bicicleta:      { name:'Bicicleta',      cost:50,   speed: 100, icon:'🚲' },
-    moto:           { name:'Motocicleta',    cost:200,  speed: 180, icon:'🛵' },
-    auto_compacto:  { name:'Auto Compacto',  cost:800,  speed: 260, icon:'🚗' },
-    auto_deportivo: { name:'Auto Deportivo', cost:2500, speed: 360, icon:'🏎️' }
-  };
-
-  /* ===== Tipos de Instituciones (25) ===== */
-  const GOV_TYPES = [
-    {k:'parque', label:'Parque', cost:CFG.COST_PARK, w:130,h:90, icon:'🌳', fill:'rgba(12,81,58,0.92)', stroke:'rgba(31,122,90,0.95)'},
-    {k:'escuela', label:'Escuela', cost:CFG.COST_SCHOOL, w:140,h:95, icon:'📚', fill:'rgba(51,65,85,0.92)', stroke:'rgba(148,163,184,0.95)'},
-    {k:'policia', label:'Policía', cost:CFG.COST_POLICE, w:150,h:80, icon:'🚓', fill:'#3b82f6', stroke:'#dbeafe'},
-    {k:'hospital', label:'Hospital', cost:CFG.COST_HOSPITAL, w:180,h:100, icon:'🏥', fill:'#f1f5f9', stroke:'#ef4444'},
-    {k:'central_electrica', label:'Central Eléctrica', cost:CFG.COST_POWER, w:200,h:120, icon:'⚡', fill:'#475569', stroke:'#facc15'},
-    {k:'bomberos', label:'Cuerpo de Bomberos', cost:220, w:160,h:85, icon:'🚒', fill:'#7c2d12', stroke:'#fecaca'},
-    {k:'registro_civil', label:'Registro Civil', cost:180, w:150,h:85, icon:'🪪', fill:'#0f172a', stroke:'#94a3b8'},
-    {k:'universidad', label:'Universidad Pública', cost:300, w:200,h:120, icon:'🎓', fill:'#1e293b', stroke:'#93c5fd'},
-    {k:'tribunal', label:'Tribunal / Corte', cost:260, w:170,h:95, icon:'⚖️', fill:'#111827', stroke:'#9ca3baf'},
-    {k:'museo', label:'Museo', cost:200, w:160,h:90, icon:'🏛️', fill:'#3f3f46', stroke:'#cbd5e1'},
-  {k:'biblioteca', label:'Biblioteca', cost:CFG.COST_LIBRARY, w:140,h:90, icon:'📖', fill:'#a16207', stroke:'#fde047'},
-    {k:'teatro', label:'Teatro', cost:190, w:160,h:90, icon:'🎭', fill:'#1f2937', stroke:'#9ca3baf'},
-  {k:'estadio', label:'Estadio', cost:420, w:320,h:220, icon:'🏟️', fill:'#0b3a1e', stroke:'#10b981'},
-    {k:'terminal', label:'Terminal Terrestre', cost:260, w:200,h:110, icon:'🚌', fill:'#0c4a6e', stroke:'#7dd3fc'},
-    {k:'correos', label:'Correos del Estado', cost:170, w:150,h:85, icon:'📮', fill:'#0b1f3a', stroke:'#60a5fa'},
-    {k:'banco_central', label:'Banco Central', cost:300, w:180,h:100, icon:'🏦', fill:'#2d3748', stroke:'#fde68a'},
-    {k:'aduana', label:'Aduana', cost:240, w:170,h:95, icon:'🚢', fill:'#1e3a8a', stroke:'#93c5fd'},
-    {k:'carcel', label:'Centro de Rehabilitación', cost:280, w:200,h:110, icon:'🗝️', fill:'#111827', stroke:'#64748b'},
-    {k:'planta_agua', label:'Planta de Agua', cost:260, w:190,h:110, icon:'🚰', fill:'#0e7490', stroke:'#67e8f9'},
-    {k:'reciclaje', label:'Planta de Reciclaje', cost:220, w:180,h:100, icon:'♻️', fill:'#14532d', stroke:'#86efac'},
-    {k:'centro_cultural', label:'Centro Cultural', cost:190, w:160,h:90, icon:'🎨', fill:'#3b0764', stroke:'#d8b4fe'},
-    {k:'mercado_central', label:'Mercado Central', cost:210, w:180,h:100, icon:'🥚', fill:'#78350f', stroke:'#fde68a'},
-    {k:'instituto_tecnologico', label:'Instituto Tecnológico', cost:230, w:180,h:100, icon:'🧪', fill:'#0f172a', stroke:'#60a5fa'},
-    {k:'centro_investigacion', label:'Centro de Investigación', cost:260, w:190,h:105, icon:'🔬', fill:'#164e63', stroke:'#a5f3fc'},
-    {k:'observatorio', label:'Observatorio', cost:240, w:170,h:95, icon:'🔭', fill:'#1e293b', stroke:'#c7d2fe'}
-  ];
-
-// End of primary configuration and types. Duplicate trailing block was removed.
-
-  /* ===== Estructuras almacenadas ===== */
-  const streets=[], factories=[], banks=[], malls=[], houses=[], barrios=[], deceased=[], avenidas=[], roundabouts=[], shops=[];
-
-  // helper: lista de negocios visibles en el mapa grande
-  function getVisibleShops(){
-    // Preferir el estado del servidor si existe, sino usar el array local
-  // Devolver todas las tiendas (incluyendo panaderías). El usuario pidió que se muestren todas las panaderías en el mapa grande.
-  return (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops : shops;
-  }
-
-  // helper: eliminar panaderías no compradas (robusto)
-  function removeUnownedPanaderias(){
-  // NO-OP: previously removed unowned panaderias; left empty to keep panaderías visible
-  return;
-  }
-  const SHOP_TYPES = [
-  {k:'panadería', icon:'🥖', like:'pan', price:1, buyCost: 400},
-      {k:'kiosco', icon:'🏪', like:'kiosco', price:1, buyCost: 450},
-      {k:'juguería', icon:'🥣', like:'jugos', price:1, buyCost: 500},
-      {k:'cafetería', icon:'☕', like:'café', price:2, buyCost: 800},
-      {k:'heladería', icon:'🍨', like:'helado', price:2, buyCost: 850},
-      {k:'pizzería', icon:'🍕', like:'pizza', price:2, buyCost: 900},
-  // 'librería' removida por solicitud
-      {k:'juguetería', icon:'🧸', like:'juguetes', price:2, buyCost: 1000},
-      {k:'yoga studio', icon:'🧘', like:'yoga', price:2, buyCost: 1100},
-      {k:'dance hall', icon:'💃', like:'baile', price:2, buyCost: 1100},
-      {k:'tienda deportes', icon:'🏅', like:'deporte', price:2, buyCost: 1200},
-      {k:'arte & galería', icon:'🎨', like:'arte', price:2, buyCost: 1300},
-      {k:'cineclub', icon:'🎬', like:'cine', price:2, buyCost: 1400},
-      {k:'gamer zone', icon:'🎮', like:'videojuegos', price:2, buyCost: 1400},
-      {k:'senderismo', icon:'🧾', like:'naturaleza', price:2, buyCost: 1500},
-      {k:'foto-lab', icon:'📷', like:'fotografía', price:2, buyCost: 1500},
-      {k:'astro club', icon:'🔭', like:'astronomía', price:2, buyCost: 1600},
-      {k:'restaurante', icon:'🍽️', like:'comida', price:3, buyCost: 2500},
-      {k:'electrónica', icon:'🔌', like:'electrónica', price:3, buyCost: 3000},
-      {k:'tech hub', icon:'🖥️', like:'tecnología', price:3, buyCost: 3500},
-      {k:'bar', icon:'🍻', like:'bebidas', price:2, buyCost: 1200},
-  ];
-
-  // porcentaje de ganancia adicional por cada venta basado en el costo de compra
-  CFG.SHOP_PROFIT_FACTOR = CFG.SHOP_PROFIT_FACTOR || 0.002;
-
-  /* Áreas clave */
-  const builder={x:0,y:0,w:220,h:110}, cemetery={x:0,y:0,w:CFG.CEM_W,h:CFG.CEM_H}, government={x:0,y:0,w:240,h:140,funds:0, placed:[]};
-  const roadRects=[];
-  const cityBlocks = [];
-  let urbanZone = {x:0, y:0, w:0, h:0};
-
-  // Aplicar estado del servidor a estructuras locales visibles
-  function applyServerState(payload){
-    try{
-      if(payload?.government){
-        if(typeof payload.government.funds === 'number') government.funds = payload.government.funds;
-        government.placed.length = 0;
-        (payload.government.placed||[]).forEach(g=> government.placed.push({...g}));
-        if(typeof window.updateGovDesc === 'function') window.updateGovDesc();
-      }
-      if(Array.isArray(payload?.houses)){
-        window.__netHouses = payload.houses.map(h=> ({...h}));
-      }
-      if (Array.isArray(payload?.shops)) {
-        // Reemplazar el array local de tiendas con los datos del servidor
-  // Cargar todas las tiendas tal cual vienen del servidor (incluyendo panaderías)
-  shops.length = 0;
-  shops.push(...payload.shops);
-      }
-    }catch(e){ console.warn('applyServerState error', e); }
-  }
-
-  /* Utils */
-  const randi=(a,b)=> (Math.random()*(b-a)+a)|0, rand=(a,b)=> a + Math.random()*(b-a), clamp=(v,a,b)=> Math.max(a,Math.min(b,v));
-  const centerOf=r=> ({x:r.x+r.w/2, y:r.y+r.h/2});
-  const rectsOverlap=(a,b)=> !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
-  const inside=(pt,r)=> pt.x>=r.x && pt.x<=r.x+r.w && pt.y>=r.y && pt.y<=r.y+r.h;
-  const rectsOverlapWithMargin = (rectA, rectB, margin) => {
-    const paddedB = { x: rectB.x - margin, y: rectB.y - margin, w: rectB.w + margin*2, h: rectB.h + margin*2 };
-    return rectsOverlap(rectA, paddedB);
-  };
-
-  function isOnRoad(agent) {
-    const pt = { x: agent.x, y: agent.y };
-    if (avenidas.some(r => inside(pt, r))) return true;
-    if (roadRects.some(r => inside(pt, r))) return true;
-    if (roundabouts.some(r => {
-      const dist = Math.hypot(pt.x - r.cx, pt.y - r.cy);
-      return dist < r.w / 2;
-    })) return true;
-    return false;
-  }
-  function getCurrentRoad(agent) {
-    const pt = { x: agent.x, y: agent.y };
-    for (const road of [...avenidas, ...roadRects]) { if (inside(pt, road)) return road; }
-    for (const r of roundabouts) { const dist = Math.hypot(pt.x - r.cx, pt.y - r.cy); if (dist < r.w / 2) return r; }
-    return null;
-  }
-
-  function scatterRects(n, [wmin,wmax], [hmin,hmax], avoid=[] , bounds=null, sameTypeMargin = 8){
-    const placed=[]; const wr=bounds || {x:0,y:0,w:WORLD.w,h:WORLD.h}; let tries=0; const generalMargin = 8;
-    while(placed.length<n && tries<3000){tries++;
-      const w = srandi(wmin, wmax), h=srandi(hmin,hmax);
-      const x = srandi(wr.x+30, wr.x+wr.w-w-30), y = srandi(wr.y+30, wr.y+wr.h-h-30);
-      const rect={x,y,w,h};
-      if(placed.some(r=>rectsOverlapWithMargin(r,rect, sameTypeMargin))) continue;
-      if(avoid.some(r=>rectsOverlapWithMargin(r,rect, generalMargin))) continue;
-      placed.push(rect);
-    }
-    return placed;
-  }
-
-  /**
- * Distribuye edificios uniformemente en una zona dada
- * @param {number} n - Número de edificios a colocar
- * @param {array} widthRange - Rango de anchura [min, max]
- * @param {array} heightRange - Rango de altura [min, max]
- * @param {array} avoid - Edificios a evitar
- * @param {object} zone - Zona donde distribuir (x,y,w,h)
- * @param {number} margin - Margen mínimo entre edificios
- */
-function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
-  const placed = [];
-  const [wmin, wmax] = widthRange;
-  const [hmin, hmax] = heightRange;
-
-  const maxAttempts = Math.max(500, n * 400);
-  let attempts = 0;
-
-  while (placed.length < n && attempts < maxAttempts) {
-    attempts++;
-    const w = randi(wmin, wmax);
-    const h = randi(hmin, hmax);
-    const x = rand(Math.max(zone.x + 8, 0), Math.max(zone.x + 8, zone.x + zone.w - w - 8));
-    const y = rand(Math.max(zone.y + 8, 0), Math.max(zone.y + 8, zone.y + zone.h - h - 8));
-    const rect = { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
-
-    const collides = [...avoid, ...placed].some(o => rectsOverlapWithMargin(rect, o, margin));
-    if (!collides) placed.push(rect);
-  }
-
-  if (placed.length < n && typeof scatterRects === 'function') {
-    const remaining = scatterRects(n - placed.length, widthRange, heightRange, [...avoid, ...placed], zone, margin);
-    placed.push(...remaining);
-  }
-
-  return placed;
-}
-
-  function makeBarriosYCasas(totalNeeded, urbanArea, avoidList = []) {
-    barrios.length = 0;
-    houses.length = 0;
-    cityBlocks.length = 0;
-
-    // Casas en 4 barrios organizados simétricamente
-    barrios.length = 0; 
-    houses.length = 0; 
-    cityBlocks.length = 0;
-
-    const barrioMargin = 40; // Margen desde los bordes
-    const barrioSize = {
-      w: 380, 
-      h: 320
-    };
-
-    // Posiciones más simétricas para los barrios
-    const barriosPos = [
-      {x: barrioMargin, y: barrioMargin}, // Noroeste
-      {x: WORLD.w - barrioSize.w - barrioMargin, y: barrioMargin}, // Noreste
-      {x: barrioMargin, y: WORLD.h - barrioSize.h - barrioMargin}, // Suroeste
-      {x: WORLD.w - barrioSize.w - barrioMargin, y: WORLD.h - barrioSize.h - barrioMargin} // Sureste
-    ];
-
-    // Crear los barrios equidistantes
-    for(let i=0; i<4; i++){
-      const b = {
-        ...barriosPos[i], 
-        w: barrioSize.w, 
-        h: barrioSize.h, 
-        name: `Barrio ${i+1}`
-      };
-      barrios.push(b);
-      cityBlocks.push(b);
-    }
-    // Distribuir casas en los 4 barrios con tamaños variables más grandes
-    const pad = 24; // Aumentado padding de 18 a 24 para más espacio
-    let totalMade = 0;
-    const housesPerBarrio = Math.ceil(totalNeeded / barrios.length);
-    for (const b of barrios) {
-      let madeInThisBarrio = 0;
-      // Usar tamaños variables: 60-90 píxeles para variar como otras edificaciones
-      const minHouseSize = 60, maxHouseSize = 90;
-      const colsH = Math.max(4, Math.floor((b.w - pad * 2) / (maxHouseSize + 15))); // Ajustado para tamaños mayores
-      const rowsH = Math.max(3, Math.floor((b.h - pad * 2) / (maxHouseSize + 15)));
-      for (let ry = 0; ry < rowsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; ry++) {
-        for (let rx = 0; rx < colsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; rx++) {
-          // Tamaño aleatorio para cada casa (como fábricas o bancos)
-          const hsize = srandi(minHouseSize, maxHouseSize);
-          const hx = b.x + pad + rx * (maxHouseSize + 15); // Usar max para espaciado consistente
-          const hy = b.y + pad + ry * (maxHouseSize + 15);
-          const newH = { x: hx, y: hy, w: hsize, h: hsize, ownerId: null, rentedBy: null };
-          if ([...avenidas, ...roundabouts].some(av => rectsOverlapWithMargin(av, newH, 8))) continue;
-          houses.push(newH);
-          totalMade++; madeInThisBarrio++;
-        }
-      }
-    }
-  }
-
-  function buildAvenidas(urbanArea, avoidRect = null){
-    avenidas.length=0; roundabouts.length=0;
-    const avW=26;
-    const vDivs = 4, hDivs = 3;
-    const vPoints = [], hPoints = [];
-    for (let i = 1; i < vDivs; i++) vPoints.push(urbanArea.x + Math.floor(urbanArea.w * i / vDivs));
-    for (let i = 1; i < hDivs; i++) hPoints.push(urbanArea.y + Math.floor(urbanArea.h * i / hDivs));
-    for (const vx of vPoints) avenidas.push({x:vx-avW/2, y:urbanArea.y, w:avW, h:urbanArea.h});
-    for (const hy of hPoints) avenidas.push({x:urbanArea.x, y:hy-avW/2, w:urbanArea.w, h:avW});
-    for (const vx of vPoints) for (const hy of hPoints) {
-      if (Math.random() > 0.6) continue;
-      const rRadius = randi(50, 85);
-      const newRoundabout = {x:vx-rRadius, y:hy-rRadius, w:rRadius*2, h:rRadius*2, cx:vx, cy:hy};
-      if (avoidRect && rectsOverlap(newRoundabout, avoidRect)) continue;
-      roundabouts.push(newRoundabout);
-    }
-  }
-
-  function regenInfrastructure(preserveHouses=false){
-    streets.length=factories.length=banks.length=malls.length=0; government.placed.length=0;
-    if(!preserveHouses){ houses.length=0; barrios.length=0; }
-
-    // --- Semilla fija para el mundo ---
-    setSeed(20250824);
-
-    // Gobierno en el centro
-    const parkW = 220, parkH = 140, parkGap = 24;
-    const govComplexW = government.w + 2 * parkW + 2 * parkGap;
-    const govComplexH = government.h + 2 * parkH + 2 * parkGap;
-    const govComplexRect = {
-        x: WORLD.w / 2 - govComplexW / 2,
-        y: WORLD.h / 2 - govComplexH / 2,
-        w: govComplexW,
-        h: govComplexH
-    };
-    buildAvenidas({x:0, y:0, w:WORLD.w, h:WORLD.h}, govComplexRect);
-
-    // Posicionar el gobierno
-    government.x = govComplexRect.x + parkW + parkGap;
-    government.y = govComplexRect.y + parkH + parkGap;
-    // Agregar el edificio de gobierno como imagen
-    government.placed.push({
-      k: 'gobierno',
-      label: 'Gobierno',
-      x: government.x,
-      y: government.y,
-      w: government.w,
-      h: government.h
-    });
-    
-    // Distribuir parques más pequeños por el mapa
-    const parkType = GOV_TYPES.find(t=>t.k==='parque');
-    if(parkType) {
-      const parksCount = (CFG && typeof CFG.PARKS === 'number') ? CFG.PARKS : 4;
-      // Definir tamaños más pequeños para los parques
-      const smallParkW = 100; // reducido de ~220
-      const smallParkH = 70;  // reducido de ~140
-      const mediumParkW = 120;
-      const mediumParkH = 85;
-      
-      // Crear lista de áreas a evitar
-      const avoidList = [
-        government,
-        cemetery,
-        ...avenidas,
-        ...roundabouts,
-        ...houses,
-        ...barrios,
-        // Área de exclusión alrededor del gobierno (margen extra)
-        { x: government.x - 160, y: government.y - 160, w: government.w + 320, h: government.h + 320 }
-      ];
-      const parkLocations = scatterRects(
-        parksCount, 
-        [smallParkW, mediumParkW], 
-        [smallParkH, mediumParkH], 
-        avoidList, 
-        null, 
-        120 // margen entre parques
-      );
-      
-      // Iconos variados para los parques
-      const parkIcons = [
-        '🌳🌲', '🌲🌳', '🌴🌳', '🌳🌴', 
-        '🌲🌴', '🌴🌲', '🌳', '🌲', '🌴'
-      ];
-      
-      // Agregar parques al mapa con variedad de iconos
-      parkLocations.forEach((park, i) => {
-        const randomIcon = parkIcons[Math.floor(Math.random() * parkIcons.length)];
-        
-        government.placed.push({
-          ...parkType,
-          x: park.x,
-          y: park.y,
-          w: park.w,
-          h: park.h,
-          icon: randomIcon,
-          fill: '#22c55e',
-          stroke: '#166534',
-          label: `Parque ${i+1}`
-        });
-      });
-      
+// ... no street pattern cache/helpers
