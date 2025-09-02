@@ -51,6 +51,21 @@ header.app-header h1 { font-size: 1.4rem; color: var(--accent); }
 .btn { display: inline-block; padding: 8px 12px; border-radius: 8px; background: var(--accent); color: #042021; text-decoration: none; font-weight: 700; }
 .btn.secondary { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--text); }
 
+/* Estilos específicos solicitados */
+#btnLogout { 
+  background: var(--danger) !important; 
+  color: #fff !important; 
+  border: 1px solid #b91c1c !important; 
+}
+
+#btnGovClose {
+  background: var(--danger) !important;
+  color: #fff !important;
+  border: 1px solid #b91c1c !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+}
+
 /* layout flexible */
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .col { flex: 1 1 220px; min-width: 180px; }
