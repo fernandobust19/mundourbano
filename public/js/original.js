@@ -45,134 +45,36 @@
 
     /* ===== FORMULARIO ===== */
   const formBar = $("#formBar"), fName=$("#fName"), fUsd=$("#fUsd");
-  // ===== AUTENTICACIÓN (login/registro) =====
+  // ==== AUTH UI ====
   const authModal = document.getElementById('authModal');
   const authUser = document.getElementById('authUser');
   const authPass = document.getElementById('authPass');
+  const authMsg  = document.getElementById('authMsg');
   const btnDoLogin = document.getElementById('btnDoLogin');
   const btnDoRegister = document.getElementById('btnDoRegister');
-  const authMsg = document.getElementById('authMsg');
   const btnLogout = document.getElementById('btnLogout');
-
-  const API = {
-    token: localStorage.getItem('authToken') || null,
-    setToken(t){ this.token=t; if(t) localStorage.setItem('authToken', t); else localStorage.removeItem('authToken'); },
-    async post(path, body){
-      const res = await fetch(path, { method:'POST', headers: { 'Content-Type':'application/json', ...(this.token?{'x-auth':this.token}:{}) }, body: JSON.stringify(body||{}) });
-      const data = await res.json().catch(()=>({ ok:false, msg:'error' }));
-      if(!res.ok) throw Object.assign(new Error(data.msg||'Error'), { data });
-      return data;
-    },
-    async get(path){
-      const res = await fetch(path, { headers: { ...(this.token?{'x-auth':this.token}:{}) } });
-      const data = await res.json().catch(()=>({ ok:false, msg:'error' }));
-      if(!res.ok) throw Object.assign(new Error(data.msg||'Error'), { data });
-      return data;
-    }
-  };
-
-  async function loadProfileIfAny(){
-    if(!API.token) return null;
-    try { const r = await API.get('/api/profile'); return r.profile || null; }
-    catch { return null; }
+  let AUTH = { token: null, username: null, profile: null };
+  function setAuth(a){ AUTH = a||{token:null,username:null,profile:null}; try{ localStorage.setItem('auth', JSON.stringify(AUTH)); }catch(e){} }
+  function getAuth(){ try{ return JSON.parse(localStorage.getItem('auth')||'null'); }catch{ return null; } }
+  async function api(path, opts={}){
+    const headers = Object.assign({ 'Content-Type':'application/json' }, opts.headers||{});
+    if(AUTH?.token) headers['x-auth'] = AUTH.token;
+    const res = await fetch(path, { method: opts.method||'GET', headers, body: opts.body? JSON.stringify(opts.body): undefined });
+    const data = await res.json().catch(()=>({ ok:false, msg:'JSON' }));
+    if(!res.ok) throw Object.assign(new Error(data?.msg||'Error'), { data });
+    return data;
   }
-
-  function applyProfile(profile){
-    if(!profile) return;
-    try{
-      // Restaurar dinero, vehículo y UI del usuario si ya existe el agente
-      const u = USER_ID && agents.find(a=>a.id===USER_ID);
-      if(u){
-        if(typeof profile.money === 'number') u.money = profile.money;
-        if(profile.vehicle) u.vehicle = profile.vehicle;
-      }
-      // Restaurar casas y negocios posicionados desde perfil
-      if(Array.isArray(profile.houses)){
-        for(const h of profile.houses){
-          if(!h || typeof h.x!=='number') continue;
-          houses.push({ x:h.x,y:h.y,w:h.w,h:h.h, ownerId: USER_ID, rentedBy: h.rentedBy||null });
-        }
-      }
-      if(Array.isArray(profile.shops)){
-        for(const s of profile.shops){
-          if(!s || typeof s.x!=='number') continue;
-          shops.push({ id: 'S'+(shops.length+1), x:s.x,y:s.y,w:s.w,h:s.h, kind:s.kind, ownerId: USER_ID, cashbox: s.cashbox||0 });
-        }
-      }
-      // Restaurar estado familiar básico
-      if(profile.spouseId){
-        const u2 = USER_ID && agents.find(a=>a.id===USER_ID);
-        if(u2){ u2.spouseId = profile.spouseId; u2.state = 'paired'; }
-      }
-      if(Array.isArray(profile.children)){
-        // Crear agentes niño vinculados
-        for(const kid of profile.children){
-          const baby = makeAgent('child', { parents:[USER_ID, profile.spouseId||null], ageYears: kid.ageYears||0 });
-          baby.x = (kid.x||rand(100,WORLD.w-100)); baby.y = (kid.y||rand(100,WORLD.h-100));
-          agents.push(baby);
-        }
-      }
-    }catch(e){ console.warn('applyProfile error', e); }
-  }
-
-  function buildProfileSnapshot(){
-    const u = USER_ID && agents.find(a=>a.id===USER_ID);
-    const ownedHouses = houses.filter(h=>h.ownerId===USER_ID).map(h=>({ x:h.x,y:h.y,w:h.w,h:h.h, rentedBy:h.rentedBy||null }));
-    const ownedShops = shops.filter(s=>s.ownerId===USER_ID).map(s=>({ x:s.x,y:s.y,w:s.w,h:s.h, kind:s.kind, cashbox:s.cashbox||0 }));
-    // Familia: cónyuge (si el cónyuge existe) y niños (ids con state child y parents incluyen USER_ID)
-    const uAgent = u || null;
-    const spouseId = uAgent?.spouseId || null;
-    const children = agents.filter(a=>a.state==='child' && Array.isArray(a.parents) && a.parents.includes(USER_ID)).map(k=>({ ageYears: yearsSince(k.bornEpoch), x:k.x, y:k.y }));
-    return {
-      username: window.__authUser || null,
-      money: Math.floor(uAgent?.money||0),
-      vehicle: uAgent?.vehicle || null,
-      houses: ownedHouses,
-      shops: ownedShops,
-      spouseId,
-      children,
-      stats: { money: Math.floor(uAgent?.money||0) },
-      assets: { houses: ownedHouses, shops: ownedShops }
-    };
-  }
-
-  async function saveProfile(reason='manual'){
-    if(!API.token) return; // requiere login
-    try{
-      const profile = buildProfileSnapshot();
-      await API.post('/api/save', { profile });
-      console.log('Perfil guardado:', reason);
-    }catch(e){ console.warn('No se pudo guardar perfil', e?.data||e); }
-  }
-
-  function showFormAfterLogin(){
-    try{ if(authModal) authModal.style.display='none'; }catch(e){}
-    try{ document.querySelector('#formBar')?.style && (document.querySelector('#formBar').style.display='block'); }catch(e){}
-  }
-
-  async function tryAutoLogin(){
-    const prof = await loadProfileIfAny();
-    if(prof){ window.__pendingProfile = prof; showFormAfterLogin(); }
-    else { if(authModal) authModal.style.display='flex'; }
-  }
-
-  if(btnDoRegister){ btnDoRegister.addEventListener('click', async ()=>{
-    authMsg.textContent = '';
-    const u=(authUser?.value||'').trim(), p=(authPass?.value||'').trim();
-    if(!u||!p){ authMsg.textContent='Completa usuario y contraseña.'; return; }
-    try{ const r = await API.post('/api/register', { username:u, password:p }); authMsg.textContent='Registro exitoso, ahora inicia sesión.'; }
-    catch(e){ authMsg.textContent = e?.data?.msg || 'Error al registrar'; }
-  }); }
-
-  if(btnDoLogin){ btnDoLogin.addEventListener('click', async ()=>{
-    authMsg.textContent = '';
-    const u=(authUser?.value||'').trim(), p=(authPass?.value||'').trim();
-    if(!u||!p){ authMsg.textContent='Completa usuario y contraseña.'; return; }
-    try{ const r = await API.post('/api/login', { username:u, password:p }); API.setToken(r.token); window.__authUser = u; showFormAfterLogin(); window.__pendingProfile = r.profile||null; }
-    catch(e){ authMsg.textContent = e?.data?.msg || 'Error al iniciar sesión'; }
-  }); }
-
-  if(btnLogout){ btnLogout.addEventListener('click', ()=>{ API.setToken(null); window.location.reload(); }); }
+  function showAuth(on){ if(!authModal) return; authModal.style.display = on? 'flex':'none'; }
+  async function tryAutoLogin(){ const saved = getAuth(); if(saved?.token){ AUTH = saved; try{ const p = await api('/api/profile'); AUTH.profile = p.profile||null; setAuth(AUTH); showAuth(false); formBar && (formBar.style.display='block'); }catch(e){ setAuth(null); showAuth(true); } } else { showAuth(true); } }
+  if(btnDoRegister){ btnDoRegister.onclick = async ()=>{ authMsg.textContent=''; const u=authUser.value.trim(), p=authPass.value; if(!u||!p){ authMsg.textContent='Ingresa usuario y contraseña.'; return; } try{ const r = await api('/api/register', { method:'POST', body:{ username:u, password:p } }); if(r.ok){ authMsg.textContent='Registrado. Ahora inicia sesión.'; } }catch(e){ authMsg.textContent=e?.data?.msg||'No se pudo registrar'; }
+  }; }
+  if(btnDoLogin){ btnDoLogin.onclick = async ()=>{ authMsg.textContent=''; const u=authUser.value.trim(), p=authPass.value; if(!u||!p){ authMsg.textContent='Ingresa usuario y contraseña.'; return; } try{ const r = await api('/api/login', { method:'POST', body:{ username:u, password:p } }); if(r.ok){ AUTH = { token:r.token, username:u, profile:r.profile||null }; setAuth(AUTH); showAuth(false); if(formBar) formBar.style.display='block'; // si hay progreso previo, podríamos prellenar
+        if(AUTH.profile?.name){ try{ fName.value = AUTH.profile.name; }catch(e){} }
+      } }catch(e){ authMsg.textContent=e?.data?.msg||'Login inválido'; }
+  }; }
+  if(btnLogout){ btnLogout.onclick = ()=>{ setAuth(null); location.reload(); } }
+  // Arrancar chequeando sesión
+  tryAutoLogin();
   const fGenderPreview = { get src(){ return document.getElementById('uiAvatar')?.src; }, set src(v){ try{ const img=document.getElementById('uiAvatar'); if(img) img.src=v; }catch(e){} } };
   const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
   const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
@@ -258,6 +160,86 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
   let placingGov = null, placingHouse = null, placingShop = null;
 
+  // ===== TESORERÍA (edición de saldos.txt con clave) =====
+  const btnTreasury = $('#btnTreasury');
+  const treasuryModal = document.getElementById('treasuryModal');
+  const btnTreasuryClose = document.getElementById('btnTreasuryClose');
+  const treasuryStepKey = document.getElementById('treasuryStepKey');
+  const treasuryKey = document.getElementById('treasuryKey');
+  const btnTreasuryUnlock = document.getElementById('btnTreasuryUnlock');
+  const treasuryMsg = document.getElementById('treasuryMsg');
+  const treasuryEditor = document.getElementById('treasuryEditor');
+  const treasuryContent = document.getElementById('treasuryContent');
+  const btnTreasurySave = document.getElementById('btnTreasurySave');
+
+  let treasuryKeyValue = '';
+
+  function openTreasury(){
+    if(!treasuryModal) return;
+    treasuryModal.style.display = 'flex';
+    treasuryEditor.style.display = 'none';
+    treasuryStepKey.style.display = '';
+    treasuryKey.value = '';
+    treasuryMsg.textContent = '';
+    setTimeout(()=> treasuryKey?.focus && treasuryKey.focus(), 0);
+  }
+  function closeTreasury(){ if(treasuryModal) treasuryModal.style.display='none'; }
+  async function loadTreasury(){
+    try{
+      treasuryMsg.textContent = 'Cargando…';
+      const res = await api('/api/treasury', { headers: { 'x-treasury': treasuryKeyValue } });
+      if(res && typeof res.content === 'string'){
+        treasuryContent.value = res.content;
+        treasuryMsg.textContent = '';
+      } else { throw new Error('Formato inválido'); }
+    }catch(e){
+      treasuryMsg.textContent = 'Clave incorrecta o servidor no disponible.';
+      // Volver al paso de clave si falla
+      treasuryEditor.style.display='none';
+      treasuryStepKey.style.display='';
+    }
+  }
+  async function saveTreasury(){
+    if(!treasuryContent) return;
+    const prev = btnTreasurySave?.textContent;
+    if(btnTreasurySave){ btnTreasurySave.disabled = true; btnTreasurySave.textContent = 'Guardando…'; }
+    treasuryMsg.textContent = '';
+    try{
+      const res = await api('/api/treasury', { method:'POST', headers:{ 'x-treasury': treasuryKeyValue }, body:{ content: treasuryContent.value } });
+      if(res && res.ok){
+        treasuryMsg.textContent = 'Guardado y aplicado.';
+        setTimeout(closeTreasury, 600);
+      } else { throw new Error('Respuesta inválida'); }
+    }catch(e){
+      treasuryMsg.textContent = 'No se pudo guardar. Revisa la clave o intenta de nuevo.';
+    }finally{
+      if(btnTreasurySave){ btnTreasurySave.disabled = false; btnTreasurySave.textContent = prev || 'Guardar'; }
+    }
+  }
+  async function tryUnlockTreasury(){
+    const valRaw = (treasuryKey?.value||'');
+    const val = valRaw.toString().trim().toUpperCase();
+    treasuryKeyValue = val;
+    // Delegar validación al servidor; si falla, se mostrará mensaje
+    try{
+      const res = await api('/api/treasury', { headers: { 'x-treasury': treasuryKeyValue } });
+      if(res && typeof res.content === 'string'){
+        treasuryContent.value = res.content;
+        treasuryStepKey.style.display = 'none';
+        treasuryEditor.style.display = '';
+        treasuryMsg.textContent = '';
+      } else {
+        treasuryMsg.textContent = 'Clave incorrecta.';
+      }
+    }catch(_){ treasuryMsg.textContent = 'Clave incorrecta.'; }
+  }
+
+  if(btnTreasury) btnTreasury.addEventListener('click', openTreasury);
+  if(btnTreasuryClose) btnTreasuryClose.addEventListener('click', closeTreasury);
+  if(btnTreasuryUnlock) btnTreasuryUnlock.addEventListener('click', tryUnlockTreasury);
+  if(treasuryKey) treasuryKey.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlockTreasury(); });
+  if(btnTreasurySave) btnTreasurySave.addEventListener('click', saveTreasury);
+
   const isMobile = ()=> innerWidth<=768;
   let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
   const WORLD={w:0,h:0}; const cam={x:0,y:0};
@@ -286,8 +268,6 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   function toScreen(x,y){ return {x:(x-cam.x)*ZOOM, y:(y-cam.y)*ZOOM}; }
   function toWorld(px,py){ return {x: px/ZOOM + cam.x, y: py/ZOOM + cam.y}; }
   setWorldSize(); fitCanvas();
-  // Intento de auto-login
-  tryAutoLogin();
   addEventListener('resize', fitCanvas, {passive:true});
 
   /* ===== PAN/ZOOM ===== */
@@ -434,7 +414,7 @@ BG_IMG.src = '/assets/fondo1.jpg';
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
   LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:10,  // Aumentado HOUSE_SIZE de 22 a 70
-    R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+    R_ADULT:6.0, R_CHILD:4.8, R_ELDER:6.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
     YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
     HOUSE_BUY_COST:3000,
     GOV_TAX_EVERY: 20*60,      // cada 20 min
@@ -1747,7 +1727,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
             a.cooldownSocial = 120; b.cooldownSocial = 120;
             a.justMarried = performance.now(); b.justMarried = performance.now();
             toast(`${a.code} y ${b.code} se han casado! 💕`);
-            try{ saveProfile('married'); }catch(e){}
 
             let targetHome = null;
             if (aOwnsHouse) {
@@ -1872,27 +1851,50 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
       const pt = toScreen(s.x, s.y);
       ctx.beginPath();
-      const r = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM;
+  const r = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM;
       ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
       ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af';
       ctx.fill();
-      if (ZOOM >= 0.7) {
-        ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+  // Mostrar siempre el nombre, sin importar el zoom
+  ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
   ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - 8*ZOOM);
-      }
     }
   }
 
   let __lastTime = performance.now();
+  let __lastBankUiAt = 0;
   function loop(){
     if(!STARTED){ requestAnimationFrame(loop); return; }
-    const nowMs = performance.now();
+    // Sincronizar saldo local desde el servidor (si Tesorería cambió saldos)
+    try{
+      if(window.gameState && window.playerId && USER_ID){
+        const sp = (Array.isArray(window.gameState.players) ? window.gameState.players : []).find(p => p && p.id === window.playerId);
+        if(sp && typeof sp.money === 'number'){
+          const me = agents.find(a => a.id === USER_ID);
+          if(me && me.money !== sp.money){ me.money = Math.floor(sp.money); }
+        }
+      }
+    }catch(e){}
+  const nowMs = performance.now();
     let dt = (nowMs - __lastTime) / 1000; __lastTime = nowMs; dt = Math.min(dt, 0.05);
     frameCount++;
     updateSocialLogic();
     drawWorld();
     drawSocialLines();
+
+    // Actualizar panel de Banco en UI (siempre visible) cada ~1s
+    try{
+      if(nowMs - __lastBankUiAt > 1000){
+        __lastBankUiAt = nowMs;
+        if(USER_ID && accBankBody){
+          const you = agents.find(a=>a.id===USER_ID);
+          if(you){
+            accBankBody.innerHTML = `Saldo de ${you.code}: <span class="balance-amount">${Math.floor(you.money||0)}</span>`;
+          }
+        }
+      }
+    }catch(e){}
 
     // ======= Jugadores remotos con smoothing nuevo =======
     try{ renderRemotePlayers(); }catch(e){}
@@ -2021,7 +2023,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
                       const baby = makeAgent('child', { parents: [a.id, spouse.id], ageYears: 0 });
                       baby.x = home.x + home.w/2; baby.y = home.y + home.h/2; baby.houseIdx = a.houseIdx;
                       agents.push(baby); toast(`¡Ha nacido un bebé en la familia de ${a.code} y ${spouse.code}!`);
-                      try{ saveProfile('baby'); }catch(e){}
                       a.cooldownSocial = 120; spouse.cooldownSocial = 120;
                   }
               }
@@ -2037,12 +2038,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
           ctx.textAlign='center'; ctx.fillText('💕', p.x, p.y - 25 * ZOOM);
       } else if (a.justMarried) { a.justMarried = null; }
-      if (ZOOM >= 0.7) {
-        ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
-        ctx.fillStyle='#fff'; ctx.textAlign='center';
-        const age = (yearsSince(a.bornEpoch)|0);
-  ctx.fillText(`${a.name||a.code}·${age}`, p.x, p.y-8*ZOOM);
-      }
+  // Mostrar siempre el nombre del agente local
+  ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
+  ctx.fillStyle='#fff'; ctx.textAlign='center';
+  { const age2 = (yearsSince(a.bornEpoch)|0); ctx.fillText(`${a.name||a.code}·${age2}`, p.x, p.y-8*ZOOM); }
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
     const instCount = government.placed.length;
@@ -2103,7 +2102,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Quitar la línea antigua de población, solo mostrar créditos, fondo, negocios e instituciones
   lines.push(`Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
     lines.push('');
-    lines.push('## Usuarios en el mundo (tiempo real)');
+  lines.push('## Usuarios en el mundo (tiempo real)');
     // Mostrar todos los usuarios conectados en tiempo real (de gameState)
     let users = [];
     if (window.gameState && Array.isArray(window.gameState.players)) {
@@ -2120,7 +2119,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       users = agents;
     }
     // Filtrar solo humanos (no bots) y no niños si quieres
-    const filtered = users.filter(u => !u.isBot && (!u.state || u.state !== 'child'));
+  const filtered = users.filter(u => !u.isBot);
   lines.push(`Población conectada: ${filtered.length} — Jugador: ${playerName}`);
     if(filtered.length > 0){
       for(const u of filtered){
@@ -2131,13 +2130,33 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if(!displayName || displayName.trim().length <= 2){
           displayName = codeRef || 'Usuario';
         }
-        lines.push(`- ${displayName}${codeRef ? ' (' + codeRef + ')' : ''}`);
+    const money = (typeof u.money === 'number') ? Math.floor(u.money) : (u.stats && typeof u.stats.money==='number' ? Math.floor(u.stats.money) : 0);
+    lines.push(`- ${displayName}${codeRef ? ' (' + codeRef + ')' : ''}: $${money}`);
       }
     }else{
       lines.push('No hay usuarios conectados.');
     }
     lines.push('');
-    lines.push('## Finanzas por Agente');
+    lines.push('## Todos los usuarios registrados y sus saldos');
+    lines.push('(Incluye desconectados; se usa el saldo en vivo si están conectados)');
+    // Cargar balances del servidor si están en caché reciente
+    if(!window.__balancesCache || (Date.now() - (window.__balancesCache.ts||0) > 5000)){
+      window.__balancesCache = window.__balancesCache || { ts: 0, users: [] };
+      fetch('/api/balances').then(r=>r.json()).then(data=>{
+        if(data && data.ok && Array.isArray(data.users)){
+          window.__balancesCache = { ts: Date.now(), users: data.users };
+          try{ document.querySelector('#docBody').textContent = fullDocument(); }catch(e){}
+        }
+      }).catch(()=>{});
+    }
+    const list = (window.__balancesCache && Array.isArray(window.__balancesCache.users)) ? window.__balancesCache.users : [];
+    if(list.length){
+      for(const u of list){ lines.push(`- ${u.displayName || u.username}: $${Math.floor(u.money||0)}`); }
+    } else {
+      lines.push('(Cargando…)');
+    }
+    lines.push('');
+    lines.push('## Finanzas por Agente (conectados)');
     lines.push(bankReport());
     return lines.join('\n');
   }
@@ -2252,9 +2271,25 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const chosen = selBtn?.getAttribute('data-src') || fGenderPreview?.src || MALE_IMG;
       user.avatar = chosen;
     }catch(e){}
-  // Progreso guardado: se aplicará justo después si existe window.__pendingProfile
+    // Aplicar progreso guardado si existe
+    if(AUTH?.profile){
+      try{
+        if(AUTH.profile.stats){
+          if(typeof AUTH.profile.stats.money === 'number') user.money = AUTH.profile.stats.money;
+          if(typeof AUTH.profile.stats.bank === 'number') user.bank = AUTH.profile.stats.bank;
+        }
+        if(AUTH.profile.assets){
+          (AUTH.profile.assets.houses||[]).forEach(h=>{
+            houses.push({ x: h.x|0, y: h.y|0, w: h.w|0, h: h.h|0, ownerId: user.id, rentedBy: null });
+          });
+          (AUTH.profile.assets.shops||[]).forEach(s=>{
+            shops.push({ x: s.x|0, y: s.y|0, w: s.w|0, h: s.h|0, ownerId: user.id, kind: s.kind, cashbox: s.cashbox|0, id: 'S'+(shops.length+1) });
+          });
+        }
+      }catch(e){ console.warn('restore profile failed', e); }
+    }
     agents.push(user); USER_ID=user.id;
-  try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
+  try{ window.sockApi?.createPlayer({ code: user.code, username: (AUTH?.username||null), gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
     if(!hasNet()){
       for(let i=0;i<CFG.N_INIT;i++) {agents.push(makeAgent('adult',{ageYears:rand(18,60)}));}
     }
@@ -2290,9 +2325,9 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
     }catch(e){}
   // Guardado automático ligero cada 20s
-  setInterval(()=>{
+    setInterval(()=>{
       try{
-    if(!API?.token) return;
+        if(!AUTH?.token) return;
         const you = agents.find(a=>a.id===USER_ID);
         const profile = {
           name: you?.name || name,
@@ -2303,12 +2338,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
             shops: (window.gameState?.shops||shops).filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)}))
           }
         };
-    API.post('/api/save', { profile }).catch(()=>{});
+        api('/api/save', { method:'POST', body: { profile } }).catch(()=>{});
       }catch(e){}
     }, 20000);
-  // Aplicar perfil pendiente del login (si existe)
-  if(window.__pendingProfile){ try{ applyProfile(window.__pendingProfile); }catch(e){} window.__pendingProfile=null; }
-  loop();
+    loop();
   }
   const startHandler = ()=>{const name=fName.value.trim(),likes=getChecked().map(x=>x.value);if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,likes});};
   btnStart.addEventListener('click', startHandler);
@@ -2354,8 +2387,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       u.money -= placingHouse.cost;
       if(u.houseIdx !== null && houses[u.houseIdx]) { houses[u.houseIdx].rentedBy = null; }
       houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
-  toast('Casa propia construida 🏠');
-  try{ saveProfile('house'); }catch(e){}
+      toast('Casa propia construida 🏠');
+      try{ if(AUTH?.token){ const you = u; const profile = { name: you.name, avatar: you.avatar, stats:{ money: Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } }; api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{}); } }catch(e){}
       return;
     }
 
@@ -2376,7 +2409,13 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
             shops.push(newShop);
             placingShop = null;
             toast('Negocio colocado.');
-            try{ saveProfile('shop'); }catch(e){}
+            try{
+              if(AUTH?.token){
+                const you=u;
+                const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } };
+                api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{});
+              }
+            }catch(e){}
           } else {
             toast(res?.msg || 'Error al colocar negocio');
             placingShop = null;
@@ -2386,8 +2425,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         u.money -= (placingShop.price || 0);
         shops.push(newShop);
         placingShop = null;
-  toast('Negocio colocado (local).');
-  try{ saveProfile('shop'); }catch(e){}
+        toast('Negocio colocado (local).');
+        try{ if(AUTH?.token){ const you=u; const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } }; api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{}); } }catch(e){}
       }
       return;
     }
@@ -2419,7 +2458,13 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
             shops.push(newShop);
             placingShop=null;
             toast('Negocio colocado 🏪');
-            try{ saveProfile('shop'); }catch(e){}
+            try{
+              if(AUTH?.token){
+                const you=u;
+                const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } };
+                api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{});
+              }
+            }catch(e){}
           } else {
             toast(res?.msg||'Error al colocar negocio');
             placingShop=null;
@@ -2429,8 +2474,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
       u.money -= placingShop.price;
       newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop);
-  placingShop=null; toast('Negocio colocado 🏪');
-  try{ saveProfile('shop'); }catch(e){}
+    placingShop=null; toast('Negocio colocado 🏪');
+    try{ if(AUTH?.token){ const you=u; const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } }; api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{}); } }catch(e){}
     return;
     }
     if(placingGov){
@@ -2621,7 +2666,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const vType = carTypeSelect.value;
       if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
       const vehicle = VEHICLES[vType];
-  if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); saveProfile('vehicle'); }
+      if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); }
       else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
   });
 

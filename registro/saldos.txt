@@ -1,0 +1,5 @@
+# Formato: usuario saldo
+# Edita el saldo (dinero en mano). Guarda el archivo y el cambio se verá en el juego.
+fernando 1300
+pedro 0
+lucas 1000

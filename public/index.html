@@ -40,10 +40,10 @@
   @media (max-width:960px){.col-3,.col-4,.col-6{grid-column:1/-1}}
 
 
-  #likesWrap{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;max-height:240px;overflow:auto;padding:8px;border:1px dashed rgba(255,255,255,0.25);border-radius:12px;background:#000;color:#fff}
+  #likesWrap{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;max-height:240px;overflow:auto;padding:8px;border:1px dashed rgba(0,0,0,0.08);border-radius:12px;background:rgba(24,36,48,0.5);}
   @media (max-width:960px){#likesWrap{grid-template-columns:repeat(2,minmax(150px,1fr));max-height:280px}}
   .chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,0.06);border-radius:999px;background:rgba(255,255,255,0.04);font-size:13px;white-space:nowrap;color:#eef7fb}
-  .chip input{accent-color:#fff;width:18px;height:18px}
+  .chip input{accent-color:#60a5fa;width:18px;height:18px}
   .chip.disabled{opacity:.45;filter:grayscale(40%)}
   .chip.disabled input{pointer-events:none}
   .limitNote{font-size:12px;margin-top:4px;color:#93c5fd}
@@ -208,6 +208,7 @@
 <div id="top-bar">
   <button id="btnShowDoc">📄 Documento</button>
   <button id="btnShowMarried">👨‍👩👧‍👦 Casados</button>
+  <button id="btnTreasury">🏦 Tesorería</button>
 </div>
 
 <canvas id="world"></canvas>
@@ -327,6 +328,32 @@
     <h3 id="modalTitle">Nombre del bebé</h3>
     <div class="actions"><button id="btnBabyOk" class="btn">OK</button></div>
   </div>
+</div>
+
+<!-- Modal Tesorería -->
+<div id="treasuryModal" style="display:none;position:fixed;inset:0;z-index:60;align-items:flex-start;justify-content:center;padding-top:6vh;background:rgba(0,0,0,.45)">
+  <div class="modalBox" style="width:min(680px,94vw)">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h3 style="margin:0">🏦 Tesorería</h3>
+      <button id="btnTreasuryClose" title="Cerrar" class="btn" style="padding:6px 10px">✕</button>
+    </div>
+    <div id="treasuryStepKey" class="field" style="margin-top:10px">
+      <label>Clave de 8 dígitos</label>
+  <input id="treasuryKey" class="input" type="password" minlength="8" maxlength="16" placeholder="Ingrese la clave" autocomplete="off" autocapitalize="off" spellcheck="false" style="text-transform:uppercase" />
+      <div class="actions" style="margin-top:8px">
+        <button id="btnTreasuryUnlock" class="btn primary">Desbloquear</button>
+      </div>
+      <div id="treasuryMsg" class="hint" style="margin-top:6px"></div>
+    </div>
+    <div id="treasuryEditor" style="display:none;margin-top:10px">
+      <label class="hint">Editar (formato: usuario saldo). Guarda para aplicar en el juego.</label>
+      <textarea id="treasuryContent" class="input" style="min-height:260px;font-family:ui-monospace,monospace"></textarea>
+      <div class="actions" style="margin-top:8px">
+        <button id="btnTreasurySave" class="btn good">Guardar</button>
+      </div>
+    </div>
+  </div>
+  
 </div>
 
 <div id="toast"></div>

@@ -14,6 +14,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"]
   }
 });
+// Archivo de texto para saldos editables (formato: "usuario saldo")
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
@@ -27,11 +28,95 @@ app.use(express.json({ limit: '1mb' }));
 const REG_DIR = path.join(__dirname, 'registro');
 const USERS_JSON = path.join(REG_DIR, 'users.json');
 const REPORT_CSV = path.join(REG_DIR, 'reporte.csv');
+const SALDOS_TXT  = path.join(REG_DIR, 'saldos.txt');
 try {
   if (!fs.existsSync(REG_DIR)) fs.mkdirSync(REG_DIR, { recursive: true });
   if (!fs.existsSync(USERS_JSON)) fs.writeFileSync(USERS_JSON, '[]', 'utf8');
   if (!fs.existsSync(REPORT_CSV)) fs.writeFileSync(REPORT_CSV, 'fecha,evento,usuario,detalle\n', 'utf8');
 } catch (e) { console.error('Error preparando carpeta registro:', e); }
+
+// ===== Utilidades Saldos TXT =====
+// Formato esperado por defecto: "usuario saldo" en cada línea.
+// También se aceptan separadores ":" "," o "=" (flexible para edición manual).
+function parseLine(line){
+  const s = (line||'').trim();
+  if(!s || s.startsWith('#')) return null;
+  // separar por :,=,coma o espacios múltiples
+  const parts = s.split(/\s*[:=,\s]\s*/).filter(Boolean);
+  if(parts.length < 2) return null;
+  const username = String(parts[0]).trim();
+  const money = Number(parts[1]);
+  if(!username || !isFinite(money)) return null;
+  return { username, money: Math.floor(money) };
+}
+function readBalancesTxt(){
+  if(!fs.existsSync(SALDOS_TXT)) return new Map();
+  try{
+    const txt = fs.readFileSync(SALDOS_TXT, 'utf8');
+    const map = new Map();
+    for(const raw of txt.split(/\r?\n/)){
+      const rec = parseLine(raw);
+      if(rec){ map.set(rec.username.toLowerCase(), rec); }
+    }
+    return map;
+  }catch(e){ console.warn('No pude leer saldos.txt:', e.message); return new Map(); }
+}
+function writeSaldosTxtFromUsers(){
+  try{
+    const users = readUsers();
+    const lines = [
+      '# Formato: usuario saldo',
+      '# Edita el saldo (dinero en mano). Guarda el archivo y el cambio se verá en el juego.'
+    ];
+    for(const u of users){
+      const money = Math.floor(u.profile?.stats?.money ?? 0);
+      lines.push(`${u.username} ${money}`);
+    }
+    fs.writeFileSync(SALDOS_TXT, lines.join('\n') + '\n', 'utf8');
+  }catch(e){ console.warn('No pude escribir saldos.txt:', e.message); }
+}
+// Inicializar archivo si no existe
+if(!fs.existsSync(SALDOS_TXT)){
+  try{ writeSaldosTxtFromUsers(); }catch(e){}
+}
+
+// Aplicar saldos del TXT a users.json y jugadores conectados
+function applyBalancesToUsersAndState(){
+  const bal = readBalancesTxt();
+  if(!bal.size) return;
+  const users = readUsers();
+  let changed = false;
+  for(const u of users){
+    const b = bal.get(u.username.toLowerCase());
+    if(!b) continue;
+    const money = Math.floor(Number(b.money)||0);
+    if(!u.profile) u.profile = { stats:{ money:0, bank:0 }, assets:{ houses:[], shops:[] } };
+    const prevMoney = Math.floor(u.profile?.stats?.money ?? 0);
+    if(prevMoney !== money){
+      u.profile.stats.money = money;
+      changed = true;
+      // Actualizar en vivo a jugadores conectados con ese username
+      for(const p of Object.values(state.players)){
+        if(p.username && p.username.toLowerCase() === u.username.toLowerCase()){
+          p.money = money;
+          p.updatedAt = now();
+        }
+      }
+    }
+  }
+  if(changed) writeUsers(users);
+}
+
+// Vigilar cambios en el archivo de texto (si existe)
+try{
+  if(fs.existsSync(SALDOS_TXT)){
+    fs.watch(SALDOS_TXT, { persistent:true }, (eventType)=>{
+      if(eventType === 'change' || eventType === 'rename'){
+        setTimeout(()=>{ applyBalancesToUsersAndState(); }, 250);
+      }
+    });
+  }
+}catch(e){ console.warn('fs.watch saldos.xlsx falló:', e.message); }
 
 function readUsers(){
   try { return JSON.parse(fs.readFileSync(USERS_JSON, 'utf8')||'[]'); } catch { return []; }
@@ -62,6 +147,7 @@ app.post('/api/register', (req, res)=>{
   const user = { username, salt, hash, profile: null, createdAt: Date.now() };
   users.push(user);
   writeUsers(users);
+  try{ writeSaldosTxtFromUsers(); }catch(e){}
   csvAppend('registro', username, 'nuevo usuario');
   return res.json({ ok:true });
 });
@@ -103,6 +189,7 @@ app.post('/api/save', (req, res)=>{
   if(idx<0) return res.status(404).json({ ok:false, msg:'Usuario no encontrado' });
   users[idx].profile = { ...profile, savedAt: Date.now() };
   writeUsers(users);
+  try{ writeSaldosTxtFromUsers(); }catch(e){}
   try{
     // resumen para CSV
     const money = Math.floor(profile?.stats?.money ?? 0);
@@ -111,6 +198,58 @@ app.post('/api/save', (req, res)=>{
     csvAppend('save', username, `money=${money} casas=${casas} negocios=${negocios}`);
   }catch(e){}
   return res.json({ ok:true });
+});
+
+// ================= Tesorería: leer/guardar saldos.txt (clave requerida) =================
+function isValidTreasury(req){
+  try{
+    const k = req.get('x-treasury') || req.body?.key || req.query?.key;
+    return k === 'RODIVRES';
+  }catch{ return false; }
+}
+
+// GET /api/treasury -> { content }
+app.get('/api/treasury', (req, res)=>{
+  if(!isValidTreasury(req)) return res.status(401).json({ ok:false, msg:'Clave inválida' });
+  try{
+    if(!fs.existsSync(SALDOS_TXT)) writeSaldosTxtFromUsers();
+    const content = fs.readFileSync(SALDOS_TXT, 'utf8');
+    return res.json({ ok:true, content });
+  }catch(e){ return res.status(500).json({ ok:false, msg:'No se pudo leer', err: String(e?.message||e) }); }
+});
+
+// POST /api/treasury { content }
+app.post('/api/treasury', (req, res)=>{
+  if(!isValidTreasury(req)) return res.status(401).json({ ok:false, msg:'Clave inválida' });
+  const content = req.body?.content;
+  if(typeof content !== 'string') return res.status(400).json({ ok:false, msg:'Contenido requerido' });
+  try{
+    // Guardar archivo y aplicar balances al sistema y jugadores conectados
+    fs.writeFileSync(SALDOS_TXT, content, 'utf8');
+    applyBalancesToUsersAndState();
+    return res.json({ ok:true });
+  }catch(e){ return res.status(500).json({ ok:false, msg:'No se pudo guardar', err: String(e?.message||e) }); }
+});
+
+// Listado público de balances (nombres y saldos)
+app.get('/api/balances', (req, res) => {
+  try{
+    const users = readUsers();
+    const live = Object.values(state.players || {});
+    // Mapa de username -> money en vivo (si existe username)
+    const liveMap = new Map();
+    for(const p of live){
+      if(p && p.username){ liveMap.set(p.username.toLowerCase(), Math.floor(Number(p.money)||0)); }
+    }
+    const out = users.map(u => {
+      const key = (u.username||'').toLowerCase();
+      const moneyFromUsers = Math.floor(u?.profile?.stats?.money ?? 0);
+      const money = liveMap.has(key) ? liveMap.get(key) : moneyFromUsers;
+      const displayName = (u?.profile?.name && typeof u.profile.name === 'string' && u.profile.name.trim().length>0) ? u.profile.name : u.username;
+      return { username: u.username, displayName, money };
+    });
+    return res.json({ ok:true, users: out });
+  }catch(e){ return res.status(500).json({ ok:false, msg:'No se pudo listar balances' }); }
 });
 
 const state = {
@@ -265,15 +404,32 @@ io.on('connection', (socket) => {
       id,
       socketId: socket.id,
       code: data.code || ('Player' + id),
+      username: (data.username||'').trim() || null,
       x: data.x || 100,
       y: data.y || 100,
-  money: (data.startMoney != null) ? data.startMoney : 200,
+      money: (data.startMoney != null) ? data.startMoney : 200,
       gender: data.gender || 'M',
       avatar: data.avatar || null,
       createdAt: now(),
       updatedAt: now(),
       lastUpdateFromClient: now()
     };
+    // Si viene username y hay saldo en TXT/usuarios, aplicarlo
+    try{
+      const bal = readBalancesTxt();
+      const key = (player.username||'').toLowerCase();
+      if(key && bal.has(key)){
+        const b = bal.get(key);
+        player.money = Math.floor(Number(b.money)||player.money||0);
+      } else {
+        // fallback: si existe en users.json, recuperar perfil
+        const users = readUsers();
+        const u = users.find(x=>x.username.toLowerCase()===key);
+        if(u?.profile?.stats){
+          if(typeof u.profile.stats.money === 'number') player.money = Math.floor(u.profile.stats.money);
+        }
+      }
+    }catch(e){ }
     state.players[id] = player;
     socket.playerId = id;
     if (ack) ack({ ok: true, id });
@@ -289,7 +445,7 @@ io.on('connection', (socket) => {
     const p = state.players[id];
     if ('x' in data) p.x = data.x;
     if ('y' in data) p.y = data.y;
-    if ('money' in data) p.money = data.money;
+  if ('money' in data) p.money = data.money;
   if ('bank' in data) p.bank = data.bank;
     if ('vehicle' in data) p.vehicle = data.vehicle;
     p.updatedAt = now();
@@ -334,4 +490,6 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
+  // A la subida, aplicar balances del Excel (si existe)
+  try{ applyBalancesToUsersAndState(); }catch(e){}
 });
