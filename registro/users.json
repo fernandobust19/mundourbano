@@ -7,14 +7,14 @@
       "name": "fer",
       "avatar": "https://i.postimg.cc/x8cc0drr/20250820-102743.png",
       "stats": {
-        "money": 1300,
+        "money": 255,
         "bank": 0
       },
       "assets": {
         "houses": [],
         "shops": []
       },
-      "savedAt": 1756861332841
+      "savedAt": 1756923250126
     },
     "createdAt": 1756829911435
   },
@@ -52,5 +52,24 @@
       "savedAt": 1756850742756
     },
     "createdAt": 1756850300760
+  },
+  {
+    "username": "pedro1",
+    "salt": "bc2e210ccdb996f27cfae6932d42528f",
+    "hash": "45375d32fa3a138a57ec0d2074158981ac791350ae679816952cf6b7082acdd3",
+    "profile": {
+      "name": "PEDRO1",
+      "avatar": "https://i.postimg.cc/x8cc0drr/20250820-102743.png",
+      "stats": {
+        "money": 215,
+        "bank": 0
+      },
+      "assets": {
+        "houses": [],
+        "shops": []
+      },
+      "savedAt": 1756920853260
+    },
+    "createdAt": 1756920820831
   }
 ]

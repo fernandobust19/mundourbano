@@ -159,6 +159,23 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const btnGovClose = $("#btnGovClose");
   if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
   let placingGov = null, placingHouse = null, placingShop = null;
+  // Registro de actividad UI
+  const activityEl = document.getElementById('activityLog');
+  function logActivity(line){
+    try{
+      if(!activityEl) return;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      const ss = String(now.getSeconds()).padStart(2,'0');
+      const prev = activityEl.textContent || '';
+      const msg = `[${hh}:${mm}:${ss}] ${line}`;
+      activityEl.textContent = (prev ? (prev + '\n') : '') + msg;
+      activityEl.scrollTop = activityEl.scrollHeight;
+    }catch(e){}
+  }
+  // Exponer para socket.js
+  try{ window.logActivity = logActivity; }catch(e){}
 
   // ===== TESORERÍA (edición de saldos.txt con clave) =====
   const btnTreasury = $('#btnTreasury');
@@ -2151,10 +2168,30 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }
     const list = (window.__balancesCache && Array.isArray(window.__balancesCache.users)) ? window.__balancesCache.users : [];
     if(list.length){
-      for(const u of list){ lines.push(`- ${u.displayName || u.username}: $${Math.floor(u.money||0)}`); }
+      for(const u of list){
+        const casas = (u.houses != null) ? u.houses : 0;
+        const negocios = (u.shops != null) ? u.shops : 0;
+        lines.push(`- ${u.displayName || u.username}: $${Math.floor(u.money||0)} — Casas: ${casas} — Negocios: ${negocios}`);
+      }
     } else {
       lines.push('(Cargando…)');
     }
+  // Sección de propiedades del jugador actual (resumen – sin listar cada negocio)
+    lines.push('');
+    lines.push('## Mis Propiedades');
+    try{
+      const housesState = (window.gameState && Array.isArray(window.gameState.houses)) ? window.gameState.houses : houses;
+      const shopsState  = (window.gameState && Array.isArray(window.gameState.shops))  ? window.gameState.shops  : shops;
+      const myUser = AUTH && AUTH.username ? String(AUTH.username).toLowerCase() : null;
+      const myH = housesState.filter(h => (myUser && (String(h.ownerUsername||'').toLowerCase() === myUser)) || (USER_ID && h.ownerId === USER_ID));
+      const myS = shopsState.filter(s => (myUser && (String(s.ownerUsername||'').toLowerCase() === myUser)) || (USER_ID && s.ownerId === USER_ID));
+      if(myH.length===0 && myS.length===0){
+        lines.push('(No tienes propiedades aún)');
+      } else {
+    lines.push(`Casas: ${myH.length} — Negocios: ${myS.length}`);
+    lines.push('(Los negocios se muestran sobre el ícono en el mapa al tocarlos)');
+      }
+    }catch(e){ lines.push('(No se pudo cargar el detalle de propiedades)'); }
     lines.push('');
     lines.push('## Finanzas por Agente (conectados)');
     lines.push(bankReport());
@@ -2229,12 +2266,21 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }
   function closeGovPanel(){ govDock.style.display = 'none'; }
   document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeGovPanel(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ const d=document.getElementById('shopInfoDock'); if(d) d.style.display='none'; } });
   document.addEventListener('pointerdown', (e)=>{
     try{
       if(govDock.style.display !== 'flex') return;
       const gd = govDock.getBoundingClientRect();
       if(e.clientX < gd.left || e.clientX > gd.right || e.clientY < gd.top || e.clientY > gd.bottom){ closeGovPanel(); }
     }catch(e){}
+  }, {passive:true});
+  document.addEventListener('pointerdown', (e)=>{
+    try{
+      const dock = document.getElementById('shopInfoDock');
+      if(!dock || dock.style.display !== 'flex') return;
+      const r = dock.getBoundingClientRect();
+      if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom){ dock.style.display='none'; }
+    }catch(_){}
   }, {passive:true});
   $("#uiHideBtn").onclick = ()=>{ show($("#uiDock"), false); show($("#uiShowBtn"), true); };
   $("#uiShowBtn").onclick = ()=>{ show($("#uiDock"), true); show($("#uiShowBtn"), false); };
@@ -2271,8 +2317,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const chosen = selBtn?.getAttribute('data-src') || fGenderPreview?.src || MALE_IMG;
       user.avatar = chosen;
     }catch(e){}
-    // Aplicar progreso guardado si existe
-    if(AUTH?.profile){
+  // Aplicar progreso guardado si existe (solo en modo offline). En modo online, el servidor restaura propiedades.
+  if(AUTH?.profile && !hasNet()){
       try{
         if(AUTH.profile.stats){
           if(typeof AUTH.profile.stats.money === 'number') user.money = AUTH.profile.stats.money;
@@ -2374,7 +2420,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
     if(placingHouse){
       const u=agents.find(a=>a.id===placingHouse.ownerId); if(!u){ placingHouse=null; return; }
-      const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null};
+  const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null, ownerUsername: AUTH?.username || null};
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,newH, 8))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
       if((u.money||0) < placingHouse.cost){ toast('Saldo insuficiente.'); placingHouse=null; return; }
       if(hasNet()){
@@ -2382,6 +2428,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           if(res?.ok){ u.money -= placingHouse.cost; houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null; toast('Casa propia construida 🏠'); }
           else { toast(res?.msg||'Error al colocar casa'); placingHouse=null; }
         });
+        logActivity('Compraste una casa');
         return;
       }
       u.money -= placingHouse.cost;
@@ -2392,23 +2439,50 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       return;
     }
 
+    // Click en negocios: mostrar info compacta justo en el ícono
+    try{
+      const shopsList = getVisibleShops();
+      const hit = shopsList.find(s => pt.x >= s.x && pt.x <= s.x + s.w && pt.y >= s.y && pt.y <= s.y + s.h);
+      if(hit){
+        const dock = $("#shopInfoDock"), body = $("#shopInfoBody"), btnX = $("#btnShopInfoClose");
+        const p = toScreen(hit.x, hit.y);
+        const dockW = Math.min(window.innerWidth * 0.9, dock.offsetWidth || 260);
+        const dockH = Math.min(window.innerHeight * 0.8, dock.offsetHeight || 140);
+        let left = p.x + (hit.w * ZOOM)/2 - dockW/2;
+        let top  = p.y - dockH - 8;
+        left = Math.max(6, Math.min(left, window.innerWidth - dockW - 6));
+        top  = Math.max(6, Math.min(top, window.innerHeight - dockH - 6));
+        dock.style.position = 'fixed';
+        dock.style.left = `${left}px`;
+        dock.style.top  = `${top}px`;
+        dock.style.width = `${dockW}px`;
+        const owner = (hit.ownerUsername || agents.find(a=>a.id===hit.ownerId)?.code || '—');
+        const caja = (hit.cashbox!=null)? Math.floor(hit.cashbox): '—';
+        body.textContent = `Tipo: ${hit.kind||'negocio'}\nDueño: ${owner}\nCaja: ${caja}`;
+        dock.style.display = 'flex';
+        if(btnX && !btnX.__bound){ btnX.__bound = true; btnX.addEventListener('click', ()=>{ dock.style.display='none'; }); }
+        return;
+      }
+    }catch(_){ }
+
     // Colocación de negocio desde el menú (ej: panadería). Debe aparecer justo donde se hace click.
     if(placingShop){
       const u = agents.find(a => a.id === placingShop.ownerId);
       if(!u){ placingShop = null; return; }
       const size = placingShop.size || {w: CFG.SHOP_W, h: CFG.SHOP_H};
-      const newShop = { x: pt.x - size.w/2, y: pt.y - size.h/2, w: size.w, h: size.h, kind: placingShop.kind.k || placingShop.kind, ownerId: u.id };
+  const newShop = { x: pt.x - size.w/2, y: pt.y - size.h/2, w: size.w, h: size.h, kind: placingShop.kind.k || placingShop.kind, ownerId: u.id, ownerUsername: AUTH?.username || null };
       // comprobar colisiones
       if(allBuildings.some(r => rectsOverlapWithMargin(r, newShop, 8))){ toast('No se puede colocar el negocio aquí (colisión).'); placingShop = null; return; }
       if((u.money || 0) < (placingShop.price || 0)){ toast('Saldo insuficiente.'); placingShop = null; return; }
       // enviar al servidor si corresponde
-      if(hasNet()){
+  if(hasNet()){
         window.sock?.emit('placeShop', newShop, (res) => {
           if(res?.ok){
             u.money -= (placingShop.price || 0);
             shops.push(newShop);
             placingShop = null;
             toast('Negocio colocado.');
+    logActivity(`Compraste un negocio: ${newShop.kind}`);
             try{
               if(AUTH?.token){
                 const you=u;
@@ -2435,7 +2509,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const rectShop = {x: pt.x - placingShop.size.w/2, y: pt.y - placingShop.size.h/2, w: placingShop.size.w, h: placingShop.size.h};
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectShop, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
       if((u.money||0) < placingShop.price){ toast('Saldo insuficiente.'); placingShop=null; return; }
-      const newShop = { 
+    const newShop = { 
   ownerId:u.id, 
   x:rectShop.x, 
   y:rectShop.y, 
@@ -2445,7 +2519,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   icon:placingShop.kind.icon, 
   like:placingShop.kind.like, 
   price:placingShop.kind.price, 
-  buyCost: placingShop.kind.buyCost 
+  buyCost: placingShop.kind.buyCost,
+  ownerUsername: AUTH?.username || null 
 };
       if(hasNet()){
         console.log("Intentando colocar negocio vía red...");
@@ -2666,7 +2741,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const vType = carTypeSelect.value;
       if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
       const vehicle = VEHICLES[vType];
-      if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); }
+  if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); logActivity(`Compraste vehículo: ${vehicle.name}`); }
       else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
   });
 

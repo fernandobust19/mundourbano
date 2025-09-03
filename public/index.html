@@ -111,7 +111,8 @@
 
 <!-- Modal de acceso: registro/inicio de sesión -->
 <div id="authModal" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center">
-  <div class="modalBox" style="width:min(420px,92vw)">
+  <div class="modalBox" style="width:min(420px,92vw);max-height:92vh;overflow:auto">
+  <img src="/assets/creador.jpg" alt="Creador" style="width:100%;height:auto;max-height:28vh;object-fit:contain;border-radius:10px;margin:0 0 8px 0;display:block"/>
     <h3 style="margin:0 0 6px 0">Ingresar</h3>
     <div class="field" style="margin-top:6px">
       <label>Usuario</label>
@@ -230,6 +231,10 @@
       <button id="btnShop" class="btn">Comprar Negocio</button>
   <button id="btnLogout" class="btn secondary" title="Cerrar sesión">Salir</button>
     </div>
+    <div class="field" style="margin-top:8px">
+      <label>Registro de actividad</label>
+      <pre id="activityLog" style="max-height:120px"></pre>
+    </div>
   </div>
 
   <div class="card">
@@ -288,6 +293,16 @@
       <button id="btnGovPlace" class="btn primary">Colocar institución</button>
     </div>
     <div class="hint" id="govHint" style="margin-top:6px">Elige y luego haz clic en el mapa.</div>
+  </div>
+</div>
+
+<div id="shopInfoDock" style="display:none;">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h4 style="margin:0 0 6px 0">🏪 Negocio</h4>
+      <button id="btnShopInfoClose" title="Cerrar" style="all:unset;cursor:pointer;padding:6px;border-radius:6px;background:transparent;color:var(--text);font-weight:700">✕</button>
+    </div>
+    <div id="shopInfoBody" class="hint" style="margin-top:4px;white-space:pre-line"></div>
   </div>
 </div>
 

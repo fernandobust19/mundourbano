@@ -29,10 +29,12 @@ const REG_DIR = path.join(__dirname, 'registro');
 const USERS_JSON = path.join(REG_DIR, 'users.json');
 const REPORT_CSV = path.join(REG_DIR, 'reporte.csv');
 const SALDOS_TXT  = path.join(REG_DIR, 'saldos.txt');
+const GOV_JSON    = path.join(REG_DIR, 'government.json');
 try {
   if (!fs.existsSync(REG_DIR)) fs.mkdirSync(REG_DIR, { recursive: true });
   if (!fs.existsSync(USERS_JSON)) fs.writeFileSync(USERS_JSON, '[]', 'utf8');
   if (!fs.existsSync(REPORT_CSV)) fs.writeFileSync(REPORT_CSV, 'fecha,evento,usuario,detalle\n', 'utf8');
+  if (!fs.existsSync(GOV_JSON)) fs.writeFileSync(GOV_JSON, JSON.stringify({ funds: 10000, placed: [] }, null, 2), 'utf8');
 } catch (e) { console.error('Error preparando carpeta registro:', e); }
 
 // ===== Utilidades Saldos TXT =====
@@ -124,6 +126,34 @@ function readUsers(){
 function writeUsers(users){
   fs.writeFileSync(USERS_JSON, JSON.stringify(users, null, 2), 'utf8');
 }
+function readGovernment(){
+  try{ return JSON.parse(fs.readFileSync(GOV_JSON, 'utf8')||'{"funds":10000,"placed":[]}'); }catch{ return { funds:10000, placed:[] }; }
+}
+function writeGovernment(gov){
+  try{ fs.writeFileSync(GOV_JSON, JSON.stringify(gov, null, 2), 'utf8'); }catch(e){ console.warn('writeGovernment fail', e?.message||e); }
+}
+// Actualiza assets en users.json al comprar/colocar
+function upsertUserAsset(username, type, obj){
+  try{
+    const users = readUsers();
+    const idx = users.findIndex(u => (u.username||'').toLowerCase() === String(username||'').toLowerCase());
+    if(idx < 0) return false;
+    const u = users[idx];
+    u.profile = u.profile || { stats:{ money:0, bank:0 }, assets:{ houses:[], shops:[] } };
+    u.profile.assets = u.profile.assets || { houses:[], shops:[] };
+    if(type === 'house'){
+      const item = { x: Math.floor(obj.x||0), y: Math.floor(obj.y||0), w: Math.floor(obj.w||60), h: Math.floor(obj.h||60) };
+      const exists = (u.profile.assets.houses||[]).some(h => h.x===item.x && h.y===item.y && h.w===item.w && h.h===item.h);
+      if(!exists){ (u.profile.assets.houses ||= []).push(item); }
+    } else if(type === 'shop'){
+      const item = { kind: String(obj.kind||'shop'), x: Math.floor(obj.x||0), y: Math.floor(obj.y||0), w: Math.floor(obj.w||120), h: Math.floor(obj.h||80), cashbox: Math.floor(obj.cashbox||0) };
+      const exists = (u.profile.assets.shops||[]).some(s => s.kind===item.kind && s.x===item.x && s.y===item.y && s.w===item.w && s.h===item.h);
+      if(!exists){ (u.profile.assets.shops ||= []).push(item); }
+    }
+    users[idx] = u; writeUsers(users);
+    return true;
+  }catch(e){ console.warn('upsertUserAsset fail', e?.message||e); return false; }
+}
 function csvAppend(evento, usuario, detalle){
   const line = `${new Date().toISOString()},${evento},${usuario},${(detalle||'').toString().replace(/[\n\r,]+/g,' ').slice(0,500)}\n`;
   try { fs.appendFileSync(REPORT_CSV, line, 'utf8'); } catch(e) { console.warn('CSV append fail', e); }
@@ -195,6 +225,7 @@ app.post('/api/save', (req, res)=>{
     const money = Math.floor(profile?.stats?.money ?? 0);
     const casas = (profile?.assets?.houses||[]).length;
     const negocios = (profile?.assets?.shops||[]).length;
+  const veh = profile?.vehicle ? ` veh=${profile.vehicle}` : '';
     csvAppend('save', username, `money=${money} casas=${casas} negocios=${negocios}`);
   }catch(e){}
   return res.json({ ok:true });
@@ -241,12 +272,19 @@ app.get('/api/balances', (req, res) => {
     for(const p of live){
       if(p && p.username){ liveMap.set(p.username.toLowerCase(), Math.floor(Number(p.money)||0)); }
     }
+    // Resumen de propiedades por username
+    const housesByUser = new Map();
+    const shopsByUser  = new Map();
+    for(const h of state.houses){ const u=(h.ownerUsername||'').toLowerCase(); if(!u) continue; housesByUser.set(u, (housesByUser.get(u)||0)+1); }
+    for(const s of state.shops){ const u=(s.ownerUsername||'').toLowerCase(); if(!u) continue; shopsByUser.set(u, (shopsByUser.get(u)||0)+1); }
     const out = users.map(u => {
       const key = (u.username||'').toLowerCase();
       const moneyFromUsers = Math.floor(u?.profile?.stats?.money ?? 0);
       const money = liveMap.has(key) ? liveMap.get(key) : moneyFromUsers;
       const displayName = (u?.profile?.name && typeof u.profile.name === 'string' && u.profile.name.trim().length>0) ? u.profile.name : u.username;
-      return { username: u.username, displayName, money };
+      const houses = housesByUser.get(key)||0;
+      const shops  = shopsByUser.get(key)||0;
+      return { username: u.username, displayName, money, houses, shops };
     });
     return res.json({ ok:true, users: out });
   }catch(e){ return res.status(500).json({ ok:false, msg:'No se pudo listar balances' }); }
@@ -256,10 +294,58 @@ const state = {
   players: {},
   shops: [],
   houses: [],
-  government: { funds: 10000, placed: [] }
+  government: readGovernment()
 };
 
 function now() { return Date.now(); }
+
+// ===== Restaurar casas y negocios desde users.json al estado del servidor =====
+function ensureAssetsLoadedFromUsers(){
+  try{
+    const users = readUsers();
+    const haveHouseIds = new Set(state.houses.map(h=>h.id).filter(Boolean));
+    const haveShopIds  = new Set(state.shops.map(s=>s.id).filter(Boolean));
+    for(const u of users){
+      const username = (u?.username||'').trim();
+      if(!username) continue;
+      const assets = u?.profile?.assets || {};
+      // Casas
+      (assets.houses||[]).forEach((h, idx)=>{
+        const id = `HU:${username.toLowerCase()}#${idx}`;
+        if(haveHouseIds.has(id)) return;
+        state.houses.push({
+          id,
+          x: Math.floor(h.x||0), y: Math.floor(h.y||0),
+          w: Math.floor(h.w||60), h: Math.floor(h.h||60),
+          ownerId: null, rentedBy: null, ownerUsername: username
+        });
+        haveHouseIds.add(id);
+      });
+      // Negocios
+      (assets.shops||[]).forEach((s, idx)=>{
+        const id = `SH:${username.toLowerCase()}#${idx}`;
+        if(haveShopIds.has(id)) return;
+        state.shops.push({
+          id,
+          x: Math.floor(s.x||0), y: Math.floor(s.y||0),
+          w: Math.floor(s.w||120), h: Math.floor(s.h||80),
+          kind: s.kind || 'shop', like: s.like, price: s.price,
+          cashbox: Math.floor(s.cashbox||0),
+          ownerId: null, ownerUsername: username
+        });
+        haveShopIds.add(id);
+      });
+    }
+  }catch(e){ console.warn('ensureAssetsLoadedFromUsers falló:', e?.message||e); }
+}
+
+// Vincular ownerId de assets a un jugador conectado por su username
+function attachOwnerIdsForUsername(username, playerId){
+  if(!username) return;
+  const key = String(username).toLowerCase();
+  for(const h of state.houses){ if((h.ownerUsername||'').toLowerCase()===key) h.ownerId = playerId||null; }
+  for(const s of state.shops){ if((s.ownerUsername||'').toLowerCase()===key) s.ownerId = playerId||null; }
+}
 
 setInterval(() => {
   const payload = {
@@ -432,6 +518,8 @@ io.on('connection', (socket) => {
     }catch(e){ }
     state.players[id] = player;
     socket.playerId = id;
+  // Vincular ownerId de assets persistentes si el jugador tiene username
+  try{ if(player.username) attachOwnerIdsForUsername(player.username, id); }catch(_){ }
     if (ack) ack({ ok: true, id });
     io.emit('playerJoined', player);
   });
@@ -454,16 +542,20 @@ io.on('connection', (socket) => {
 
   socket.on('placeShop', (payload, ack) => {
     const id = 'S' + (state.shops.length + 1);
-    const shop = Object.assign({}, payload, { id, cashbox: 0, createdAt: now() });
+  const ownerUsername = (state.players[socket.playerId]?.username) || payload.ownerUsername || null;
+  const shop = Object.assign({}, payload, { id, cashbox: 0, createdAt: now(), ownerUsername });
     state.shops.push(shop);
+  if(ownerUsername){ try{ upsertUserAsset(ownerUsername, 'shop', shop); csvAppend('comprar_negocio', ownerUsername, `${shop.kind} en (${shop.x},${shop.y})`); }catch(_){} }
     io.emit('shopPlaced', shop);
     if (ack) ack({ ok: true, shop });
   });
 
   socket.on('placeHouse', (payload, ack) => {
     const id = 'H' + (state.houses.length + 1);
-    const house = Object.assign({}, payload, { id, createdAt: now() });
+  const ownerUsername = (state.players[socket.playerId]?.username) || payload.ownerUsername || null;
+  const house = Object.assign({}, payload, { id, createdAt: now(), ownerUsername });
     state.houses.push(house);
+  if(ownerUsername){ try{ upsertUserAsset(ownerUsername, 'house', house); csvAppend('comprar_casa', ownerUsername, `(${house.x},${house.y}) ${house.w}x${house.h}`); }catch(_){} }
     io.emit('housePlaced', house);
     if (ack) ack({ ok: true, house });
   });
@@ -475,6 +567,7 @@ io.on('connection', (socket) => {
     }
     state.government.funds -= payload.cost || 0;
     state.government.placed.push(payload);
+  try{ writeGovernment(state.government); csvAppend('gob_colocar', 'GOBIERNO', `${payload.k||payload.label||'inst'} (${payload.x},${payload.y}) costo=${payload.cost||0}`); }catch(_){}
     io.emit('govPlaced', payload);
     if (ack) ack({ ok:true });
   });
@@ -492,4 +585,6 @@ server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
   // A la subida, aplicar balances del Excel (si existe)
   try{ applyBalancesToUsersAndState(); }catch(e){}
+  // Cargar casas y negocios desde users.json
+  try{ ensureAssetsLoadedFromUsers(); }catch(e){}
 });
