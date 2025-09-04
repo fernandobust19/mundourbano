@@ -5,7 +5,7 @@
       "username": "fernando",
       "passHash": "$2a$10$Lc8QizdJ4V5F.lG0rHZ1L.RNYJ23oDG1lUzzYXpNcgYsZ/Qg9eMB6",
       "createdAt": 1756986731248,
-      "lastLoginAt": 1756988564704
+      "lastLoginAt": 1757022240709
     },
     {
       "id": "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3",
@@ -13,26 +13,59 @@
       "passHash": "$2a$10$zweJ.z2pdZNOwJnZZnMg4uBNAh/MmWBeF7GORIfTu0lvhcFe4Ko8O",
       "createdAt": 1756986821863,
       "lastLoginAt": null
+    },
+    {
+      "id": "f91563b4-5e77-448b-9dd0-97d22ba833f8",
+      "username": "manuel",
+      "passHash": "$2a$10$XLjFO9bY8Tg2FM6cfIkVKeVGxh9KO3TSUJZGsKfopB1OuIwAdDtJ.",
+      "createdAt": 1757021594412,
+      "lastLoginAt": null
     }
   ],
   "progress": {
     "1a4064b1-b943-4d30-8cd6-ddc7532cd40e": {
       "money": 0,
       "bank": 0,
-      "vehicle": null,
+      "vehicle": "moto",
       "shops": [
         {
-          "x": 14157.333333333332,
-          "y": 1156.6666666666667,
+          "x": 511,
+          "y": 265,
           "w": 120,
           "h": 80,
           "kind": "panadería",
-          "ownerId": "A182200"
+          "ownerId": "A580275"
         }
       ],
       "houses": []
     },
     "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3": {
+      "money": 400,
+      "bank": 0,
+      "vehicle": null,
+      "shops": [],
+      "houses": []
+    },
+    "af97079d-7b32-48eb-a7e1-cd5c41a0a421": {
+      "money": 0,
+      "bank": 0,
+      "vehicle": null,
+      "shops": [
+        {
+          "x": 568,
+          "y": 340,
+          "w": 120,
+          "h": 80,
+          "kind": "panadería",
+          "ownerId": "A880119",
+          "id": "S1",
+          "cashbox": 0,
+          "createdAt": 1757020468677
+        }
+      ],
+      "houses": []
+    },
+    "f91563b4-5e77-448b-9dd0-97d22ba833f8": {
       "money": 400,
       "bank": 0,
       "vehicle": null,
@@ -109,6 +142,356 @@
       "details": {
         "keys": [
           "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756989400888,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756989404034,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756989413657,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1756989417155,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756989419512,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756989957400,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756989963866,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756989976779,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1756990236337,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756990303788,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756990315803,
+      "type": "shop_add",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "id": "S2"
+      }
+    },
+    {
+      "ts": 1756990315819,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1756990330918,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756990345013,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756990347981,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756990357931,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1756990374545,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756990381211,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757020462442,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757020465735,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757020468677,
+      "type": "shop_add",
+      "userId": "af97079d-7b32-48eb-a7e1-cd5c41a0a421",
+      "details": {
+        "id": "S1"
+      }
+    },
+    {
+      "ts": 1757020468695,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1757020469764,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757020485325,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757020487875,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757021084196,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757021128574,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757021594413,
+      "type": "register",
+      "userId": "f91563b4-5e77-448b-9dd0-97d22ba833f8",
+      "details": {
+        "username": "manuel"
+      }
+    },
+    {
+      "ts": 1757022186047,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757022240709,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757022360995,
+      "type": "shop_add",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "id": "S2"
+      }
+    },
+    {
+      "ts": 1757022361025,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1757023088867,
+      "type": "shop_add",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "id": "S2"
+      }
+    },
+    {
+      "ts": 1757023088894,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1757023091295,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757023092587,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757023121528,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "vehicle"
         ]
       }
     }

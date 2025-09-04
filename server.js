@@ -2,6 +2,7 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const brain = require('./brain');
@@ -77,6 +78,18 @@ app.post('/api/progress', (req, res) => {
   return res.json(out);
 });
 
+// Listado de usuarios (para chat)
+app.get('/api/users', (req, res) => {
+  const uid = getSessionUserId(req);
+  if(!uid) return res.status(401).json({ ok:false });
+  try{
+    const users = brain.listUsers();
+    // Mapea displayName usando progreso (nombre guardado opcional) si existiera
+    const out = users.map(u => ({ username: u.username }));
+    return res.json({ ok:true, users: out });
+  }catch(e){ return res.status(500).json({ ok:false }); }
+});
+
 // Proxy/cache sencillo de imágenes remotas (evita CORS/404 externos).
 // GET /img/:key -> mapea por images.json; GET /img?url=...
 const IMG_MAP = (()=>{ try{ return require('./images.json'); }catch(e){ return {}; } })();
@@ -117,6 +130,24 @@ const state = {
   houses: [],
   government: { funds: 10000, placed: [] }
 };
+
+function listOnlineUsers(){
+  // Devuelve cada conexión (pantalla) con su socketId para direccionamiento exacto
+  try{
+    const out = [];
+    for(const p of Object.values(state.players)){
+      if(!p || p.isBot) continue; // solo humanos
+      const uname = (p && p.username) ? String(p.username) : null;
+      if(!uname || !p.socketId) continue;
+      out.push({ username: uname, socketId: p.socketId, playerId: p.id });
+    }
+    return out;
+  }catch(_){ return []; }
+}
+
+function emitChatOnline(){
+  try{ io.emit('chat:online', { users: listOnlineUsers() }); }catch(_){ }
+}
 
 function now() { return Date.now(); }
 
@@ -273,6 +304,7 @@ io.on('connection', (socket) => {
       id,
       socketId: socket.id,
       code: data.code || ('Player' + id),
+      username: data.username || null,
       x: data.x || 100,
       y: data.y || 100,
       money: (data.startMoney != null) ? data.startMoney : 400,
@@ -282,10 +314,15 @@ io.on('connection', (socket) => {
       updatedAt: now(),
       lastUpdateFromClient: now()
     };
+    // Si hay sesión y no vino username, usar el de la cuenta para habilitar chat dirigido
+    if(!player.username && socket.userId){
+      try{ const acc = brain.getUserById(socket.userId); if(acc?.username) player.username = acc.username; }catch(_){ }
+    }
     state.players[id] = player;
     socket.playerId = id;
     if (ack) ack({ ok: true, id });
-    io.emit('playerJoined', player);
+  io.emit('playerJoined', player);
+  emitChatOnline();
   });
 
   socket.on('update', (data) => {
@@ -296,13 +333,13 @@ io.on('connection', (socket) => {
     if (!id || !state.players[id]) return;
     const p = state.players[id];
     if ('x' in data) p.x = data.x;
-    if ('y' in data) p.y = data.y;
-    if ('money' in data) {
+  if ('y' in data) p.y = data.y;
+  if ('money' in data) {
       p.money = data.money;
       if(socket.userId){ try{ brain.setMoney(socket.userId, p.money, p.bank); }catch(e){} }
     }
-  if ('bank' in data) p.bank = data.bank;
-    if ('vehicle' in data) { p.vehicle = data.vehicle; if(socket.userId){ try{ brain.setVehicle(socket.userId, p.vehicle); }catch(e){} } }
+  if ('bank' in data) { p.bank = data.bank; if(socket.userId){ try{ brain.setMoney(socket.userId, p.money, p.bank); }catch(e){} } }
+  if ('vehicle' in data) { p.vehicle = data.vehicle; if(socket.userId){ try{ brain.setVehicle(socket.userId, p.vehicle); }catch(e){} } }
     p.updatedAt = now();
     p.lastUpdateFromClient = t;
   });
@@ -310,9 +347,16 @@ io.on('connection', (socket) => {
   socket.on('placeShop', (payload, ack) => {
     const id = 'S' + (state.shops.length + 1);
     const shop = Object.assign({}, payload, { id, cashbox: 0, createdAt: now() });
-  state.shops.push(shop);
-  // Persistir si el socket tiene usuario logueado
-  if(socket.userId){ try{ brain.addShop(socket.userId, shop); }catch(e){} }
+    state.shops.push(shop);
+    // Persistir si el socket tiene usuario logueado y descontar dinero
+    if(socket.userId){
+      try{
+        brain.addShop(socket.userId, shop);
+        // Descontar dinero si el jugador local lo trae en payload.ownerId (buscamos su entidad para conocer saldo)
+        const me = socket.playerId ? state.players[socket.playerId] : null;
+        if(me && typeof me.money === 'number') brain.setMoney(socket.userId, me.money, me.bank);
+      }catch(e){}
+    }
     io.emit('shopPlaced', shop);
     if (ack) ack({ ok: true, shop });
   });
@@ -320,10 +364,56 @@ io.on('connection', (socket) => {
   socket.on('placeHouse', (payload, ack) => {
     const id = 'H' + (state.houses.length + 1);
     const house = Object.assign({}, payload, { id, createdAt: now() });
-  state.houses.push(house);
-  if(socket.userId){ try{ brain.addHouse(socket.userId, house); }catch(e){} }
+    state.houses.push(house);
+    if(socket.userId){
+      try{
+        brain.addHouse(socket.userId, house);
+        const me = socket.playerId ? state.players[socket.playerId] : null;
+        if(me && typeof me.money === 'number') brain.setMoney(socket.userId, me.money, me.bank);
+      }catch(e){}
+    }
     io.emit('housePlaced', house);
     if (ack) ack({ ok: true, house });
+  });
+
+  // Chat directo: { to, text } y lista en tiempo real
+  socket.on('chat:listOnline', (payload, ack) => {
+    if(typeof ack === 'function') ack({ ok:true, users: listOnlineUsers() });
+  });
+
+  // Chat directo: { to, text }
+  socket.on('chat:send', (payload, ack) => {
+    try{
+      const fromId = socket.playerId;
+      const me = fromId ? state.players[fromId] : null;
+      const fromUsername = me?.username || brain.getUserById(socket.userId)?.username || null;
+      if(!fromUsername){ if(ack) ack({ ok:false, msg:'No autenticado' }); return; }
+      const text = String(payload?.text||'').trim();
+      if(!text){ if(ack) ack({ ok:false, msg:'Falta mensaje' }); return; }
+
+      // Preferir envío por socket específico si viene de la lista
+      const toSocketId = String(payload?.toSocketId||'').trim();
+      if(toSocketId){
+        const target = Object.values(state.players).find(p => p && p.socketId === toSocketId);
+        if(!target){ if(ack) ack({ ok:false, msg:'Destino no disponible' }); return; }
+        const msg = { from: fromUsername, text, ts: Date.now() };
+        try{ io.to(toSocketId).emit('chat:incoming', msg); }catch(_){ /* noop */ }
+        if(ack) ack({ ok:true });
+        return;
+      }
+
+      // Fallback: por username (puede alcanzar múltiples pantallas de ese usuario)
+      const toUser = String(payload?.to||'').trim();
+      if(!toUser){ if(ack) ack({ ok:false, msg:'Faltan datos' }); return; }
+      const exists = brain.getUserByUsername(toUser);
+      if(!exists){ if(ack) ack({ ok:false, msg:'Usuario destino no existe' }); return; }
+      const key = toUser.toLowerCase();
+      const targets = Object.values(state.players).filter(p => (p.username||'').toLowerCase()===key && p.socketId);
+      if(!targets.length){ if(ack) ack({ ok:false, msg:'Usuario no conectado' }); return; }
+      const msg = { from: fromUsername, text, ts: Date.now() };
+      for(const tp of targets){ try{ io.to(tp.socketId).emit('chat:incoming', msg); }catch(_){} }
+      if(ack) ack({ ok:true, note:'Enviado a múltiples pantallas del usuario' });
+    }catch(e){ if(ack) ack({ ok:false, msg:'Error interno' }); }
   });
 
   // Restaurar ítems del progreso (coloca en el estado del servidor si faltan)
@@ -373,6 +463,7 @@ io.on('connection', (socket) => {
       delete state.players[id];
       io.emit('playerLeft', { id });
     }
+  emitChatOnline();
   });
 });
 
