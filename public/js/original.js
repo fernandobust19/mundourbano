@@ -44,45 +44,16 @@
   };
 
     /* ===== FORMULARIO ===== */
-  const formBar = $("#formBar"), fName=$("#fName"), fUsd=$("#fUsd");
-  // ==== AUTH UI ====
-  const authModal = document.getElementById('authModal');
-  const authUser = document.getElementById('authUser');
-  const authPass = document.getElementById('authPass');
-  const authMsg  = document.getElementById('authMsg');
-  const btnDoLogin = document.getElementById('btnDoLogin');
-  const btnDoRegister = document.getElementById('btnDoRegister');
-  const btnLogout = document.getElementById('btnLogout');
-  let AUTH = { token: null, username: null, profile: null };
-  function setAuth(a){ AUTH = a||{token:null,username:null,profile:null}; try{ localStorage.setItem('auth', JSON.stringify(AUTH)); }catch(e){} }
-  function getAuth(){ try{ return JSON.parse(localStorage.getItem('auth')||'null'); }catch{ return null; } }
-  async function api(path, opts={}){
-    const headers = Object.assign({ 'Content-Type':'application/json' }, opts.headers||{});
-    if(AUTH?.token) headers['x-auth'] = AUTH.token;
-    const res = await fetch(path, { method: opts.method||'GET', headers, body: opts.body? JSON.stringify(opts.body): undefined });
-    const data = await res.json().catch(()=>({ ok:false, msg:'JSON' }));
-    if(!res.ok) throw Object.assign(new Error(data?.msg||'Error'), { data });
-    return data;
-  }
-  function showAuth(on){ if(!authModal) return; authModal.style.display = on? 'flex':'none'; }
-  async function tryAutoLogin(){ const saved = getAuth(); if(saved?.token){ AUTH = saved; try{ const p = await api('/api/profile'); AUTH.profile = p.profile||null; setAuth(AUTH); showAuth(false); formBar && (formBar.style.display='block'); }catch(e){ setAuth(null); showAuth(true); } } else { showAuth(true); } }
-  if(btnDoRegister){ btnDoRegister.onclick = async ()=>{ authMsg.textContent=''; const u=authUser.value.trim(), p=authPass.value; if(!u||!p){ authMsg.textContent='Ingresa usuario y contraseña.'; return; } try{ const r = await api('/api/register', { method:'POST', body:{ username:u, password:p } }); if(r.ok){ authMsg.textContent='Registrado. Ahora inicia sesión.'; } }catch(e){ authMsg.textContent=e?.data?.msg||'No se pudo registrar'; }
-  }; }
-  if(btnDoLogin){ btnDoLogin.onclick = async ()=>{ authMsg.textContent=''; const u=authUser.value.trim(), p=authPass.value; if(!u||!p){ authMsg.textContent='Ingresa usuario y contraseña.'; return; } try{ const r = await api('/api/login', { method:'POST', body:{ username:u, password:p } }); if(r.ok){ AUTH = { token:r.token, username:u, profile:r.profile||null }; setAuth(AUTH); showAuth(false); if(formBar) formBar.style.display='block'; // si hay progreso previo, podríamos prellenar
-        if(AUTH.profile?.name){ try{ fName.value = AUTH.profile.name; }catch(e){} }
-      } }catch(e){ authMsg.textContent=e?.data?.msg||'Login inválido'; }
-  }; }
-  if(btnLogout){ btnLogout.onclick = ()=>{ setAuth(null); location.reload(); } }
-  // Arrancar chequeando sesión
-  tryAutoLogin();
-  const fGenderPreview = { get src(){ return document.getElementById('uiAvatar')?.src; }, set src(v){ try{ const img=document.getElementById('uiAvatar'); if(img) img.src=v; }catch(e){} } };
-  const MALE_IMG = 'https://i.postimg.cc/x8cc0drr/20250820-102743.png';
-  const FEMALE_IMG = 'https://i.postimg.cc/C1vRTqQH/20250820-103145.png';
-  const MALE_IMG_2 = 'https://i.postimg.cc/vHf2KjGK/20250831_015656.png';
-  const FEMALE_IMG_2 = 'https://i.postimg.cc/hjZ1J8cT/20250831_015636.png';
+  const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
+  const fGenderPreview = document.getElementById('fGenderPreview');
+  const MALE_IMG = '/assets/20250831-015636.png';
+  const FEMALE_IMG = '/assets/20250820_102743.png';
+  const MALE_IMG_2 = '/assets/20250831-015656.png';
+  const FEMALE_IMG_2 = '/assets/20250831_104830.jpg';
 
   // Avatar grid clickable thumbnails
   const avatarGrid = document.getElementById('avatarGrid');
+  const uiAvatarEl = document.getElementById('uiAvatar');
   function clearAvatarSelection(){ if(!avatarGrid) return; avatarGrid.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected')); }
   if(avatarGrid){
     avatarGrid.addEventListener('click', (ev)=>{
@@ -91,26 +62,34 @@
       if(!src) return;
       clearAvatarSelection(); btn.classList.add('selected');
       // set preview and UI avatar
-      try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){}
-      // set the select value too for form persistence
-      // if(avatarSelect) avatarSelect.value = src; // This was removed from HTML, causing a ReferenceError.
+      try{ fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(e){}
+      // set the select value too for form persistence (safe check if avatarSelect isn't declared)
+      try{ if(typeof avatarSelect !== 'undefined' && avatarSelect) avatarSelect.value = src; }catch(e){}
+      // persist selection so it survives reloads and is applied to UI avatar
+      try{ localStorage.setItem('selectedAvatar', src); }catch(e){}
     });
-    // pre-select first and reflect in preview + UI
-    const first = avatarGrid.querySelector('.avatar-option');
-    if(first){
-      first.classList.add('selected');
-      const src = first.getAttribute('data-src');
-      if(src){ try{ fGenderPreview.src = src; document.getElementById('uiAvatar').src = src; }catch(e){} }
+    // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
+    try{
+      const saved = localStorage.getItem('selectedAvatar');
+      if(saved){
+        // mark matching option selected
+        const match = avatarGrid.querySelector(`.avatar-option[data-src="${saved}"]`);
+        if(match){ clearAvatarSelection(); match.classList.add('selected'); fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved; }
+        else {
+          // fallback to applying saved src directly
+          fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved;
+        }
+      } else {
+        const first = avatarGrid.querySelector('.avatar-option');
+        if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
+      }
+    }catch(e){
+      // ignore localStorage errors
+      const first = avatarGrid.querySelector('.avatar-option'); if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
     }
   }
-  function updateGenderPreview(){
-    try{
-      const selBtn = document.querySelector('#avatarGrid .avatar-option.selected');
-      const chosen = selBtn && selBtn.getAttribute('data-src');
-      fGenderPreview.src = chosen || MALE_IMG;
-    }catch(e){}
-  }
-  updateGenderPreview();
+  function updateGenderPreview(){ try{ if(!fGender || !fGender.value) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
+  if(fGender){ fGender.addEventListener('change', updateGenderPreview); updateGenderPreview(); }
   const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
   const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
   const getBoxes=()=> Array.from(likesWrap.querySelectorAll('input[type="checkbox"]'));
@@ -159,103 +138,6 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const btnGovClose = $("#btnGovClose");
   if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
   let placingGov = null, placingHouse = null, placingShop = null;
-  // Registro de actividad UI
-  const activityEl = document.getElementById('activityLog');
-  function logActivity(line){
-    try{
-      if(!activityEl) return;
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2,'0');
-      const mm = String(now.getMinutes()).padStart(2,'0');
-      const ss = String(now.getSeconds()).padStart(2,'0');
-      const prev = activityEl.textContent || '';
-      const msg = `[${hh}:${mm}:${ss}] ${line}`;
-      activityEl.textContent = (prev ? (prev + '\n') : '') + msg;
-      activityEl.scrollTop = activityEl.scrollHeight;
-    }catch(e){}
-  }
-  // Exponer para socket.js
-  try{ window.logActivity = logActivity; }catch(e){}
-
-  // ===== TESORERÍA (edición de saldos.txt con clave) =====
-  const btnTreasury = $('#btnTreasury');
-  const treasuryModal = document.getElementById('treasuryModal');
-  const btnTreasuryClose = document.getElementById('btnTreasuryClose');
-  const treasuryStepKey = document.getElementById('treasuryStepKey');
-  const treasuryKey = document.getElementById('treasuryKey');
-  const btnTreasuryUnlock = document.getElementById('btnTreasuryUnlock');
-  const treasuryMsg = document.getElementById('treasuryMsg');
-  const treasuryEditor = document.getElementById('treasuryEditor');
-  const treasuryContent = document.getElementById('treasuryContent');
-  const btnTreasurySave = document.getElementById('btnTreasurySave');
-
-  let treasuryKeyValue = '';
-
-  function openTreasury(){
-    if(!treasuryModal) return;
-    treasuryModal.style.display = 'flex';
-    treasuryEditor.style.display = 'none';
-    treasuryStepKey.style.display = '';
-    treasuryKey.value = '';
-    treasuryMsg.textContent = '';
-    setTimeout(()=> treasuryKey?.focus && treasuryKey.focus(), 0);
-  }
-  function closeTreasury(){ if(treasuryModal) treasuryModal.style.display='none'; }
-  async function loadTreasury(){
-    try{
-      treasuryMsg.textContent = 'Cargando…';
-      const res = await api('/api/treasury', { headers: { 'x-treasury': treasuryKeyValue } });
-      if(res && typeof res.content === 'string'){
-        treasuryContent.value = res.content;
-        treasuryMsg.textContent = '';
-      } else { throw new Error('Formato inválido'); }
-    }catch(e){
-      treasuryMsg.textContent = 'Clave incorrecta o servidor no disponible.';
-      // Volver al paso de clave si falla
-      treasuryEditor.style.display='none';
-      treasuryStepKey.style.display='';
-    }
-  }
-  async function saveTreasury(){
-    if(!treasuryContent) return;
-    const prev = btnTreasurySave?.textContent;
-    if(btnTreasurySave){ btnTreasurySave.disabled = true; btnTreasurySave.textContent = 'Guardando…'; }
-    treasuryMsg.textContent = '';
-    try{
-      const res = await api('/api/treasury', { method:'POST', headers:{ 'x-treasury': treasuryKeyValue }, body:{ content: treasuryContent.value } });
-      if(res && res.ok){
-        treasuryMsg.textContent = 'Guardado y aplicado.';
-        setTimeout(closeTreasury, 600);
-      } else { throw new Error('Respuesta inválida'); }
-    }catch(e){
-      treasuryMsg.textContent = 'No se pudo guardar. Revisa la clave o intenta de nuevo.';
-    }finally{
-      if(btnTreasurySave){ btnTreasurySave.disabled = false; btnTreasurySave.textContent = prev || 'Guardar'; }
-    }
-  }
-  async function tryUnlockTreasury(){
-    const valRaw = (treasuryKey?.value||'');
-    const val = valRaw.toString().trim().toUpperCase();
-    treasuryKeyValue = val;
-    // Delegar validación al servidor; si falla, se mostrará mensaje
-    try{
-      const res = await api('/api/treasury', { headers: { 'x-treasury': treasuryKeyValue } });
-      if(res && typeof res.content === 'string'){
-        treasuryContent.value = res.content;
-        treasuryStepKey.style.display = 'none';
-        treasuryEditor.style.display = '';
-        treasuryMsg.textContent = '';
-      } else {
-        treasuryMsg.textContent = 'Clave incorrecta.';
-      }
-    }catch(_){ treasuryMsg.textContent = 'Clave incorrecta.'; }
-  }
-
-  if(btnTreasury) btnTreasury.addEventListener('click', openTreasury);
-  if(btnTreasuryClose) btnTreasuryClose.addEventListener('click', closeTreasury);
-  if(btnTreasuryUnlock) btnTreasuryUnlock.addEventListener('click', tryUnlockTreasury);
-  if(treasuryKey) treasuryKey.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlockTreasury(); });
-  if(btnTreasurySave) btnTreasurySave.addEventListener('click', saveTreasury);
 
   const isMobile = ()=> innerWidth<=768;
   let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
@@ -275,9 +157,9 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   function srand(a, b) { return a + seededRandom() * (b - a); }
   function setWorldSize(){
     const vw = innerWidth, vh = innerHeight;
-    // Doblar la extensión horizontal del mapa grande: multiplicadores duplicados
-    WORLD.w = Math.floor(vw * (isMobile() ? 7.2 : 5.6));
-    WORLD.h = Math.floor(vh * (isMobile() ? 3.2 : 2.6));
+    // Usuario pidió duplicar el mapa: mantenemos los multiplicadores aumentados
+    WORLD.w = Math.floor(vw * (isMobile() ? 14.4 : 11.2));
+    WORLD.h = Math.floor(vh * (isMobile() ? 6.4 : 5.2));
   }
 
   function fitCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; clampCam(); }
@@ -303,55 +185,55 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   // Mapeo directo de imágenes para edificaciones
 const BUILDING_IMAGES = {
   // Instituciones gubernamentales con URLs corregidas
-  parque: 'https://i.postimg.cc/2jwdggYM/20250826-110318.png',
-  escuela: 'https://i.postimg.cc/x1PTBFPx/escuela.png', // URL alternativa 
+  parque: '/assets/parque.png',
+  escuela: '/assets/escuela.png', // URL alternativa 
   // biblioteca removed
-  policia: 'https://i.postimg.cc/YCHr4sgt/policia.png',
-  hospital: 'https://i.postimg.cc/y8yV0yXc/hospital.png',
-  central_electrica: 'https://i.postimg.cc/8zfXn9dM/electrica.png', // ACTUALIZADA
-  cemetery: 'https://i.postimg.cc/0NzPkDMD/20250827-081702.jpg',
+  policia: '/assets/policia.png',
+  hospital: '/assets/hospital.png',
+  central_electrica: '/assets/electrica.png', // ACTUALIZADA
+  cemetery: '/assets/20250827-081702.jpg',
   // Edificios generales
-  house: 'https://i.postimg.cc/BQpptNmR/20250827-030930.png',
-  bank: 'https://i.postimg.cc/4x5TcfRw/banco.png',
-  factory: 'https://i.postimg.cc/y8JFgdRC/20250826-102250.png',
-  mall: 'https://i.postimg.cc/13ykskVF/mall.png',
-  shop: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
+  house: '/assets/casa.png',
+  bank: '/assets/banco.png',
+  factory: '/assets/fabrica.png',
+  mall: '/assets/mall.png',
+  shop: '/assets/20250827-071843.png',
   
   // Gobierno
-  gobierno: 'https://i.postimg.cc/PJ2mZvKT/20250826-103751.png',
+  gobierno: '/assets/Gobierno.png',
   
   // Tiendas específicas
-  bar: 'https://i.postimg.cc/Pqfdyv2c/Bar.png',
-  panadería: 'https://i.postimg.cc/sDHYgSvJ/20250827-065353.png',
-  biblioteca: 'https://i.postimg.cc/rwmxy3tf/20250831_110133.png',
+  bar: '/assets/Bar.png',
+  panadería: '/assets/panaderia.png',
+  biblioteca: '/assets/20250831-110133.png',
   
   // Nuevas URLs agregadas para negocios faltantes
   // Nuevas URLs agregadas para negocios faltantes
-  kiosco: 'https://i.postimg.cc/xjp7LhNK/kiosco.png',
-  juguería: 'https://i.postimg.cc/Y0TbTcQZ/jugo.png',
-  cafetería: 'https://i.postimg.cc/J4gfCv11/cafeteria.png',
-  heladería: 'https://i.postimg.cc/Bnd2x05L/20250827-071843.png',
-  'pizzería': 'https://i.postimg.cc/nhb3kJFQ/pizzeria.png',
+  kiosco: '/assets/kiosco.png',
+  juguería: '/assets/jugo.png',
+  cafetería: '/assets/cafeteria.png',
+  heladería: '/assets/heladeria.png',
+  'pizzería': '/assets/pizzer-a.png',
   // (se removió la entrada de librería por solicitud)
   // 'librería': '/assets/fondo1.jpg',
-  'juguetería': 'https://i.postimg.cc/P5W2VRJV/jugueteria.png',
-  'yoga studio': 'https://i.postimg.cc/8Ps23NgK/yoga_estudio.png',
-  'dance hall': 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
-  'tienda deportes': 'https://i.postimg.cc/XvWDV0t0/deportes.png',
-  'arte & galería': 'https://i.postimg.cc/VvZ36HnW/galeria.png',
-  'cineclub': 'https://i.postimg.cc/8cz2TVJC/cine_club.png',
-  'gamer zone': 'https://i.postimg.cc/c48DwHSS/gamer.png',
-  'senderismo': 'https://i.postimg.cc/PrxHj1YM/senderismo.png',
-  'foto-lab': 'https://i.postimg.cc/pVkv4shT/foto_club.png',
-  'astro club': 'https://i.postimg.cc/c4bS46cG/astro_club.png',
-  restaurante: 'https://i.postimg.cc/vHwKPbTd/20250827_070529.png',
+  'juguetería': '/assets/jugueteria.png',
+  'yoga studio': '/assets/yoga-estudio.png',
+  'dance hall': '/assets/danza.png',
+  'tienda deportes': '/assets/deportes.png',
+  'arte & galería': '/assets/galeria.png',
+  'cineclub': '/assets/cine-club.png',
+  'gamer zone': '/assets/gamer.png',
+  'senderismo': '/assets/senderismo.png',
+  'foto-lab': '/assets/foto-club.png',
+  'astro club': '/assets/astro-club.png',
+  restaurante: '/assets/restaurante.png',
   
   // Otras instituciones
-  bomberos: 'https://i.postimg.cc/KYzPHMhV/bomberos.png', // ACTUALIZADA
-  universidad: 'https://i.imgur.com/hvsZIsB.png', // URL alternativa
-  tribunal: 'https://i.imgur.com/zZ8FVOB.png', // URL alternativa
-  teatro: 'https://i.postimg.cc/Nfj8tbfM/20250827-071830.png',
-  estadio: 'https://i.postimg.cc/tgZKH7hS/20250827-052454.png' // URL solicitada por el usuario
+  bomberos: '/assets/bomberos.png', // ACTUALIZADA
+  universidad: '/assets/librer-a.png', // placeholder (no tienes universidad.png)
+  tribunal: '/assets/constructora.png', // placeholder si no hay tribunal
+  teatro: '/assets/20250827-071830.png',
+  estadio: '/assets/20250827-052454.png' // URL solicitada por el usuario
 };
 
 // Precarga de imágenes para mejor rendimiento
@@ -430,8 +312,8 @@ BG_IMG.src = '/assets/fondo1.jpg';
 
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
-  LINES_ON:true, PARKS:4, SCHOOLS:4, FACTORIES:6, BANKS:4, MALLS:2, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:10,  // Aumentado HOUSE_SIZE de 22 a 70
-    R_ADULT:6.0, R_CHILD:4.8, R_ELDER:6.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+  LINES_ON:true, PARKS:8, SCHOOLS:8, FACTORIES:12, BANKS:8, MALLS:4, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:24,  // Más infraestructuras y casas iniciales
+    R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
     YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
     HOUSE_BUY_COST:3000,
     GOV_TAX_EVERY: 20*60,      // cada 20 min
@@ -557,6 +439,39 @@ BG_IMG.src = '/assets/fondo1.jpg';
   const randi=(a,b)=> (Math.random()*(b-a)+a)|0, rand=(a,b)=> a + Math.random()*(b-a), clamp=(v,a,b)=> Math.max(a,Math.min(b,v));
   const centerOf=r=> ({x:r.x+r.w/2, y:r.y+r.h/2});
   const rectsOverlap=(a,b)=> !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
+  // Función global para remover elementos por labels (case-insensitive) de las colecciones visibles
+  function removeByLabels(labels){
+    try{
+      const needle = (s) => (s || '').toString().trim().toLowerCase();
+      const set = new Set((labels||[]).map(l => (''+l).toString().trim().toLowerCase()));
+      const removeFromList = (lst) => {
+        for(let i = lst.length - 1; i >= 0; i--){
+          const it = lst[i];
+          const lab = needle(it && (it.label || it.k || it.kind || it.type));
+          if(lab && set.has(lab)) lst.splice(i,1);
+        }
+      };
+      // listas globales
+      try{ removeFromList(government.placed); }catch(e){}
+      try{ removeFromList(shops); }catch(e){}
+      try{ removeFromList(factories); }catch(e){}
+      try{ removeFromList(banks); }catch(e){}
+      try{ removeFromList(malls); }catch(e){}
+      try{ removeFromList(houses); }catch(e){}
+      try{ // También limpiar listas de vías y roundabouts si etiquetadas
+        if(Array.isArray(roadRects)){ for(let i=roadRects.length-1;i>=0;i--){ const it = roadRects[i]; const lab = needle(it && (it.label||it.k||it.kind||it.type)); if(lab && set.has(lab)) roadRects.splice(i,1); } }
+        if(Array.isArray(avenidas)){ for(let i=avenidas.length-1;i>=0;i--){ const it = avenidas[i]; const lab = needle(it && (it.label||it.k||it.kind||it.type)); if(lab && set.has(lab)) avenidas.splice(i,1); } }
+        if(Array.isArray(roundabouts)){ for(let i=roundabouts.length-1;i>=0;i--){ const it = roundabouts[i]; const lab = needle(it && (it.label||it.k||it.kind||it.type)); if(lab && set.has(lab)) roundabouts.splice(i,1); } }
+      }catch(e){}
+      // también limpiar estado del servidor si aplica
+      if(window.gameState){
+        try{ if(Array.isArray(window.gameState.shops)) window.gameState.shops = window.gameState.shops.filter(s => !set.has(needle(s && (s.label || s.k || s.kind || s.type)))); }catch(e){}
+        try{ if(window.gameState.government && Array.isArray(window.gameState.government.placed)) window.gameState.government.placed = window.gameState.government.placed.filter(g => !set.has(needle(g && (g.label || g.k || g.kind || g.type)))); }catch(e){}
+      }
+  // Use debug logging to avoid spamming the console every frame; enable by setting window.__verboseRemoval = true
+  if (window.__verboseRemoval) console.debug('removeByLabels executed for', Array.from(set));
+    }catch(e){ console.warn('removeByLabels error', e); }
+  }
   const inside=(pt,r)=> pt.x>=r.x && pt.x<=r.x+r.w && pt.y>=r.y && pt.y<=r.y+r.h;
   const rectsOverlapWithMargin = (rectA, rectB, margin) => {
     const paddedB = { x: rectB.x - margin, y: rectB.y - margin, w: rectB.w + margin*2, h: rectB.h + margin*2 };
@@ -693,7 +608,9 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   function buildAvenidas(urbanArea, avoidRect = null){
     avenidas.length=0; roundabouts.length=0;
     const avW=26;
-    const vDivs = 4, hDivs = 3;
+    // Más divisiones para un mapa más denso (más avenidas/calles)
+    const vDivs = Math.max(6, Math.floor((urbanArea.w/1200))); // vertical divisiones crecientes según ancho
+    const hDivs = Math.max(4, Math.floor((urbanArea.h/900)));  // horizontales según alto
     const vPoints = [], hPoints = [];
     for (let i = 1; i < vDivs; i++) vPoints.push(urbanArea.x + Math.floor(urbanArea.w * i / vDivs));
     for (let i = 1; i < hDivs; i++) hPoints.push(urbanArea.y + Math.floor(urbanArea.h * i / hDivs));
@@ -743,7 +660,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     // Distribuir parques más pequeños por el mapa
     const parkType = GOV_TYPES.find(t=>t.k==='parque');
     if(parkType) {
-      const parksCount = (CFG && typeof CFG.PARKS === 'number') ? CFG.PARKS : 4;
       // Definir tamaños más pequeños para los parques
       const smallParkW = 100; // reducido de ~220
       const smallParkH = 70;  // reducido de ~140
@@ -752,17 +668,25 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       
       // Crear lista de áreas a evitar
       const avoidList = [
-        government,
-        cemetery,
-        ...avenidas,
-        ...roundabouts,
-        ...houses,
+        government, 
+        cemetery, 
+        ...avenidas, 
+        ...roundabouts, 
+        ...houses, 
         ...barrios,
-        // Área de exclusión alrededor del gobierno (margen extra)
-        { x: government.x - 160, y: government.y - 160, w: government.w + 320, h: government.h + 320 }
+        // Crear un área de exclusión alrededor del gobierno (margen extra)
+        {
+          x: government.x - 300, 
+          y: government.y - 300, 
+          w: government.w + 600, 
+          h: government.h + 600
+        }
       ];
+      
+      // Generar parques pequeños distribuidos por el mapa usando CFG.PARKS
+      const parksCount = CFG.PARKS || 8;
       const parkLocations = scatterRects(
-        parksCount, 
+        parksCount,
         [smallParkW, mediumParkW], 
         [smallParkH, mediumParkH], 
         avoidList, 
@@ -1305,6 +1229,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       return false;
     }
 
+  // removeByLabels definida en ámbito global más arriba
+
     function enforceNoOverlap(margin = 6){
       const all = [...houses, ...government.placed, ...shops, ...factories, ...banks, ...malls];
       for (let i = 0; i < all.length; i++){
@@ -1481,47 +1407,18 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }
   }
 
-  // Eliminar por lista de labels (case-insensitive) en todas las colecciones y en window.gameState
-  function removeByLabels(labels){
-    try{
-      const needle = (s) => (s || '').toString().trim().toLowerCase();
-      const set = new Set((labels||[]).map(l => (''+l).toString().trim().toLowerCase()));
-
-      const removeFromList = (lst) => {
-        for(let i = lst.length - 1; i >= 0; i--){
-          const it = lst[i];
-          const lab = needle(it && (it.label || it.k || it.kind || it.type));
-          if(lab && set.has(lab)) lst.splice(i,1);
-        }
-      };
-
-      removeFromList(government.placed);
-      removeFromList(shops);
-      removeFromList(factories);
-      removeFromList(banks);
-      removeFromList(malls);
-      removeFromList(houses);
-
-      // también limpiar estado del servidor si aplica
-      if(window.gameState){
-        if(Array.isArray(window.gameState.shops)) window.gameState.shops = window.gameState.shops.filter(s => !set.has(needle(s && (s.label || s.k || s.kind || s.type))));
-        if(window.gameState.government && Array.isArray(window.gameState.government.placed)) window.gameState.government.placed = window.gameState.government.placed.filter(g => !set.has(needle(g && (g.label || g.k || g.kind || g.type))));
-      }
-  // Silenciado: esta operación puede ejecutarse muchas veces; evitar ruido en consola.
-    }catch(e){ console.warn('removeByLabels error', e); }
-  }
-
   function drawWorld(){
   // Asegurar que las panaderías no compradas se eliminen antes de dibujar
   try{ removeUnownedPanaderias(); }catch(e){}
 
-  // Eliminar etiquetas solicitadas por el usuario (ej: 'Hospital 3', 'Escuela 2', etc.) solo una vez
-  if(!window.__labelsRemovedOnce){
-    try{
+  // Eliminar etiquetas solicitadas por el usuario (ej: 'Hospital 3', 'Escuela 2', etc.)
+  // Esta operación solo debe ejecutarse una vez por sesión para evitar spam de CPU
+  try{
+    if(!window.__labelsRemoved){
       removeByLabels(['hospital 3','escuela 2','central electrica 2','policia 2','policia 4','central electrica 1','edificio 7','central eléctrica 2','panaderia 4','panaderia 5','panadería 4','panadería 5']);
-    }catch(e){ console.warn('Error invoking removeByLabels', e); }
-    window.__labelsRemovedOnce = true;
-  }
+      window.__labelsRemoved = true;
+    }
+  }catch(e){ console.warn('Error invoking removeByLabels', e); }
 
   // Las panaderías solo deben mostrarse cuando tengan ownerId; la función
   // removeUnownedPanaderias() y los filtros en getVisibleShops() se encargan
@@ -1868,50 +1765,27 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
       const pt = toScreen(s.x, s.y);
       ctx.beginPath();
-  const r = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM;
+      const r = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM;
       ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
       ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af';
       ctx.fill();
-  // Mostrar siempre el nombre, sin importar el zoom
-  ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      if (ZOOM >= 0.7) {
+        ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
   ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - 8*ZOOM);
+      }
     }
   }
 
   let __lastTime = performance.now();
-  let __lastBankUiAt = 0;
   function loop(){
     if(!STARTED){ requestAnimationFrame(loop); return; }
-    // Sincronizar saldo local desde el servidor (si Tesorería cambió saldos)
-    try{
-      if(window.gameState && window.playerId && USER_ID){
-        const sp = (Array.isArray(window.gameState.players) ? window.gameState.players : []).find(p => p && p.id === window.playerId);
-        if(sp && typeof sp.money === 'number'){
-          const me = agents.find(a => a.id === USER_ID);
-          if(me && me.money !== sp.money){ me.money = Math.floor(sp.money); }
-        }
-      }
-    }catch(e){}
-  const nowMs = performance.now();
+    const nowMs = performance.now();
     let dt = (nowMs - __lastTime) / 1000; __lastTime = nowMs; dt = Math.min(dt, 0.05);
     frameCount++;
     updateSocialLogic();
     drawWorld();
     drawSocialLines();
-
-    // Actualizar panel de Banco en UI (siempre visible) cada ~1s
-    try{
-      if(nowMs - __lastBankUiAt > 1000){
-        __lastBankUiAt = nowMs;
-        if(USER_ID && accBankBody){
-          const you = agents.find(a=>a.id===USER_ID);
-          if(you){
-            accBankBody.innerHTML = `Saldo de ${you.code}: <span class="balance-amount">${Math.floor(you.money||0)}</span>`;
-          }
-        }
-      }
-    }catch(e){}
 
     // ======= Jugadores remotos con smoothing nuevo =======
     try{ renderRemotePlayers(); }catch(e){}
@@ -2055,10 +1929,12 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
           ctx.textAlign='center'; ctx.fillText('💕', p.x, p.y - 25 * ZOOM);
       } else if (a.justMarried) { a.justMarried = null; }
-  // Mostrar siempre el nombre del agente local
-  ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
-  ctx.fillStyle='#fff'; ctx.textAlign='center';
-  { const age2 = (yearsSince(a.bornEpoch)|0); ctx.fillText(`${a.name||a.code}·${age2}`, p.x, p.y-8*ZOOM); }
+      if (ZOOM >= 0.7) {
+        ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
+        ctx.fillStyle='#fff'; ctx.textAlign='center';
+        const age = (yearsSince(a.bornEpoch)|0);
+  ctx.fillText(`${a.name||a.code}·${age}`, p.x, p.y-8*ZOOM);
+      }
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
     const instCount = government.placed.length;
@@ -2119,7 +1995,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Quitar la línea antigua de población, solo mostrar créditos, fondo, negocios e instituciones
   lines.push(`Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
     lines.push('');
-  lines.push('## Usuarios en el mundo (tiempo real)');
+    lines.push('## Usuarios en el mundo (tiempo real)');
     // Mostrar todos los usuarios conectados en tiempo real (de gameState)
     let users = [];
     if (window.gameState && Array.isArray(window.gameState.players)) {
@@ -2136,7 +2012,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       users = agents;
     }
     // Filtrar solo humanos (no bots) y no niños si quieres
-  const filtered = users.filter(u => !u.isBot);
+    const filtered = users.filter(u => !u.isBot && (!u.state || u.state !== 'child'));
   lines.push(`Población conectada: ${filtered.length} — Jugador: ${playerName}`);
     if(filtered.length > 0){
       for(const u of filtered){
@@ -2147,53 +2023,13 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if(!displayName || displayName.trim().length <= 2){
           displayName = codeRef || 'Usuario';
         }
-    const money = (typeof u.money === 'number') ? Math.floor(u.money) : (u.stats && typeof u.stats.money==='number' ? Math.floor(u.stats.money) : 0);
-    lines.push(`- ${displayName}${codeRef ? ' (' + codeRef + ')' : ''}: $${money}`);
+        lines.push(`- ${displayName}${codeRef ? ' (' + codeRef + ')' : ''}`);
       }
     }else{
       lines.push('No hay usuarios conectados.');
     }
     lines.push('');
-    lines.push('## Todos los usuarios registrados y sus saldos');
-    lines.push('(Incluye desconectados; se usa el saldo en vivo si están conectados)');
-    // Cargar balances del servidor si están en caché reciente
-    if(!window.__balancesCache || (Date.now() - (window.__balancesCache.ts||0) > 5000)){
-      window.__balancesCache = window.__balancesCache || { ts: 0, users: [] };
-      fetch('/api/balances').then(r=>r.json()).then(data=>{
-        if(data && data.ok && Array.isArray(data.users)){
-          window.__balancesCache = { ts: Date.now(), users: data.users };
-          try{ document.querySelector('#docBody').textContent = fullDocument(); }catch(e){}
-        }
-      }).catch(()=>{});
-    }
-    const list = (window.__balancesCache && Array.isArray(window.__balancesCache.users)) ? window.__balancesCache.users : [];
-    if(list.length){
-      for(const u of list){
-        const casas = (u.houses != null) ? u.houses : 0;
-        const negocios = (u.shops != null) ? u.shops : 0;
-        lines.push(`- ${u.displayName || u.username}: $${Math.floor(u.money||0)} — Casas: ${casas} — Negocios: ${negocios}`);
-      }
-    } else {
-      lines.push('(Cargando…)');
-    }
-  // Sección de propiedades del jugador actual (resumen – sin listar cada negocio)
-    lines.push('');
-    lines.push('## Mis Propiedades');
-    try{
-      const housesState = (window.gameState && Array.isArray(window.gameState.houses)) ? window.gameState.houses : houses;
-      const shopsState  = (window.gameState && Array.isArray(window.gameState.shops))  ? window.gameState.shops  : shops;
-      const myUser = AUTH && AUTH.username ? String(AUTH.username).toLowerCase() : null;
-      const myH = housesState.filter(h => (myUser && (String(h.ownerUsername||'').toLowerCase() === myUser)) || (USER_ID && h.ownerId === USER_ID));
-      const myS = shopsState.filter(s => (myUser && (String(s.ownerUsername||'').toLowerCase() === myUser)) || (USER_ID && s.ownerId === USER_ID));
-      if(myH.length===0 && myS.length===0){
-        lines.push('(No tienes propiedades aún)');
-      } else {
-    lines.push(`Casas: ${myH.length} — Negocios: ${myS.length}`);
-    lines.push('(Los negocios se muestran sobre el ícono en el mapa al tocarlos)');
-      }
-    }catch(e){ lines.push('(No se pudo cargar el detalle de propiedades)'); }
-    lines.push('');
-    lines.push('## Finanzas por Agente (conectados)');
+    lines.push('## Finanzas por Agente');
     lines.push(bankReport());
     return lines.join('\n');
   }
@@ -2266,7 +2102,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }
   function closeGovPanel(){ govDock.style.display = 'none'; }
   document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeGovPanel(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ const d=document.getElementById('shopInfoDock'); if(d) d.style.display='none'; } });
   document.addEventListener('pointerdown', (e)=>{
     try{
       if(govDock.style.display !== 'flex') return;
@@ -2274,17 +2109,9 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(e.clientX < gd.left || e.clientX > gd.right || e.clientY < gd.top || e.clientY > gd.bottom){ closeGovPanel(); }
     }catch(e){}
   }, {passive:true});
-  document.addEventListener('pointerdown', (e)=>{
-    try{
-      const dock = document.getElementById('shopInfoDock');
-      if(!dock || dock.style.display !== 'flex') return;
-      const r = dock.getBoundingClientRect();
-      if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom){ dock.style.display='none'; }
-    }catch(_){}
-  }, {passive:true});
   $("#uiHideBtn").onclick = ()=>{ show($("#uiDock"), false); show($("#uiShowBtn"), true); };
   $("#uiShowBtn").onclick = ()=>{ show($("#uiDock"), true); show($("#uiShowBtn"), false); };
-  panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; toast('Depósito realizado.'); };
+  panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money) }); }catch(e){} toast('Depósito realizado.'); };
 
   function setVisibleWorldUI(on){
     $("#formBar").style.display = on ? 'none' : 'block';
@@ -2297,7 +2124,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     docDock.style.display = 'none'; govDock.style.display = 'none';
   }
 
-  function startWorldWithUser({name,likes}){
+  function startWorldWithUser({name,gender,age,likes,usd}){
     $("#formBar").style.display='none'; 
     setVisibleWorldUI(true); 
     STARTED=true; 
@@ -2307,35 +2134,34 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Mantener las panaderías tal como vienen (no eliminar al iniciar)
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
-  let startMoney = 200;
-  const gender = 'M'; // neutral default; rendering no longer depends on chosen gender
-  const age = 20;
-  const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
-    // Prefer the selected avatar from grid (fallback to preview/default by gender)
+    const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
+    let startMoney = 400 + addCredits;
+    const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
     try{
-      const selBtn = document.querySelector('#avatarGrid .avatar-option.selected');
-  const chosen = selBtn?.getAttribute('data-src') || fGenderPreview?.src || MALE_IMG;
-      user.avatar = chosen;
+      // Prefer avatar explicitly selected by the user (persisted in localStorage or present in UI)
+      let selected = null;
+      try{ selected = localStorage.getItem('selectedAvatar') || null; }catch(e){}
+      try{ if(!selected){ const _ui = document.getElementById('uiAvatar'); if(_ui && _ui.src) selected = _ui.src; } }catch(e){}
+      if(selected) user.avatar = selected;
+  else user.avatar = (gender === 'M') ? MALE_IMG : FEMALE_IMG;
+      // If gender is undefined placeholder 'U', try to infer from avatar filename (basic heuristic)
+      if((!gender || gender === 'U') && user.avatar){
+        const low = user.avatar.toLowerCase();
+        if(low.includes('female') || low.includes('f') || low.includes('103145') || low.includes('015636')) gender = 'F';
+        else gender = 'M';
+        user.gender = gender;
+      }
     }catch(e){}
-  // Aplicar progreso guardado si existe (solo en modo offline). En modo online, el servidor restaura propiedades.
-  if(AUTH?.profile && !hasNet()){
-      try{
-        if(AUTH.profile.stats){
-          if(typeof AUTH.profile.stats.money === 'number') user.money = AUTH.profile.stats.money;
-          if(typeof AUTH.profile.stats.bank === 'number') user.bank = AUTH.profile.stats.bank;
-        }
-        if(AUTH.profile.assets){
-          (AUTH.profile.assets.houses||[]).forEach(h=>{
-            houses.push({ x: h.x|0, y: h.y|0, w: h.w|0, h: h.h|0, ownerId: user.id, rentedBy: null });
-          });
-          (AUTH.profile.assets.shops||[]).forEach(s=>{
-            shops.push({ x: s.x|0, y: s.y|0, w: s.w|0, h: s.h|0, ownerId: user.id, kind: s.kind, cashbox: s.cashbox|0, id: 'S'+(shops.length+1) });
-          });
-        }
-      }catch(e){ console.warn('restore profile failed', e); }
-    }
     agents.push(user); USER_ID=user.id;
-  try{ window.sockApi?.createPlayer({ code: user.code, username: (AUTH?.username||null), gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{}); }catch(e){}
+    try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{
+      // Tras crear jugador en el servidor, si hay progreso, restaurar ítems colocados
+      try{
+        const prog = (window.__progress||{});
+        if(prog && (Array.isArray(prog.shops) || Array.isArray(prog.houses))){
+          window.sock?.emit('restoreItems', { shops: prog.shops||[], houses: prog.houses||[] }, ()=>{});
+        }
+      }catch(e){}
+    }); }catch(e){}
     if(!hasNet()){
       for(let i=0;i<CFG.N_INIT;i++) {agents.push(makeAgent('adult',{ageYears:rand(18,60)}));}
     }
@@ -2370,26 +2196,9 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         }
       }
     }catch(e){}
-  // Guardado automático ligero cada 20s
-    setInterval(()=>{
-      try{
-        if(!AUTH?.token) return;
-        const you = agents.find(a=>a.id===USER_ID);
-        const profile = {
-          name: you?.name || name,
-          avatar: you?.avatar || null,
-          stats: { money: Math.floor(you?.money||0), bank: Math.floor(you?.bank||0) },
-          assets: {
-            houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})),
-            shops: (window.gameState?.shops||shops).filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)}))
-          }
-        };
-        api('/api/save', { method:'POST', body: { profile } }).catch(()=>{});
-      }catch(e){}
-    }, 20000);
     loop();
   }
-  const startHandler = ()=>{const name=fName.value.trim(),likes=getChecked().map(x=>x.value);if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,likes});};
+  const startHandler = ()=>{const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,gender,age,likes,usd});};
   btnStart.addEventListener('click', startHandler);
   $("#formInner").addEventListener('submit',(e)=>{ e.preventDefault(); startHandler(); });
 
@@ -2420,87 +2229,44 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
     if(placingHouse){
       const u=agents.find(a=>a.id===placingHouse.ownerId); if(!u){ placingHouse=null; return; }
-  const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null, ownerUsername: AUTH?.username || null};
+      const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null};
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,newH, 8))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
       if((u.money||0) < placingHouse.cost){ toast('Saldo insuficiente.'); placingHouse=null; return; }
       if(hasNet()){
-        window.sock?.emit('placeHouse', newH, (res)=>{
+  window.sock?.emit('placeHouse', newH, (res)=>{
           if(res?.ok){ u.money -= placingHouse.cost; houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null; toast('Casa propia construida 🏠'); }
           else { toast(res?.msg||'Error al colocar casa'); placingHouse=null; }
         });
-        logActivity('Compraste una casa');
         return;
       }
-      u.money -= placingHouse.cost;
+  u.money -= placingHouse.cost;
       if(u.houseIdx !== null && houses[u.houseIdx]) { houses[u.houseIdx].rentedBy = null; }
       houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
-      toast('Casa propia construida 🏠');
-      try{ if(AUTH?.token){ const you = u; const profile = { name: you.name, avatar: you.avatar, stats:{ money: Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } }; api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{}); } }catch(e){}
-      return;
+  try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), houses: houses.filter(h=>h.ownerId===u.id) }); }catch(e){}
+  toast('Casa propia construida 🏠'); return;
     }
-
-    // Click en negocios: mostrar info compacta justo en el ícono
-    try{
-      const shopsList = getVisibleShops();
-      const hit = shopsList.find(s => pt.x >= s.x && pt.x <= s.x + s.w && pt.y >= s.y && pt.y <= s.y + s.h);
-      if(hit){
-        const dock = $("#shopInfoDock"), body = $("#shopInfoBody"), btnX = $("#btnShopInfoClose");
-        const p = toScreen(hit.x, hit.y);
-        const dockW = Math.min(window.innerWidth * 0.9, dock.offsetWidth || 260);
-        const dockH = Math.min(window.innerHeight * 0.8, dock.offsetHeight || 140);
-        let left = p.x + (hit.w * ZOOM)/2 - dockW/2;
-        let top  = p.y - dockH - 8;
-        left = Math.max(6, Math.min(left, window.innerWidth - dockW - 6));
-        top  = Math.max(6, Math.min(top, window.innerHeight - dockH - 6));
-        dock.style.position = 'fixed';
-        dock.style.left = `${left}px`;
-        dock.style.top  = `${top}px`;
-        dock.style.width = `${dockW}px`;
-        const owner = (hit.ownerUsername || agents.find(a=>a.id===hit.ownerId)?.code || '—');
-        const caja = (hit.cashbox!=null)? Math.floor(hit.cashbox): '—';
-        body.textContent = `Tipo: ${hit.kind||'negocio'}\nDueño: ${owner}\nCaja: ${caja}`;
-        dock.style.display = 'flex';
-        if(btnX && !btnX.__bound){ btnX.__bound = true; btnX.addEventListener('click', ()=>{ dock.style.display='none'; }); }
-        return;
-      }
-    }catch(_){ }
 
     // Colocación de negocio desde el menú (ej: panadería). Debe aparecer justo donde se hace click.
     if(placingShop){
       const u = agents.find(a => a.id === placingShop.ownerId);
       if(!u){ placingShop = null; return; }
       const size = placingShop.size || {w: CFG.SHOP_W, h: CFG.SHOP_H};
-  const newShop = { x: pt.x - size.w/2, y: pt.y - size.h/2, w: size.w, h: size.h, kind: placingShop.kind.k || placingShop.kind, ownerId: u.id, ownerUsername: AUTH?.username || null };
+      const newShop = { x: pt.x - size.w/2, y: pt.y - size.h/2, w: size.w, h: size.h, kind: placingShop.kind.k || placingShop.kind, ownerId: u.id };
       // comprobar colisiones
       if(allBuildings.some(r => rectsOverlapWithMargin(r, newShop, 8))){ toast('No se puede colocar el negocio aquí (colisión).'); placingShop = null; return; }
       if((u.money || 0) < (placingShop.price || 0)){ toast('Saldo insuficiente.'); placingShop = null; return; }
       // enviar al servidor si corresponde
-  if(hasNet()){
+      if(hasNet()){
         window.sock?.emit('placeShop', newShop, (res) => {
-          if(res?.ok){
-            u.money -= (placingShop.price || 0);
-            shops.push(newShop);
-            placingShop = null;
-            toast('Negocio colocado.');
-    logActivity(`Compraste un negocio: ${newShop.kind}`);
-            try{
-              if(AUTH?.token){
-                const you=u;
-                const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } };
-                api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{});
-              }
-            }catch(e){}
-          } else {
-            toast(res?.msg || 'Error al colocar negocio');
-            placingShop = null;
-          }
+          if(res?.ok){ u.money -= (placingShop.price || 0); shops.push(newShop); placingShop = null; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} toast('Negocio colocado.'); }
+          else { toast(res?.msg || 'Error al colocar negocio'); placingShop = null; }
         });
       }else{
-        u.money -= (placingShop.price || 0);
-        shops.push(newShop);
+  u.money -= (placingShop.price || 0);
+  shops.push(newShop);
+  try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){}
         placingShop = null;
         toast('Negocio colocado (local).');
-        try{ if(AUTH?.token){ const you=u; const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } }; api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{}); } }catch(e){}
       }
       return;
     }
@@ -2509,7 +2275,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const rectShop = {x: pt.x - placingShop.size.w/2, y: pt.y - placingShop.size.h/2, w: placingShop.size.w, h: placingShop.size.h};
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectShop, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
       if((u.money||0) < placingShop.price){ toast('Saldo insuficiente.'); placingShop=null; return; }
-    const newShop = { 
+      const newShop = { 
   ownerId:u.id, 
   x:rectShop.x, 
   y:rectShop.y, 
@@ -2519,39 +2285,20 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   icon:placingShop.kind.icon, 
   like:placingShop.kind.like, 
   price:placingShop.kind.price, 
-  buyCost: placingShop.kind.buyCost,
-  ownerUsername: AUTH?.username || null 
+  buyCost: placingShop.kind.buyCost 
 };
       if(hasNet()){
         console.log("Intentando colocar negocio vía red...");
         window.sock?.emit('placeShop', newShop, (res)=>{
           console.log("Respuesta del servidor:", res);
-          if(res?.ok){
-            u.money -= placingShop.price;
-            newShop.id='S'+(shops.length+1);
-            newShop.cashbox=0;
-            shops.push(newShop);
-            placingShop=null;
-            toast('Negocio colocado 🏪');
-            try{
-              if(AUTH?.token){
-                const you=u;
-                const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } };
-                api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{});
-              }
-            }catch(e){}
-          } else {
-            toast(res?.msg||'Error al colocar negocio');
-            placingShop=null;
-          }
+          if(res?.ok){ u.money -= placingShop.price; newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop); placingShop=null; toast('Negocio colocado 🏪'); }
+          else { toast(res?.msg||'Error al colocar negocio'); placingShop=null; }
         });
         return;
       }
-      u.money -= placingShop.price;
+  u.money -= placingShop.price;
       newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop);
-    placingShop=null; toast('Negocio colocado 🏪');
-    try{ if(AUTH?.token){ const you=u; const profile={ name:you.name, avatar:you.avatar, stats:{ money:Math.floor(you.money||0), bank:Math.floor(you.bank||0) }, assets:{ houses: houses.filter(h=>h.ownerId===USER_ID).map(h=>({x:h.x,y:h.y,w:h.w,h:h.h})), shops: shops.filter(s=>s.ownerId===USER_ID).map(s=>({kind:s.kind,x:s.x,y:s.y,w:s.w,h:s.h,cashbox:Math.floor(s.cashbox||0)})) } }; api('/api/save', { method:'POST', body:{ profile } }).catch(()=>{}); } }catch(e){}
-    return;
+  placingShop=null; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} toast('Negocio colocado 🏪'); return;
     }
     if(placingGov){
       const rectX = { x: pt.x - placingGov.w/2, y: pt.y - placingGov.h/2, w: placingGov.w, h: placingGov.h, label: placingGov.label, icon: placingGov.icon, fill: placingGov.fill, stroke: placingGov.stroke, k: placingGov.k };
@@ -2741,7 +2488,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const vType = carTypeSelect.value;
       if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
       const vehicle = VEHICLES[vType];
-  if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); logActivity(`Compraste vehículo: ${vehicle.name}`); }
+      if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), vehicle: vType }); }catch(e){} carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); }
       else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
   });
 

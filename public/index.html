@@ -55,7 +55,8 @@
   .avatar-option.selected{outline:2px solid rgba(100,160,220,0.85);box-shadow:0 4px 14px rgba(16,24,32,0.45)}
 
 
-  #world{display:none;width:100vw;height:100vh;position:fixed;inset:0;z-index:10}
+  /* Mostrar canvas principal por defecto (antes estaba oculto) */
+  #world{display:block;width:100vw;height:100vh;position:fixed;inset:0;z-index:10}
   .card{background:var(--card);border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:10px 12px;backdrop-filter:blur(4px);position:relative}
   /* UI menus shown inside the map: darker bluish with more transparency for subtle overlay */
   #uiDock .card, #docDock .card, #govDock .card {
@@ -81,7 +82,7 @@
   pre{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;max-height:40vh;overflow:auto;margin:0}
 
 
-  #zoomFab{position:fixed;right:12px;bottom:12px;z-index:26;display:none;flex-direction:column;gap:10px;pointer-events:auto}
+  #zoomFab{position:fixed;right:12px;bottom:12px;z-index:26;display:flex;flex-direction:column;gap:10px;pointer-events:auto}
   .fab{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--brand);border:1px solid rgba(0,0,0,0.06);box-shadow:0 8px 20px rgba(0,0,0,.06);font-size:22px;cursor:pointer;user-select:none;color:var(--text)}
   .fab:active{transform:scale(.96)}
   
@@ -99,7 +100,7 @@
   #shopList{display:grid;grid-template-columns:1fr;gap:8px;max-height:260px;overflow-y:auto;padding:8px;border:1px solid rgba(0,0,0,0.06);border-radius:10px;background:var(--card)}
 
 
-  #mini{position:fixed;right:12px;top:12px;z-index:26;display:none;width:200px;height:130px;border:1px solid rgba(0,0,0,0.06);border-radius:10px;background:var(--card);box-shadow:0 6px 22px rgba(0,0,0,.04);cursor:crosshair;pointer-events:auto}
+  #mini{position:fixed;right:12px;top:12px;z-index:26;display:block;width:200px;height:130px;border:1px solid rgba(0,0,0,0.06);border-radius:10px;background:var(--card);box-shadow:0 6px 22px rgba(0,0,0,.04);cursor:crosshair;pointer-events:auto}
   #mini canvas{width:100%;height:100%;display:block}
   #mini .hint{position:absolute;left:6px;bottom:4px;font-size:10px;opacity:.7}
 
@@ -109,48 +110,25 @@
 </head> 
 <body>
 
-<!-- Modal de acceso: registro/inicio de sesión -->
-<div id="authModal" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center">
-  <div class="modalBox" style="width:min(420px,92vw);max-height:92vh;overflow:auto">
-  <img src="/assets/creador.jpg" alt="Creador" style="width:100%;height:auto;max-height:28vh;object-fit:contain;border-radius:10px;margin:0 0 8px 0;display:block"/>
-    <h3 style="margin:0 0 6px 0">Ingresar</h3>
-    <div class="field" style="margin-top:6px">
-      <label>Usuario</label>
-      <input id="authUser" class="input" type="text" placeholder="nombre de usuario"/>
-    </div>
-    <div class="field" style="margin-top:6px">
-      <label>Contraseña</label>
-      <input id="authPass" class="input" type="password" placeholder="contraseña"/>
-    </div>
-    <div class="actions" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button id="btnDoLogin" class="btn primary">Iniciar sesión</button>
-      <button id="btnDoRegister" class="btn">Registrarme</button>
-    </div>
-    <div id="authMsg" class="hint" style="margin-top:6px"></div>
-  </div>
-  
-  <!-- Evitar que el form de crear personaje se muestre detrás hasta que haya login -->
-  <style> #formBar{ display:none; } </style>
-</div>
-
 <div id="formBar" role="dialog" aria-modal="true">
   <form id="formInner" autocomplete="off">
     <h2>Crear tu persona (24h = 1 año · fallece a los 90)</h2>
-    <div class="field col-12">
-      <label>Avatar y Nombre</label>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div id="avatarGrid" style="margin-top:0">
-          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/x8cc0drr/20250820-102743.png"><img src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" alt="H1"/></button>
-          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png"><img src="https://i.postimg.cc/C1vRTqQH/20250820-103145.png" alt="F1"/></button>
-          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png"><img src="https://i.postimg.cc/vHf2KjGK/20250831_015656.png" alt="H2"/></button>
-          <button type="button" class="avatar-option" data-src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png"><img src="https://i.postimg.cc/hjZ1J8cT/20250831_015636.png" alt="F2"/></button>
-        </div>
-        <div style="min-width:220px">
-          <input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/>
-        </div>
+    <div class="field col-3">
+      <!-- Gender select removed: avatars are selectable only. Keep hidden field to avoid JS errors. -->
+      <input type="hidden" id="fGender" value="U" />
+      <div style="display:flex;align-items:center;gap:8px;">
+  <img id="fGenderPreview" src="/assets/20250820_102743.png" alt="preview" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2b3553;background:#fff" />
+      </div>
+      <div id="avatarGrid" style="margin-top:8px">
+  <button type="button" class="avatar-option" data-src="/assets/20250820_102743.png"><img src="/assets/20250820_102743.png" alt="H1"/></button>
+  <button type="button" class="avatar-option" data-src="/assets/20250831-015636.png"><img src="/assets/20250831-015636.png" alt="F1"/></button>
+  <button type="button" class="avatar-option" data-src="/assets/20250831-015656.png"><img src="/assets/20250831-015656.png" alt="H2"/></button>
+  <button type="button" class="avatar-option" data-src="/assets/20250831_104830.jpg"><img src="/assets/20250831_104830.jpg" alt="F2"/></button>
       </div>
     </div>
-  <div class="field col-3"><label>Créditos iniciales</label><input id="fUsd" type="number" value="200" class="input" disabled/><div class="hint">Fijos: 200 credi-puntos.</div></div>
+  <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/></div>
+    <div class="field col-3"><label>Edad</label><input id="fAge" type="number" min="0" max="120" value="20" class="input"/></div>
+  <div class="field col-3"><label>Créditos iniciales</label><input id="fUsd" type="number" min="0" max="0" step="1" value="0" class="input" disabled/><div class="hint">Todos comienzan con 400 créditos gratis.</div></div>
     <div class="field col-12">
       <label>Elige exactamente 5 gustos</label>
       <div id="likesWrap" aria-label="Lista de gustos">
@@ -209,7 +187,6 @@
 <div id="top-bar">
   <button id="btnShowDoc">📄 Documento</button>
   <button id="btnShowMarried">👨‍👩👧‍👦 Casados</button>
-  <button id="btnTreasury">🏦 Tesorería</button>
 </div>
 
 <canvas id="world"></canvas>
@@ -219,7 +196,7 @@
   <div class="card">
     <b>Mundo activo</b><br/><small>Trabajo 60s = +15 → 💰 banco</small>
     <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
-      <img id="uiAvatar" src="https://i.postimg.cc/x8cc0drr/20250820-102743.png" style="width:56px;height:56px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover" alt="avatar" />
+  <img id="uiAvatar" src="/assets/20250820_102743.png" style="width:56px;height:56px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover" alt="avatar" />
       <div>
         <div id="stats" style="font-size:12px"></div>
         <div id="userName" style="font-size:12px;opacity:.9;margin-top:2px">Sin iniciar</div>
@@ -229,11 +206,7 @@
       <button id="toggleLines" class="btn">Líneas ON/OFF</button>
       <button id="btnHouse" class="btn good">Comprar Casa</button>
       <button id="btnShop" class="btn">Comprar Negocio</button>
-  <button id="btnLogout" class="btn secondary" title="Cerrar sesión">Salir</button>
-    </div>
-    <div class="field" style="margin-top:8px">
-      <label>Registro de actividad</label>
-      <pre id="activityLog" style="max-height:120px"></pre>
+  <button id="btnLogout" class="btn" title="Cerrar sesión">SALIR</button>
     </div>
   </div>
 
@@ -296,16 +269,6 @@
   </div>
 </div>
 
-<div id="shopInfoDock" style="display:none;">
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <h4 style="margin:0 0 6px 0">🏪 Negocio</h4>
-      <button id="btnShopInfoClose" title="Cerrar" style="all:unset;cursor:pointer;padding:6px;border-radius:6px;background:transparent;color:var(--text);font-weight:700">✕</button>
-    </div>
-    <div id="shopInfoBody" class="hint" style="margin-top:4px;white-space:pre-line"></div>
-  </div>
-</div>
-
 <div id="zoomFab" aria-label="Controles de zoom">
   <div id="zoomIn" class="fab" title="Acercar">＋</div>
   <div id="zoomOut" class="fab" title="Alejar">−</div>
@@ -345,37 +308,13 @@
   </div>
 </div>
 
-<!-- Modal Tesorería -->
-<div id="treasuryModal" style="display:none;position:fixed;inset:0;z-index:60;align-items:flex-start;justify-content:center;padding-top:6vh;background:rgba(0,0,0,.45)">
-  <div class="modalBox" style="width:min(680px,94vw)">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <h3 style="margin:0">🏦 Tesorería</h3>
-      <button id="btnTreasuryClose" title="Cerrar" class="btn" style="padding:6px 10px">✕</button>
-    </div>
-    <div id="treasuryStepKey" class="field" style="margin-top:10px">
-      <label>Clave de 8 dígitos</label>
-  <input id="treasuryKey" class="input" type="password" minlength="8" maxlength="16" placeholder="Ingrese la clave" autocomplete="off" autocapitalize="off" spellcheck="false" style="text-transform:uppercase" />
-      <div class="actions" style="margin-top:8px">
-        <button id="btnTreasuryUnlock" class="btn primary">Desbloquear</button>
-      </div>
-      <div id="treasuryMsg" class="hint" style="margin-top:6px"></div>
-    </div>
-    <div id="treasuryEditor" style="display:none;margin-top:10px">
-      <label class="hint">Editar (formato: usuario saldo). Guarda para aplicar en el juego.</label>
-      <textarea id="treasuryContent" class="input" style="min-height:260px;font-family:ui-monospace,monospace"></textarea>
-      <div class="actions" style="margin-top:8px">
-        <button id="btnTreasurySave" class="btn good">Guardar</button>
-      </div>
-    </div>
-  </div>
-  
-</div>
-
 <div id="toast"></div>
 
 <!-- Multijugador: socket.io cliente y wrapper -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/socket.js"></script>
+<!-- Autenticación usuario/registro -->
+<script src="/js/user-auth.js"></script>
 <!-- Lógica del mundo (usa el estado compartido si está disponible) -->
 <script src="/js/original.js"></script>
 </body>

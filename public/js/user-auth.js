@@ -1,0 +1,116 @@
+// user-auth.js — UI de login/registro + integración con API
+(() => {
+	// Crear modal simple si no existe
+	function ensureAuthModal(){
+		if(document.getElementById('authModal')) return;
+		const wrap = document.createElement('div');
+		wrap.id = 'authModal';
+		wrap.style.position = 'fixed';
+		wrap.style.inset = '0';
+		wrap.style.zIndex = '60';
+		wrap.style.display = 'flex';
+		wrap.style.alignItems = 'flex-start';
+		wrap.style.justifyContent = 'center';
+		wrap.style.paddingTop = '8vh';
+		wrap.style.background = 'rgba(0,0,0,0.35)';
+		wrap.innerHTML = `
+			<div class="modalBox" style="width:min(460px,94vw);">
+				<div style="display:flex;align-items:center;gap:12px">
+					<img src="/login/creador.png" alt="creador" style="width:64px;height:64px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover"/>
+					<div>
+						<h3 style="margin:0">Bienvenido</h3>
+						<div class="hint">Regístrate o inicia sesión para guardar tu progreso.</div>
+					</div>
+				</div>
+				<div class="field" style="margin-top:10px">
+					<label>Usuario</label>
+					<input id="authUser" class="input" type="text" placeholder="usuario" maxlength="24">
+				</div>
+				<div class="field" style="margin-top:6px">
+					<label>Contraseña</label>
+					<input id="authPass" class="input" type="password" placeholder="••••" maxlength="64">
+				</div>
+				<div id="authErr" class="err" style="display:none;margin-top:6px"></div>
+				<div class="actions" style="margin-top:10px">
+					<button id="btnAuthRegister" class="btn">Registrar</button>
+					<button id="btnAuthLogin" class="btn primary">Iniciar sesión</button>
+				</div>
+			</div>`;
+		document.body.appendChild(wrap);
+	}
+
+	function showAuth(on=true){ const m = document.getElementById('authModal'); if(!m) return; m.style.display = on ? 'flex' : 'none'; }
+	function setErr(msg){ const e = document.getElementById('authErr'); if(!e) return; if(msg){ e.textContent = msg; e.style.display = 'block'; } else { e.style.display = 'none'; } }
+
+	async function call(method, url, body){
+		const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, credentials: 'include' });
+		const json = await res.json().catch(()=>({ ok:false }));
+		if(!res.ok || !json.ok) throw new Error(json.msg || 'Error');
+		return json;
+	}
+
+	async function checkMe(){ try{ return await call('GET', '/api/me'); }catch(e){ return null; } }
+
+	async function handleRegister(){
+		setErr('');
+		const u = document.getElementById('authUser').value.trim();
+		const p = document.getElementById('authPass').value;
+		try{
+			const out = await call('POST', '/api/register', { username: u, password: p });
+			applyLogin(out);
+		}catch(e){ setErr(e.message || 'No se pudo registrar'); }
+	}
+	async function handleLogin(){
+		setErr('');
+		const u = document.getElementById('authUser').value.trim();
+		const p = document.getElementById('authPass').value;
+		try{
+			const out = await call('POST', '/api/login', { username: u, password: p });
+			applyLogin(out);
+		}catch(e){ setErr(e.message || 'No se pudo iniciar'); }
+	}
+
+	function applyLogin(out){
+		try {
+			window.__user = out.user;
+			window.__progress = out.progress || {};
+			// Reflejar nombre de usuario
+			const userName = document.getElementById('userName');
+			if(userName) userName.textContent = out.user.username;
+			// Inicializar saldo/vehículo desde progreso
+			window.__onAuthProgress && window.__onAuthProgress(window.__progress);
+		} catch(e){}
+		showAuth(false);
+	}
+
+	async function init(){
+		ensureAuthModal();
+		document.getElementById('btnAuthRegister').addEventListener('click', handleRegister);
+		document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
+		// Botón SALIR
+		const btnLogout = document.getElementById('btnLogout');
+		if(btnLogout){ btnLogout.addEventListener('click', async ()=>{ try{ await call('POST','/api/logout'); location.reload(); }catch(e){ location.reload(); } }); }
+		// Intentar sesión existente
+		const me = await checkMe();
+		if(me && me.ok){ applyLogin(me); } else { showAuth(true); }
+	}
+
+	// Exponer helper para que original.js aplique progreso inicial a la entidad del jugador
+	window.__onAuthProgress = function(progress){
+		try {
+			// Guardar para consultas globales
+			window.__progress = progress || {};
+		} catch(e){}
+	};
+
+	// Guardar progreso periódicamente
+	window.saveProgress = async function(patch){
+		try{
+			await call('POST', '/api/progress', patch || window.__progress || {});
+		}catch(e){ /* ignorar errores de red */ }
+	};
+
+	// Iniciar
+	if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+

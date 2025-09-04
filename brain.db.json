@@ -1,0 +1,116 @@
+{
+  "users": [
+    {
+      "id": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "username": "fernando",
+      "passHash": "$2a$10$Lc8QizdJ4V5F.lG0rHZ1L.RNYJ23oDG1lUzzYXpNcgYsZ/Qg9eMB6",
+      "createdAt": 1756986731248,
+      "lastLoginAt": 1756988564704
+    },
+    {
+      "id": "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3",
+      "username": "FERNANDO111",
+      "passHash": "$2a$10$zweJ.z2pdZNOwJnZZnMg4uBNAh/MmWBeF7GORIfTu0lvhcFe4Ko8O",
+      "createdAt": 1756986821863,
+      "lastLoginAt": null
+    }
+  ],
+  "progress": {
+    "1a4064b1-b943-4d30-8cd6-ddc7532cd40e": {
+      "money": 0,
+      "bank": 0,
+      "vehicle": null,
+      "shops": [
+        {
+          "x": 14157.333333333332,
+          "y": 1156.6666666666667,
+          "w": 120,
+          "h": 80,
+          "kind": "panadería",
+          "ownerId": "A182200"
+        }
+      ],
+      "houses": []
+    },
+    "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3": {
+      "money": 400,
+      "bank": 0,
+      "vehicle": null,
+      "shops": [],
+      "houses": []
+    }
+  },
+  "activityLog": [
+    {
+      "ts": 1756986731248,
+      "type": "register",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756986821863,
+      "type": "register",
+      "userId": "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3",
+      "details": {
+        "username": "FERNANDO111"
+      }
+    },
+    {
+      "ts": 1756987117892,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756988564704,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1756988704406,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1756988708093,
+      "type": "shop_add",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "id": "S1"
+      }
+    },
+    {
+      "ts": 1756988708109,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1756988722228,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    }
+  ]
+}

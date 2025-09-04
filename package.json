@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+  "dev": "nodemon server.js",
+  "assets:download": "node ./tools/download-assets.js"
   },
   "engines": {
     "node": ">=20 <23"
@@ -15,7 +16,8 @@
   "dependencies": {
     "express": "^5.1.0",
   "socket.io": "^4.8.1",
-  "xlsx": "^0.18.5"
+  "bcryptjs": "^2.4.3",
+  "cookie-parser": "^1.4.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
