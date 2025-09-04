@@ -129,124 +129,11 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const btnShowDoc=$("#btnShowDoc"), accDocBody=$("#docBody");
   const panelDepositAll=$("#panelDepositAll"), accBankBody=$("#bankBody");
   const btnHouse=$("#btnHouse"), btnShop=$("#btnShop");
-  const btnChat=$("#btnChat");
   const btnShowMarried = $("#btnShowMarried"), marriedDock = $("#marriedDock"), marriedList = $("#marriedList");
   const builderModal=$("#builderModal"), btnBuy=$("#btnBuy"), btnBuilderClose=$("#btnBuilderClose"), builderMsg=$("#builderMsg");
   const shopModal=$("#shopModal"), shopList=$("#shopList"), shopMsg=$("#shopMsg"), btnShopClose=$("#btnShopClose");
   const govFundsEl=$("#govFunds"), govDescEl = $("#govDesc");
   const govSelectEl=$("#govSelect"), btnGovPlace=$("#btnGovPlace");
-  // Chat UI
-  const chatListModal = document.getElementById('chatListModal');
-  const btnChatListClose = document.getElementById('btnChatListClose');
-  const chatUsersEl = document.getElementById('chatUsers');
-  const chatFilter = document.getElementById('chatFilter');
-  const chatSendModal = document.getElementById('chatSendModal');
-  const chatToInput = document.getElementById('chatTo');
-  const chatText = document.getElementById('chatText');
-  const btnChatSend = document.getElementById('btnChatSend');
-  const btnChatCancel = document.getElementById('btnChatCancel');
-  const chatSendMsg = document.getElementById('chatSendMsg');
-  // Destino específico por pantalla
-  let chatToSocketId = null;
-
-  // Contenedor visual de mensajes recibidos (esquina inferior derecha)
-  let chatHud = null;
-  function ensureChatHud(){
-    if(chatHud) return chatHud;
-    chatHud = document.createElement('div');
-    chatHud.id = 'chatHud';
-    chatHud.style.position = 'fixed';
-    chatHud.style.right = '12px';
-    chatHud.style.bottom = '12px';
-    chatHud.style.zIndex = '70';
-    chatHud.style.display = 'flex';
-    chatHud.style.flexDirection = 'column';
-    chatHud.style.gap = '6px';
-    document.body.appendChild(chatHud);
-    return chatHud;
-  }
-  function pushChatBubble({from, text}){
-    const hud = ensureChatHud();
-    const b = document.createElement('div');
-    b.className = 'card';
-    b.style.maxWidth = '320px';
-    b.style.background = 'rgba(0,0,0,0.75)';
-    b.style.color = '#fff';
-    b.style.fontSize = '13px';
-    b.style.padding = '8px 10px';
-    b.style.borderRadius = '10px';
-    b.style.boxShadow = '0 6px 18px rgba(0,0,0,.28)';
-    b.innerHTML = `<b>${from||'Mensaje'}</b><br>${(text||'').replace(/[<>]/g,'')}`;
-    hud.appendChild(b);
-    setTimeout(()=>{ try{ b.remove(); }catch(_){} }, 8000);
-  }
-
-  function loadUsersForChat(){
-    try{
-      if(!window.sock){ return; }
-      window.sock.emit('chat:listOnline', {}, (res)=>{
-        if(!res?.ok) return;
-        const users = Array.isArray(res.users)?res.users:[];
-        renderUserList(users);
-      });
-    }catch(e){}
-  }
-  function renderUserList(users){
-    if(!chatUsersEl) return;
-    chatUsersEl.innerHTML = '';
-    const filter = (chatFilter?.value||'').trim().toLowerCase();
-    users.filter(u=> !filter || (u.username||'').toLowerCase().includes(filter)).forEach(u=>{
-      const btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.style.display='block'; btn.style.width='100%'; btn.style.textAlign='left'; btn.style.margin='4px 0';
-      // Mostrar usuario y un identificador corto de la pantalla para distinguir múltiples conexiones
-      const short = (u.socketId||'').slice(-4);
-      btn.textContent = short ? `${u.username} · pantalla ${short}` : u.username;
-      btn.onclick = ()=> openSendTo(u.username, u.socketId||null);
-      chatUsersEl.appendChild(btn);
-    });
-  }
-  function openChatList(){ if(!chatListModal) return; chatListModal.style.display='flex'; loadUsersForChat(); }
-  function closeChatList(){ if(chatListModal) chatListModal.style.display='none'; }
-  function openSendTo(username, socketId){
-    if(!chatSendModal) return;
-    closeChatList();
-    chatToSocketId = socketId || null;
-    chatToInput.value = username;
-    chatText.value='';
-    chatSendMsg.textContent='';
-    chatSendModal.style.display='flex';
-    setTimeout(()=> chatText?.focus(), 50);
-  }
-  function closeSend(){ if(chatSendModal) chatSendModal.style.display='none'; }
-  async function sendChat(){
-    try{
-      const to = (chatToInput?.value||'').trim();
-      const text = (chatText?.value||'').trim();
-      if(!to || !text){ chatSendMsg.textContent = 'Completa el mensaje.'; return; }
-      await new Promise((resolve, reject)=>{
-        try{
-          // Preferir envío dirigido por socketId para que solo esa pantalla lo reciba
-          const payload = chatToSocketId ? { toSocketId: chatToSocketId, text } : { to, text };
-          window.sock.emit('chat:send', payload, (res)=>{ res?.ok ? resolve() : reject(new Error(res?.msg||'fallo')); });
-        }catch(e){ reject(e); }
-      });
-      chatSendMsg.textContent = 'Enviado ✅';
-      setTimeout(closeSend, 600);
-    }catch(e){ chatSendMsg.textContent = 'No se pudo enviar.'; }
-  }
-  if(btnChat) btnChat.onclick = openChatList;
-  if(btnChatListClose) btnChatListClose.onclick = closeChatList;
-  if(chatFilter) chatFilter.addEventListener('input', ()=>{ try{ loadUsersForChat(); }catch(_){} });
-  if(btnChatSend) btnChatSend.onclick = sendChat;
-  if(btnChatCancel) btnChatCancel.onclick = closeSend;
-  // Recibir mensajes entrantes
-  try{
-    if(window.sock){
-      window.sock.on('chat:incoming', (msg)=>{ try{ pushChatBubble(msg); }catch(_){} });
-      window.sock.on('chat:online', (payload)=>{ try{ renderUserList(Array.isArray(payload?.users)?payload.users:[]); }catch(_){} });
-    }
-  }catch(e){}
 
   const btnGovClose = $("#btnGovClose");
   if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
@@ -2265,11 +2152,9 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Mantener las panaderías tal como vienen (no eliminar al iniciar)
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
-  const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
-  const prog = (window.__progress||{});
-  // Si hay progreso guardado, usarlo; si no, 400 + créditos extra
-  let startMoney = (typeof prog.money === 'number' && isFinite(prog.money)) ? Math.max(0, Math.floor(prog.money)) : (400 + addCredits);
-  const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney});
+    const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
+    let startMoney = 400 + addCredits;
+    const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
     try{
       // Prefer avatar explicitly selected by the user (persisted in localStorage or present in UI)
       let selected = null;
@@ -2285,24 +2170,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         user.gender = gender;
       }
     }catch(e){}
-    // Aplicar vehículo guardado si existe
-    try{ if(prog && prog.vehicle){ user.vehicle = prog.vehicle; } }catch(e){}
-    // Si estamos offline, pintar de inmediato casas/negocios guardados
-    try{
-      if(!hasNet()){
-        if(Array.isArray(prog.houses)){
-          for(const h of prog.houses){ if(h && typeof h.x==='number'){ houses.push(Object.assign({}, h)); } }
-        }
-        if(Array.isArray(prog.shops)){
-          for(const s of prog.shops){ if(s && typeof s.x==='number'){ shops.push(Object.assign({}, s)); } }
-        }
-      }
-    }catch(e){}
     agents.push(user); USER_ID=user.id;
-  try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{
+    try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{
       // Tras crear jugador en el servidor, si hay progreso, restaurar ítems colocados
       try{
-    const prog = (window.__progress||{});
+        const prog = (window.__progress||{});
         if(prog && (Array.isArray(prog.shops) || Array.isArray(prog.houses))){
           window.sock?.emit('restoreItems', { shops: prog.shops||[], houses: prog.houses||[] }, ()=>{});
         }

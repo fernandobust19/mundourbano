@@ -159,8 +159,6 @@ module.exports = {
 	registerUser,
 	verifyLogin,
 	getUserById,
-	getUserByUsername,
-	listUsers: () => db.users.map(u => ({ id: u.id, username: u.username })),
 	getProgress,
 	updateProgress,
 	addShop,

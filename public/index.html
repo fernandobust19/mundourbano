@@ -187,7 +187,6 @@
 <div id="top-bar">
   <button id="btnShowDoc">📄 Documento</button>
   <button id="btnShowMarried">👨‍👩👧‍👦 Casados</button>
-  <button id="btnChat">💬 CHAT</button>
 </div>
 
 <canvas id="world"></canvas>
@@ -306,40 +305,6 @@
   <div class="modalBox">
     <h3 id="modalTitle">Nombre del bebé</h3>
     <div class="actions"><button id="btnBabyOk" class="btn">OK</button></div>
-  </div>
-</div>
-
-<!-- Modal lista de usuarios para chat -->
-<div id="chatListModal" style="display:none;position:fixed;inset:0;z-index:60;align-items:flex-start;justify-content:center;padding-top:8vh;background:rgba(0,0,0,.45)">
-  <div class="modalBox" style="width:min(480px,94vw)">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <h3 style="margin:0">Usuarios conectados</h3>
-      <button id="btnChatListClose" class="btn" style="padding:6px 10px">✕</button>
-    </div>
-    <div class="field" style="margin-top:8px">
-      <input id="chatFilter" class="input" placeholder="Filtrar por nombre" />
-    </div>
-    <div id="chatUsers" style="max-height:50vh;overflow:auto;border:1px solid rgba(0,0,0,0.06);border-radius:10px;padding:8px;background:var(--card)"></div>
-  </div>
-</div>
-
-<!-- Modal enviar mensaje -->
-<div id="chatSendModal" style="display:none;position:fixed;inset:0;z-index:60;align-items:flex-start;justify-content:center;padding-top:10vh;background:rgba(0,0,0,.45)">
-  <div class="modalBox" style="width:min(420px,94vw)">
-    <h3 id="chatSendTitle" style="margin:0 0 6px 0">Enviar mensaje</h3>
-    <div class="field">
-      <label>Para</label>
-      <input id="chatTo" class="input" type="text" placeholder="usuario" disabled />
-    </div>
-    <div class="field" style="margin-top:8px">
-      <label>Mensaje</label>
-      <textarea id="chatText" class="input" style="min-height:100px"></textarea>
-    </div>
-    <div class="actions" style="margin-top:8px">
-      <button id="btnChatSend" class="btn good">Enviar</button>
-      <button id="btnChatCancel" class="btn">Cancelar</button>
-    </div>
-    <div id="chatSendMsg" class="hint" style="margin-top:6px"></div>
   </div>
 </div>
 
