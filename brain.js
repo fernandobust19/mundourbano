@@ -259,6 +259,15 @@ function restoreMoneyFromLedger(userId){
 // Cargar al iniciar
 load();
 
+function changePassword(userId, newPassword) {
+	const user = getUserById(userId);
+	if (!user || typeof newPassword !== 'string' || newPassword.length < 8) return { ok: false, msg: 'Usuario no encontrado o contraseña inválida' };
+	user.passHash = bcrypt.hashSync(newPassword, 10);
+	log('password_change', userId, {});
+	schedulePersist();
+	return { ok: true };
+}
+
 module.exports = {
 	load,
 	persist,
@@ -277,6 +286,7 @@ module.exports = {
 	recordMoneyChange,
 	saveMoneySnapshot,
 	latestMoney,
-	restoreMoneyFromLedger
+	restoreMoneyFromLedger,
+	changePassword
 };
 

@@ -73,6 +73,17 @@ app.get('/api/me', (req, res) => {
   return res.json({ ok:true, user: { id:user.id, username:user.username }, progress: brain.getProgress(uid) });
 });
 
+
+app.post('/api/change-password', (req, res) => {
+  const uid = getSessionUserId(req);
+  if(!uid) return res.status(401).json({ ok:false, msg:'No autenticado' });
+  const { newPassword } = req.body || {};
+  if(typeof newPassword !== 'string' || newPassword.length < 8) return res.status(400).json({ ok:false, msg:'Contraseña inválida' });
+  const out = brain.changePassword(uid, newPassword);
+  if(!out.ok) return res.status(400).json(out);
+  return res.json({ ok:true });
+});
+
 app.post('/api/progress', (req, res) => {
   const uid = getSessionUserId(req);
   if(!uid) return res.status(401).json({ ok:false });

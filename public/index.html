@@ -116,6 +116,13 @@
 
 
   #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:40;display:none;background:rgba(255,245,157,0.9);border:1px solid rgba(0,0,0,0.06);color:var(--text);padding:8px 12px;border-radius:10px;font-size:13px}
+  /* Botones de salida/cerrar en rojo */
+  #btnLogout{background:var(--bad) !important;color:#fff !important;border-color:#b91c1c !important}
+  #btnLogout:hover{filter:brightness(1.05)}
+  #btnLogout:active{transform:scale(.98)}
+  #btnGovClose{all:unset;cursor:pointer;display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--bad);color:#fff;font-weight:800;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  #btnGovClose:hover{filter:brightness(1.05)}
+  #btnGovClose:active{transform:scale(.96)}
 </style>
 <style>
   /* Aumentar tamaño de letra para Documento y Casados */
@@ -140,6 +147,7 @@
         <input id="avatarFile" type="file" accept="image/*" style="display:none" />
   <button id="btnUploadAvatar" type="button" class="btn">Subir foto</button>
   <button id="btnRemoveAvatar" type="button" class="btn">Quitar foto</button>
+  <img id="fGenderPreview" src="/assets/avatar1.png" alt="Vista previa" style="width:48px;height:48px;border-radius:50%;border:1px solid #2b3553;background:#fff;object-fit:cover" />
         <span class="hint">Puedes subir una foto para usarla como avatar. Se mostrará en el panel y en tu agente.</span>
       </div>
     </div>
@@ -195,8 +203,21 @@
     <div class="col-12" style="display:flex;gap:10px;flex-wrap:wrap">
       <button id="btnRandLikes" type="button" class="btn">Elegir 5 al azar</button>
       <button id="btnStart" type="button" class="btn primary">Comenzar</button>
+      <button id="btnImprovePwd" type="button" class="btn good">Mejorar tu contraseña</button>
       <span id="errBox" class="err">Falta el nombre o no elegiste exactamente 5 gustos.</span>
     </div>
+
+<!-- Modal para mejorar contraseña -->
+<div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;">
+  <div style="background:var(--card);border-radius:14px;padding:24px;max-width:370px;margin:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18);text-align:left;">
+    <h3 style="margin-top:0">Agrega una contraseña más segura</h3>
+    <div style="font-size:16px;margin-bottom:12px;color:#d97706;font-weight:500;">Recomendación: Usa una contraseña con mínimo 8 caracteres, combinando mayúsculas, minúsculas, números y símbolos. Ejemplo: <span style="color:#2563eb;font-weight:600;">Mundo!2025@urbano</span></div>
+    <input id="newPwdInput" type="password" placeholder="Nueva contraseña" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d4a300;font-size:18px;margin-bottom:12px;" />
+    <button id="btnSaveNewPwd" class="btn good" style="width:100%;font-size:18px;">Guardar nueva contraseña</button>
+    <div id="pwdMsg" style="margin-top:10px;font-size:15px;color:#22c55e;display:none;"></div>
+    <button id="btnClosePwdModal" class="btn" style="margin-top:18px;">Cerrar</button>
+  </div>
+</div>
   </form>
 </div>
 
@@ -270,7 +291,7 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <h4 style="margin:0 0 6px 0">🏛️ Panel de Gobierno</h4>
-      <button id="btnGovClose" title="Cerrar" style="all:unset;cursor:pointer;padding:6px;border-radius:6px;background:transparent;color:var(--text);font-weight:700">✕</button>
+  <button id="btnGovClose" title="Cerrar">✕</button>
     </div>
     <div id="govDesc" class="hint" style="margin-bottom:6px"></div>
     <div id="govFunds" class="hint" style="margin:6px 0">Fondo: 0</div>

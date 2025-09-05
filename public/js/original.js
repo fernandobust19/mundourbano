@@ -69,7 +69,12 @@
       // set the select value too for form persistence (safe check if avatarSelect isn't declared)
       try{ if(typeof avatarSelect !== 'undefined' && avatarSelect) avatarSelect.value = src; }catch(e){}
       // persist selection so it survives reloads and is applied to UI avatar
-      try{ localStorage.setItem('selectedAvatar', src); }catch(e){}
+      try{ 
+        localStorage.setItem('selectedAvatar', src);
+        // También guardar en el progreso actual para que el agente use este avatar al iniciar
+        window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
+        window.saveProgress && window.saveProgress({ avatar: src });
+      }catch(e){}
     });
     // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
     try{
@@ -480,7 +485,7 @@ BG_IMG.src = '/assets/fondo1.jpg';
 
   // helper: eliminar panaderías no compradas (robusto)
   function removeUnownedPanaderias(){
-  // NO-OP: previously removed unowned panaderias; left empty to keep panaderias visible
+  // NO-OP: previously removed unowned panaderias; left empty to keep panaderías visible
   return;
   }
   const SHOP_TYPES = [
@@ -1304,7 +1309,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           const set = sectorHas.get(sKey) || new Set();
           // count how many of this type in this sector
           let count = 0;
-          for(const o of allLists){ if(getTypeKey(o) === t && sectorOf(centerOf(o).x, centerOf(o).y) === sKey) count++; }
+          for(const o of allLists){ if(getTypeKey(o) === t && sectorOf(centerOf(o).x, CenterOf(o).y) === sKey) count++; }
           if(count <= 1) continue; // ok
 
           // find nearest sector without this type
@@ -1886,10 +1891,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const pt = toScreen(s.x, s.y);
   const baseR = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
   const r = Math.max(CFG.MIN_AGENT_PX, baseR);
-  // Fondo del círculo
-  ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
-  ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af'; ctx.fill();
-  // Imagen de avatar (si existe)
+  // Solo imagen de avatar (sin círculo de fondo)
   try{
     const img = getAvatarImage(p.avatar);
     if(img && img.complete){
@@ -2052,10 +2054,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const p=toScreen(a.x,a.y);
   const baseR = (a.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
   const circleR = Math.max(CFG.MIN_AGENT_PX, baseR);
-  // Fondo del círculo
-  ctx.beginPath(); ctx.arc(p.x,p.y, circleR, 0, Math.PI*2);
-  ctx.fillStyle = (a.gender==='M')?'#93c5fd':'#fda4af'; ctx.fill();
-  // Imagen de avatar (si existe)
+  // Solo imagen de avatar (sin círculo de fondo)
   try{
     const img = getAvatarImage(a.avatar);
     if(img && img.complete){
@@ -2065,7 +2064,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       ctx.restore();
     }
   }catch(e){}
-      if ( a.id === USER_ID) { ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2 * ZOOM; ctx.stroke(); }
+  // Sin contorno alrededor del jugador local
       if (a.justMarried && (performance.now() - a.justMarried < 5000)) {
           ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
           ctx.textAlign='center'; ctx.fillText('💕', p.x, p.y - 25 * ZOOM);
@@ -2328,7 +2327,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     if(saved && saved.gender){ gender = saved.gender; }
     if(saved && typeof saved.age === 'number'){ age = saved.age; }
   }catch(e){}
-  const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
+  // Determinar avatar elegido (localStorage > progreso guardado > preview > por defecto)
+  let chosenAvatar = null;
+  try{ chosenAvatar = localStorage.getItem('selectedAvatar') || (window.__progress && window.__progress.avatar) || (fGenderPreview && fGenderPreview.src) || '/assets/avatar1.png'; }catch(e){ chosenAvatar = '/assets/avatar1.png'; }
+  const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney, avatar: chosenAvatar});
+  // Registrar al jugador local en la simulación y fijar su ID
+  try{
+    agents.push(user);
+    USER_ID = user.id;
+    // También sincronizar el id local usado por el render de remotos
+    window.playerId = user.id;
+  }catch(e){}
   // Reflejar también banco (si se usa en UI) como propiedad del agente para cálculos locales
   if(typeof saved.bank === 'number') try{ user.bank = Math.max(0, Math.floor(saved.bank)); }catch(e){}
   // Guardar inmediatamente el perfil elegido para futuras sesiones
@@ -2364,9 +2373,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     updateGovDesc();
   try{ window.updateOwnedShopsUI = updateOwnedShopsUI; updateOwnedShopsUI(); }catch(e){}
   try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
+  // Refrescar panel del banco con el nuevo jugador
+  try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){}
     try{
-      const uiAvatar = document.getElementById('uiAvatar');
-      if(uiAvatar && user.avatar) uiAvatar.src = user.avatar;
+  const uiAvatar = document.getElementById('uiAvatar');
+  if(uiAvatar && user.avatar) uiAvatar.src = user.avatar;
       const userName = document.getElementById('userName');
       if(userName){
         const full = user.name || user.code || 'Usuario';
@@ -2467,8 +2478,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }else{
   u.money -= (placingShop.price || 0);
   shops.push(newShop);
-  try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){}
-        placingShop = null;
+  try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} placingShop = null;
         updateOwnedShopsUI();
         toast('Negocio colocado (local).');
       }
@@ -2801,6 +2811,8 @@ function makeAgent(state, options = {}) {
     pendingDeposit: 0,
     houseIdx: null,
     likes,
+  // avatar seleccionado (del grid, preview o subida por el usuario)
+  avatar: options.avatar || null,
     target: null,
     targetRole: 'idle',
     cooldownSocial: 0,
@@ -2838,3 +2850,72 @@ function assignRental(agent) {
   agent.houseIdx = houses.indexOf(randomHouse);
   return true;
 }
+
+// Mejorar tu contraseña: mostrar modal, guardar nueva contraseña y mostrar recomendación
+const btnImprovePwd = document.getElementById('btnImprovePwd');
+const pwdModal = document.getElementById('pwdModal');
+const btnClosePwdModal = document.getElementById('btnClosePwdModal');
+const btnSaveNewPwd = document.getElementById('btnSaveNewPwd');
+const newPwdInput = document.getElementById('newPwdInput');
+const pwdMsg = document.getElementById('pwdMsg');
+if(btnImprovePwd && pwdModal && btnClosePwdModal && btnSaveNewPwd && newPwdInput && pwdMsg){
+  btnImprovePwd.onclick = ()=>{
+    pwdModal.style.display = 'flex';
+    newPwdInput.value = '';
+    pwdMsg.style.display = 'none';
+  };
+  btnClosePwdModal.onclick = ()=>{ pwdModal.style.display = 'none'; };
+  btnSaveNewPwd.onclick = async ()=>{
+    const pwd = newPwdInput.value.trim();
+    // Validación básica
+    if(pwd.length < 8 || !/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[^A-Za-z0-9]/.test(pwd)){
+      pwdMsg.textContent = 'La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas, números y símbolos.';
+      pwdMsg.style.color = '#ef4444';
+      pwdMsg.style.display = 'block';
+      return;
+    }
+    // Enviar al servidor para guardar de forma segura
+    try {
+      const resp = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: pwd })
+      });
+      const data = await resp.json();
+      if(data.ok){
+        pwdMsg.textContent = '¡Contraseña actualizada con éxito!';
+        pwdMsg.style.color = '#22c55e';
+        pwdMsg.style.display = 'block';
+        newPwdInput.value = '';
+      }else{
+        pwdMsg.textContent = data.msg || 'Error al guardar la contraseña.';
+        pwdMsg.style.color = '#ef4444';
+        pwdMsg.style.display = 'block';
+      }
+    } catch(e){
+      pwdMsg.textContent = 'Error de conexión con el servidor.';
+      pwdMsg.style.color = '#ef4444';
+      pwdMsg.style.display = 'block';
+    }
+  };
+}
+
+// Asegurar que el avatar por defecto esté presente en el progreso
+function ensureDefaultAvatar(progress) {
+  if (!progress.avatar) {
+    progress.avatar = '/assets/avatar1.png'; // avatar por defecto
+    try { window.saveProgress && window.saveProgress({ avatar: progress.avatar }); } catch(e){}
+  }
+}
+
+// Al cargar el progreso del usuario, asegúrate de que tenga avatar
+try {
+  if (window.__progress) ensureDefaultAvatar(window.__progress);
+} catch(e){}
+
+// Al guardar el personaje, asegúrate de que tenga avatar
+btnStart && btnStart.addEventListener('click', function() {
+  try {
+    if (window.__progress) ensureDefaultAvatar(window.__progress);
+  } catch(e){}
+});

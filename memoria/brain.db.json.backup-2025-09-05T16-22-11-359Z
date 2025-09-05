@@ -1,0 +1,378 @@
+{
+  "users": [
+    {
+      "id": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "username": "fernando",
+      "passHash": "$2a$10$bEP9lMMPAbUHzDB/L6n2X.38bWeRwvFl1.3OR0L3KISIBmg2Hj.KO",
+      "createdAt": 1757083544866,
+      "lastLoginAt": 1757088217914
+    }
+  ],
+  "progress": {
+    "9d30882a-6138-461d-8e90-393a8ffbd118": {
+      "money": 183,
+      "bank": 0,
+      "vehicle": "bicicleta",
+      "vehicles": [
+        "bicicleta"
+      ],
+      "shops": [
+        {
+          "x": 5197.155,
+          "y": 1232.5307692307692,
+          "w": 120,
+          "h": 80,
+          "kind": "panadería",
+          "ownerId": "A282015"
+        }
+      ],
+      "houses": [],
+      "name": "FERNANDO",
+      "avatar": "/assets/avatar1.png",
+      "likes": [
+        "música",
+        "lectura",
+        "cine",
+        "animales",
+        "yoga"
+      ],
+      "gender": "M",
+      "age": 20
+    },
+    "1a4064b1-b943-4d30-8cd6-ddc7532cd40e": {
+      "money": 400,
+      "bank": 0,
+      "vehicle": null,
+      "vehicles": [],
+      "shops": [],
+      "houses": [],
+      "name": null,
+      "avatar": null,
+      "likes": [],
+      "gender": null,
+      "age": null
+    }
+  },
+  "activityLog": [
+    {
+      "ts": 1757083544867,
+      "type": "register",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757083561060,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757083751005,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757083754251,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757083830364,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757085656555,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757085658903,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757085809779,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757085812264,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757085832238,
+      "type": "shop_add",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "id": "S1"
+      }
+    },
+    {
+      "ts": 1757085832252,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "money",
+          "shops"
+        ]
+      }
+    },
+    {
+      "ts": 1757085839671,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757085842075,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757086193795,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757086196483,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757086262319,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "money",
+          "vehicle",
+          "vehicles"
+        ]
+      }
+    },
+    {
+      "ts": 1757086273630,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757086275920,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757086280395,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757086533624,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757086535673,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757086757074,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757086759432,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757087093382,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757087095718,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757087462754,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757088192587,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757088209747,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757088217914,
+      "type": "login",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757088222803,
+      "type": "progress_update",
+      "userId": "9d30882a-6138-461d-8e90-393a8ffbd118",
+      "details": {
+        "keys": [
+          "name",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    }
+  ]
+}
