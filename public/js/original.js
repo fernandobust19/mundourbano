@@ -348,7 +348,11 @@ BG_IMG.src = '/assets/fondo1.jpg';
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
   LINES_ON:true, PARKS:8, SCHOOLS:8, FACTORIES:12, BANKS:8, MALLS:4, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:24,  // Más infraestructuras y casas iniciales
-    R_ADULT:3.0, R_CHILD:2.4, R_ELDER:3.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+    // Radio base de los agentes (en unidades de mundo). Aumentado para que se vean más grandes.
+    R_ADULT:5.0, R_CHILD:4.0, R_ELDER:5.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+    // Tamaños mínimos en pantalla para que no desaparezcan con el zoom.
+    MIN_AGENT_PX: 6,
+    NAME_FONT_PX: 12,
     YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
     HOUSE_BUY_COST:3000,
     GOV_TAX_EVERY: 20*60,      // cada 20 min
@@ -1816,17 +1820,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         s.x = target.x; s.y = target.y; s.vx = 0; s.vy = 0;
       }
 
-      const pt = toScreen(s.x, s.y);
-      ctx.beginPath();
-      const r = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM;
-      ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
+  const pt = toScreen(s.x, s.y);
+  ctx.beginPath();
+  const baseR = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
+  const r = Math.max(CFG.MIN_AGENT_PX, baseR);
+  ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
       ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af';
       ctx.fill();
-      if (ZOOM >= 0.7) {
-        ctx.font = `700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - 8*ZOOM);
-      }
+  // Mostrar nombre siempre visible con tamaño fijo en pixeles, independiente del zoom
+  ctx.font = `700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`;
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+  ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - (r + 10));
     }
   }
 
@@ -1973,8 +1977,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           }
       }
 
-      const p=toScreen(a.x,a.y);
-      ctx.beginPath(); ctx.arc(p.x,p.y, (a.state==='child'?CFG.R_CHILD:CFG.R_ADULT)*ZOOM, 0, Math.PI*2);
+  const p=toScreen(a.x,a.y);
+  const baseR = (a.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
+  const circleR = Math.max(CFG.MIN_AGENT_PX, baseR);
+  ctx.beginPath(); ctx.arc(p.x,p.y, circleR, 0, Math.PI*2);
       ctx.fillStyle = (a.gender==='M')?'#93c5fd':'#fda4af';
       ctx.fill();
       if ( a.id === USER_ID) { ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2 * ZOOM; ctx.stroke(); }
@@ -1982,12 +1988,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
           ctx.textAlign='center'; ctx.fillText('💕', p.x, p.y - 25 * ZOOM);
       } else if (a.justMarried) { a.justMarried = null; }
-      if (ZOOM >= 0.7) {
-        ctx.font=`700 ${Math.max(8,12*ZOOM)}px ui-monospace,monospace`;
-        ctx.fillStyle='#fff'; ctx.textAlign='center';
-        const age = (yearsSince(a.bornEpoch)|0);
-  ctx.fillText(`${a.name||a.code}·${age}`, p.x, p.y-8*ZOOM);
-      }
+  // Mostrar nombre siempre visible con tamaño fijo en pixeles, independiente del zoom
+  ctx.font=`700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`;
+  ctx.fillStyle='#fff'; ctx.textAlign='center';
+  const ageYrs = (yearsSince(a.bornEpoch)|0);
+  ctx.fillText(`${a.name||a.code}·${ageYrs}`, p.x, p.y - (circleR + 10));
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
     const instCount = government.placed.length;
@@ -2225,6 +2230,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if(prog && (Array.isArray(prog.shops) || Array.isArray(prog.houses))){
           window.sock?.emit('restoreItems', { shops: prog.shops||[], houses: prog.houses||[] }, ()=>{});
         }
+        // Restaurar vehículo actual y lista de vehículos adquiridos
+        try{
+          if(prog && prog.vehicle){ user.vehicle = prog.vehicle; window.sockApi?.update({ vehicle: prog.vehicle }); }
+          if(prog && Array.isArray(prog.vehicles)){ window.__progress.vehicles = prog.vehicles.slice(); }
+        }catch(e){}
       }catch(e){}
     }); }catch(e){}
     if(!hasNet()){
@@ -2562,7 +2572,21 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const vType = carTypeSelect.value;
       if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
       const vehicle = VEHICLES[vType];
-      if (u.money >= vehicle.cost){ u.money -= vehicle.cost; u.vehicle = vType; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), vehicle: vType }); }catch(e){} carMsg.textContent = `¡${vehicle.name} comprado!`; carMsg.style.color = 'var(--ok)'; toast(`¡Vehículo comprado! Tu velocidad aumentó.`); }
+      if (u.money >= vehicle.cost){
+        u.money -= vehicle.cost;
+        u.vehicle = vType;
+        try{
+          const prog = (window.__progress || {});
+          const list = Array.isArray(prog.vehicles) ? prog.vehicles.slice() : [];
+          if(!list.includes(vType)) list.push(vType);
+          window.__progress.vehicles = list;
+          window.saveProgress && window.saveProgress({ money: Math.floor(u.money), vehicle: vType, vehicles: list });
+        }catch(e){}
+        try{ window.sockApi?.update({ vehicle: vType }); }catch(e){}
+        carMsg.textContent = `¡${vehicle.name} comprado!`;
+        carMsg.style.color = 'var(--ok)';
+        toast(`¡Vehículo comprado! Tu velocidad aumentó.`);
+      }
       else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
   });
 

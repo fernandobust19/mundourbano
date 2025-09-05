@@ -305,7 +305,16 @@ io.on('connection', (socket) => {
   if(socket.userId){ try{ brain.setMoney(socket.userId, p.money, p.bank); brain.recordMoneyChange(socket.userId, brain.getUserById(socket.userId)?.username || null, 0, p.money, p.bank, 'tick'); }catch(e){} }
     }
   if ('bank' in data) p.bank = data.bank;
-    if ('vehicle' in data) { p.vehicle = data.vehicle; if(socket.userId){ try{ brain.setVehicle(socket.userId, p.vehicle); }catch(e){} } }
+    if ('vehicle' in data) {
+      p.vehicle = data.vehicle;
+      if(socket.userId){
+        try{
+          brain.setVehicle(socket.userId, p.vehicle);
+          // registrar vehículo como adquirido si no existía
+          brain.addOwnedVehicle(socket.userId, p.vehicle);
+        }catch(e){}
+      }
+    }
     p.updatedAt = now();
     p.lastUpdateFromClient = t;
   });

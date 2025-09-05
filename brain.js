@@ -10,7 +10,7 @@ const LEDGER_PATH = path.join(__dirname, 'saldos.ledger.json');
 
 let db = {
 	users: [], // { id, username, passHash, createdAt, lastLoginAt }
-	progress: {}, // userId -> { money, bank, vehicle, shops:[], houses:[] }
+	progress: {}, // userId -> { money, bank, vehicle, vehicles:[], shops:[], houses:[] }
 	activityLog: [] // { ts, type, userId, details }
 };
 
@@ -106,7 +106,7 @@ function getUserById(userId) {
 }
 
 function ensureProgress(userId) {
-	if (!db.progress[userId]) db.progress[userId] = { money: 400, bank: 0, vehicle: null, shops: [], houses: [] };
+	if (!db.progress[userId]) db.progress[userId] = { money: 400, bank: 0, vehicle: null, vehicles: [], shops: [], houses: [] };
 	return db.progress[userId];
 }
 
@@ -146,10 +146,10 @@ function updateProgress(userId, patch) {
 	const p = ensureProgress(userId);
 	if (patch == null || typeof patch !== 'object') return { ok: false };
 	// Solo campos permitidos
-	const allowed = ['money', 'bank', 'vehicle', 'shops', 'houses'];
+	const allowed = ['money', 'bank', 'vehicle', 'vehicles', 'shops', 'houses'];
 	for (const k of allowed) {
 		if (k in patch) {
-			if (k === 'shops' || k === 'houses') {
+			if (k === 'shops' || k === 'houses' || k === 'vehicles') {
 				if (Array.isArray(patch[k])) p[k] = patch[k];
 			} else {
 				p[k] = patch[k];
@@ -192,6 +192,18 @@ function setVehicle(userId, vehicle) {
 	const p = ensureProgress(userId);
 	p.vehicle = vehicle || null;
 	schedulePersist();
+}
+
+function addOwnedVehicle(userId, vehicle){
+	try{
+		const p = ensureProgress(userId);
+		if(!Array.isArray(p.vehicles)) p.vehicles = [];
+		if(vehicle && !p.vehicles.includes(vehicle)){
+			p.vehicles.push(vehicle);
+			schedulePersist();
+			log('vehicle_add', userId, { vehicle });
+		}
+	}catch(e){}
 }
 
 // ===== Ledger helpers =====
@@ -248,6 +260,7 @@ module.exports = {
 	addHouse,
 	setMoney,
 	setVehicle,
+	addOwnedVehicle,
 	log,
 	// ledger API
 	recordMoneyChange,

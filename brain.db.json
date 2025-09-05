@@ -5,7 +5,7 @@
       "username": "fernando",
       "passHash": "$2a$10$Lc8QizdJ4V5F.lG0rHZ1L.RNYJ23oDG1lUzzYXpNcgYsZ/Qg9eMB6",
       "createdAt": 1756986731248,
-      "lastLoginAt": 1757036707852
+      "lastLoginAt": 1757038065191
     },
     {
       "id": "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3",
@@ -26,14 +26,14 @@
       "username": "pedro1",
       "passHash": "$2a$10$0EWiaHjbfm33wSm0TQazAudRfGD6wiatD.SEPZ4QipeCZ8eTr2s9G",
       "createdAt": 1757036587519,
-      "lastLoginAt": 1757036729354
+      "lastLoginAt": 1757037432896
     }
   ],
   "progress": {
     "1a4064b1-b943-4d30-8cd6-ddc7532cd40e": {
-      "money": 64,
+      "money": 14,
       "bank": 0,
-      "vehicle": null,
+      "vehicle": "bicicleta",
       "shops": [
         {
           "x": 807,
@@ -80,9 +80,9 @@
       "houses": []
     },
     "c65b40e3-8ad8-4c49-aba1-caf719951c95": {
-      "money": 200,
+      "money": 150,
       "bank": 0,
-      "vehicle": "moto",
+      "vehicle": "bicicleta",
       "shops": [],
       "houses": []
     }
@@ -1016,6 +1016,148 @@
       "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
       "details": {
         "username": "pedro1"
+      }
+    },
+    {
+      "ts": 1757036895578,
+      "type": "login",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "username": "pedro1"
+      }
+    },
+    {
+      "ts": 1757036911807,
+      "type": "progress_update",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036968918,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757036984200,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757037375699,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757037382966,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757037390032,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money",
+          "vehicle",
+          "vehicles"
+        ]
+      }
+    },
+    {
+      "ts": 1757037394703,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757037432896,
+      "type": "login",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "username": "pedro1"
+      }
+    },
+    {
+      "ts": 1757037463785,
+      "type": "progress_update",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "keys": [
+          "money",
+          "vehicle",
+          "vehicles"
+        ]
+      }
+    },
+    {
+      "ts": 1757037465989,
+      "type": "progress_update",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757037476561,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757037624504,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757038065191,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757038073366,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
       }
     }
   ]
