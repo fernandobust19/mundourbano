@@ -1704,7 +1704,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         ctx.fillRect(p.x, p.y, w, h);
         ctx.fillStyle = 'rgba(220,220,220,0.95)';
         const bars = Math.max(3, Math.floor(inst.w/10));
-        for(let i=0;i<bars;i++){ const bx = p.x + 6*ZOOM + i * (w - 12*ZOOM) / Math.max(1,bars-1); ctx.fillRect(bx, p.y+6*ZOOM, 3*ZOOM, h - 12*ZOOM); }
+        for(let i=0;i<bars;i++){ const bx = p.x + 4 + i*(w-8)/(bars-1); ctx.fillRect(bx, p.y+4, 2, h-8); }
         ctx.fillStyle = '#fff'; ctx.font=`700 ${Math.max(10, 14*ZOOM)}px system-ui`; ctx.textAlign='center'; ctx.fillText('CÁRCEL', p.x + w/2, p.y + 18*ZOOM);
       } else {
         // Usar drawBuildingWithImage en lugar de drawLabelIcon
@@ -2203,24 +2203,32 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   function automaticRoadConstruction() { /* lógica opcional */ }
 
   btnShowDoc.onclick = ()=>{
-    const isVisible = docDock.style.display === 'flex';
-    if (!isVisible) {
-      // Actualizar el documento cada segundo mientras está abierto
-      if(!window.__docInterval){
-        window.__docInterval = setInterval(()=>{
-          $("#docBody").textContent = fullDocument();
-        }, 1000);
-      }
-      $("#docBody").textContent = fullDocument();
-      docDock.style.display = 'flex';
-    } else {
-      docDock.style.display = 'none';
-      if(window.__docInterval){
-        clearInterval(window.__docInterval);
-        window.__docInterval = null;
-      }
+  const isVisible = docDock.style.display === 'flex';
+  if (!isVisible) {
+    // Actualizar el documento cada segundo mientras está abierto
+    if(!window.__docInterval){
+      window.__docInterval = setInterval(()=>{
+        $("#docBody").textContent = fullDocument();
+      }, 1000);
     }
-  };
+    $("#docBody").textContent = fullDocument();
+    // Posicionar al lado del UI dock
+    try {
+      const ui = $("#uiDock");
+      const uiRect = ui.getBoundingClientRect();
+      docDock.style.left = (uiRect.right + 12) + 'px';
+      docDock.style.top = (uiRect.top) + 'px';
+      docDock.classList.remove('collapsed-left');
+    } catch(_){ docDock.style.left='360px'; docDock.style.top='10px'; }
+    docDock.style.display = 'flex';
+  } else {
+    docDock.style.display = 'none';
+    if(window.__docInterval){
+      clearInterval(window.__docInterval);
+      window.__docInterval = null;
+    }
+  }
+};
   btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } };
 
   // Gobierno: abrir vía edificio en el mapa (no botón)
@@ -2254,8 +2262,25 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(e.clientX < gd.left || e.clientX > gd.right || e.clientY < gd.top || e.clientY > gd.bottom){ closeGovPanel(); }
     }catch(e){}
   }, {passive:true});
-  $("#uiHideBtn").onclick = ()=>{ show($("#uiDock"), false); show($("#uiShowBtn"), true); };
-  $("#uiShowBtn").onclick = ()=>{ show($("#uiDock"), true); show($("#uiShowBtn"), false); };
+  // Colapsar UI hacia la izquierda y alinear top-bar debajo del UI
+  $("#uiHideBtn").onclick = ()=>{
+    try{
+      const dock = $("#uiDock");
+      const bar = $("#top-bar");
+      dock.classList.add('collapsed-left');
+      bar.classList.add('collapsed-left');
+      show($("#uiShowBtn"), true);
+    }catch(e){}
+  };
+  $("#uiShowBtn").onclick = ()=>{
+    try{
+      const dock = $("#uiDock");
+      const bar = $("#top-bar");
+      dock.classList.remove('collapsed-left');
+      bar.classList.remove('collapsed-left');
+      show($("#uiShowBtn"), false);
+    }catch(e){}
+  };
   panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){} try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money) }); }catch(e){} toast('Depósito realizado.'); };
 
   function setVisibleWorldUI(on){
@@ -2263,7 +2288,18 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // $("#formBar").style.display = on ? 'none' : 'block';
     canvas.style.display = on ? 'block':'none';
     uiDock.style.display = on ? 'flex':'none';
+    // Posicionar top-bar debajo del UI y a la izquierda
     topBar.style.display = on ? 'flex':'none';
+  // Asegurar que no estén colapsados cuando deben mostrarse
+  try{ if(on){ uiDock.classList.remove('collapsed-left'); topBar.classList.remove('collapsed-left'); } }catch(e){}
+    try{
+      if(on){
+        topBar.style.left = '10px';
+        const dockRect = uiDock.getBoundingClientRect();
+        const offset = Math.max(10, (dockRect.height||0) + 12);
+        topBar.style.top = (10 + offset) + 'px';
+      }
+    }catch(e){}
     zoomFab.style.display = on ? 'flex':'none';
     mini.style.display = on ? 'block':'none';
     show($("#uiShowBtn"),false);
@@ -2295,23 +2331,6 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
   // Reflejar también banco (si se usa en UI) como propiedad del agente para cálculos locales
   if(typeof saved.bank === 'number') try{ user.bank = Math.max(0, Math.floor(saved.bank)); }catch(e){}
-    try{
-      // Prefer avatar explicitly selected by the user (persisted in localStorage or present in UI)
-      let selected = null;
-      try{ selected = localStorage.getItem('selectedAvatar') || null; }catch(e){}
-      try{ if(!selected){ const _ui = document.getElementById('uiAvatar'); if(_ui && _ui.src) selected = _ui.src; } }catch(e){}
-  if(selected) user.avatar = selected;
-  else user.avatar = (gender === 'M') ? MALE_IMG : FEMALE_IMG;
-      // If gender is undefined placeholder 'U', try to infer from avatar filename (basic heuristic)
-      if((!gender || gender === 'U') && user.avatar){
-        const low = user.avatar.toLowerCase();
-        if(low.includes('female') || low.includes('f') || low.includes('103145') || low.includes('015636')) gender = 'F';
-        else gender = 'M';
-        user.gender = gender;
-      }
-    }catch(e){}
-  agents.push(user); USER_ID=user.id;
-  try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){}
   // Guardar inmediatamente el perfil elegido para futuras sesiones
   try{
     const patch = { name: user.name, avatar: user.avatar, likes: (user.likes||[]).slice(0,5), gender: user.gender, age: age };
@@ -2557,6 +2576,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         mctx.fillStyle = '#111'; mctx.fillRect(Math.max(0,r.x*sx), Math.max(0,r.y*sy), Math.max(1,r.w*sx), Math.max(1,r.h*sy));
         mctx.fillStyle = '#fff'; const bars = 3; const bx = Math.max(0,r.x*sx), by = Math.max(0,r.y*sy), bw = Math.max(1,r.w*sx), bh = Math.max(1,r.h*sy);
         for(let i=0;i<bars;i++){ const px = bx + 4 + i*(bw-8)/(bars-1); mctx.fillRect(px, by+4, 2, bh-8); }
+        ctx.fillStyle = '#fff'; ctx.font=`700 ${Math.max(10, 14*ZOOM)}px system-ui`; ctx.textAlign='center'; ctx.fillText('CÁRCEL', p.x + w/2, p.y + 18*ZOOM);
       } else { mrect(r, r.fill || '#94a3b8'); }
     });
     const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;
@@ -2653,7 +2673,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
   setInterval(()=>{if(!STARTED) return; if(hasNet()) return; let rentCollected = 0; let renters = 0;for(const h of houses){if(h.rentedBy){const renter = agents.find(a => a.id === h.rentedBy);if(renter && renter.money >= CFG.GOV_RENT_AMOUNT){renter.money -= CFG.GOV_RENT_AMOUNT; rentCollected += CFG.GOV_RENT_AMOUNT; renters++;}}}government.funds += rentCollected;if(rentCollected > 0){govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)} (+${Math.round(rentCollected)})`;toast(`Gobierno recaudó ${Math.round(rentCollected)} en alquileres de ${renters} personas.`);} }, CFG.GOV_RENT_EVERY*1000);
 
-  setInterval(()=>{ if(!STARTED) return; if(hasNet()) return;
+  setInterval(()=>{if(!STARTED) return; if(hasNet()) return;
     for(const shop of shops){
       if(shop.hasEmployee && shop.employeeId && shop.ownerId){
         const owner = agents.find(a => a.id === shop.ownerId);
@@ -2818,5 +2838,3 @@ function assignRental(agent) {
   agent.houseIdx = houses.indexOf(randomHouse);
   return true;
 }
-
-// ... no street pattern cache/helpers

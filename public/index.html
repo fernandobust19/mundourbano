@@ -67,9 +67,9 @@
   }
   #uiDock, #docDock, #govDock{position:fixed;top:10px;z-index:24;display:none;width:min(340px,92vw);display:flex;flex-direction:column;gap:10px;pointer-events:auto}
   #uiDock{left:10px;}
-  /* Transition para mostrar/ocultar con animación */
-  #uiDock{transition: transform 260ms ease, opacity 220ms ease;}
-  #uiDock.collapsed{transform: translateY(-18%); opacity: 0; pointer-events: none}
+  /* Transition para mostrar/ocultar con animación (hacia la izquierda) */
+  #uiDock{transition: transform 260ms ease, opacity 220ms ease; will-change: transform, opacity}
+  .collapsed-left{transform: translateX(-120%); opacity: 0; pointer-events: none}
   #docDock{left:10px;}
   #marriedDock{position:fixed; top:10px; left:10px; z-index:24; width:min(340px,92vw); display:none; flex-direction:column; gap:10px; pointer-events:auto;}
   #govDock{left:10px;}
@@ -102,7 +102,8 @@
 
 
   .balance-amount { color: var(--ok); font-size: 1.2em; font-weight: bold; }
-  #top-bar{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:25;display:none;gap:10px;}
+  /* Botonera (Documento/Casados) a la izquierda, debajo del UI, también colapsable a la izquierda */
+  #top-bar{position:fixed;left:10px;top:10px;z-index:24;display:none;gap:10px;transition: transform 260ms ease, opacity 220ms ease; will-change: transform, opacity}
   #top-bar button{all:unset;cursor:pointer;padding:8px 16px;border-radius:12px;background:var(--ui);border:1px solid var(--edge);font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.4);}
 
 
@@ -115,6 +116,10 @@
 
 
   #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:40;display:none;background:rgba(255,245,157,0.9);border:1px solid rgba(0,0,0,0.06);color:var(--text);padding:8px 12px;border-radius:10px;font-size:13px}
+</style>
+<style>
+  /* Aumentar tamaño de letra para Documento y Casados */
+  #docBody, #marriedList { font-size: 22px !important; line-height: 1.5; }
 </style>
 </head> 
 <body>
@@ -238,10 +243,10 @@
     <div id="carMsg" class="hint" style="margin-top:8px">Aumenta tu velocidad de movimiento.</div>
   </div>
 
-  <div class="card">
+  <div class="card" style="position:relative;">
     <h4 style="margin:0 0 6px 0">💰 Banco</h4>
     <div class="actions" style="margin-bottom:6px"><button id="panelDepositAll" class="btn">Depositar todo</button></div>
-    <pre id="bankBody">Consulta aquí tu saldo personal.</pre>
+    <pre id="bankBody" style="position:absolute; top:10px; right:16px; background:transparent; box-shadow:none; margin:0; padding:0; font-size:15px; color:var(--ok); text-align:right; min-width:80px;"></pre>
   </div>
   <!-- Botón para ocultar/mostrar el panel, ahora posicionado al fondo del dock -->
   <button id="uiHideBtn" title="Ocultar panel">▲</button>
