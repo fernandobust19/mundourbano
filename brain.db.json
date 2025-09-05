@@ -5,7 +5,7 @@
       "username": "fernando",
       "passHash": "$2a$10$R1pPknSTBnFH4R8baD/0iu8EIaT03yUD1.TnhpLLDnJFUWTIBFnCO",
       "createdAt": 1757089576111,
-      "lastLoginAt": 1757097254582
+      "lastLoginAt": 1757100100381
     },
     {
       "id": "843da596-5382-4ff7-9f20-cd14bf42fc15",
@@ -26,7 +26,27 @@
       "shops": [],
       "houses": [],
       "name": "FERNANDO",
-      "avatar": "/assets/avatar2.png",
+      "avatar": {
+        "money": 200,
+        "bank": 0,
+        "vehicle": "moto",
+        "vehicles": [
+          "moto"
+        ],
+        "shops": [],
+        "houses": [],
+        "name": "FERNANDO",
+        "avatar": "/assets/avatar2.png",
+        "likes": [
+          "música",
+          "lectura",
+          "cine",
+          "animales",
+          "yoga"
+        ],
+        "gender": "U",
+        "age": 20
+      },
       "likes": [
         "música",
         "lectura",
@@ -861,6 +881,322 @@
     },
     {
       "ts": 1757097280796,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757098338107,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757098345448,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098346401,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098346583,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098346950,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098347111,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098593354,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757098597824,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098599376,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098600151,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098986076,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757098989172,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098989725,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757098990245,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099062233,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757099172225,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757099176028,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099177662,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757099198706,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757099806872,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757099815149,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099815842,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099816233,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099816792,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099817465,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099817816,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099818097,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099818602,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099818905,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757099820297,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757100100381,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757100107861,
       "type": "progress_update",
       "userId": "03252554-fb0a-433a-a24b-db848040bf91",
       "details": {

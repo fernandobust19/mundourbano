@@ -50,6 +50,8 @@
   const MALE_IMG_2 = '/assets/avatar2.png';
   const FEMALE_IMG = '/assets/avatar3.png';
   const FEMALE_IMG_2 = '/assets/avatar4.png';
+  // Variable global runtime para priorizar siempre el avatar recientemente seleccionado o subido (incluye data URLs)
+  window.__selectedAvatarCurrent = window.__selectedAvatarCurrent || null;
 
   // Avatar grid clickable thumbnails
   const avatarGrid = document.getElementById('avatarGrid');
@@ -69,13 +71,12 @@
       // set the select value too for form persistence (safe check if avatarSelect isn't declared)
       try{ if(typeof avatarSelect !== 'undefined' && avatarSelect) avatarSelect.value = src; }catch(e){}
       // persist selection so it survives reloads and is applied to UI avatar
-      try{ 
+      try{
         localStorage.setItem('selectedAvatar', src);
-        // También guardar en el progreso actual para que el agente use este avatar al iniciar
+        window.__selectedAvatarCurrent = src;
         window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
         window.saveProgress && window.saveProgress({ avatar: src });
-  // Si el agente ya existe en el mundo, actualiza en vivo
-  if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ me.avatar = src; } }
+  if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ if(me.avatar !== src){ me.avatar = src; try{ AVATAR_CACHE && AVATAR_CACHE.delete && AVATAR_CACHE.delete(src); }catch(_){} try{ window.sockApi?.update({ avatar: src }); }catch(_){} } } }
       }catch(e){}
     });
     // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
@@ -109,17 +110,15 @@
       reader.onload = ()=>{
         try{
           const src = reader.result; // data URL
-          // actualizar preview e UI
-          try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){}
-          // persistir como selección actual
-          try{ localStorage.setItem('selectedAvatar', src); }catch(_){}
-          // guardar en progreso para futuras sesiones
+          try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){ }
+          try{ localStorage.setItem('selectedAvatar', src); }catch(_){ }
           try{
+            window.__selectedAvatarCurrent = src;
             window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
             window.saveProgress && window.saveProgress({ avatar: src });
-            if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ me.avatar = src; } }
-          }catch(_){}
-        }catch(_){}
+            if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ if(me.avatar !== src){ me.avatar = src; try{ AVATAR_CACHE && AVATAR_CACHE.delete && AVATAR_CACHE.delete(src); }catch(_){} try{ window.sockApi?.update({ avatar: src }); }catch(_){} } } }
+          }catch(_){ }
+        }catch(_){ }
       };
       reader.onerror = ()=>{ toast('No se pudo leer la imagen.'); };
       reader.readAsDataURL(file);
@@ -140,11 +139,12 @@
   // actualizar UI
   try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){}
         // persistir
-        try{ localStorage.setItem('selectedAvatar', src); }catch(_){}
+        try{ localStorage.setItem('selectedAvatar', src); }catch(_){ }
         try{
+          window.__selectedAvatarCurrent = src;
           window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
           window.saveProgress && window.saveProgress({ avatar: src });
-          if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ me.avatar = src; } }
+          if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ if(me.avatar !== src){ me.avatar = src; try{ AVATAR_CACHE && AVATAR_CACHE.delete && AVATAR_CACHE.delete(src); }catch(_){} try{ window.sockApi?.update({ avatar: src }); }catch(_){} } } }
         }catch(_){ }
         toast('Se restauró el avatar por defecto.');
       }catch(e){}
@@ -219,6 +219,8 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       const val = __fmtAmount((amount!=null)?amount:saved.money);
       const label = code || (window.__user?.username || 'Tu cuenta');
       accBankBody.innerHTML = `Saldo de ${label}: <span class="balance-amount">${val}</span>`;
+    // Guardar también en variable runtime si aún no está
+    if(!window.__selectedAvatarCurrent) window.__selectedAvatarCurrent = saved;
     }catch(e){}
   };
   const btnHouse=$("#btnHouse"), btnShop=$("#btnShop");
@@ -1927,9 +1929,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
     const nowS = performance.now()/1000;
 
-    for(const a of agents){
-      // Only render the local player (not remote ones)
-      if (a.id !== USER_ID) continue;
+  for(const a of agents){
       a.cooldownSocial = Math.max(0, a.cooldownSocial - dt);
       if (a.employedAtShopId) {
         const myWorkplace = shops.find(s => s.id === a.employedAtShopId);
@@ -1952,7 +1952,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           if (f) { a.goingToWork = true; a.workFactoryId = factories.indexOf(f); a.target = centerOf(f); a.targetRole = 'go_work'; }
         }
       }
-      if(a.workingUntil && nowS>=a.workingUntil){
+  if(a.workingUntil && nowS>=a.workingUntil){
         a.workingUntil=null; a.pendingDeposit += CFG.EARN_PER_SHIFT; a.goingToBank=true;
         const b=banks[(Math.random()*banks.length)|0]; if(b){ a.target=centerOf(b); a.targetRole='bank'; }
       }
@@ -2057,27 +2057,30 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
   const p=toScreen(a.x,a.y);
   const baseR = (a.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
-  const circleR = Math.max(CFG.MIN_AGENT_PX, baseR);
-  // Solo imagen de avatar (sin círculo de fondo)
-  try{
-    const img = getAvatarImage(a.avatar);
-    if(img && img.complete){
-      ctx.save();
-      ctx.beginPath(); ctx.arc(p.x, p.y, circleR*0.95, 0, Math.PI*2); ctx.clip();
-      const d = circleR*1.8; ctx.drawImage(img, p.x - d/2, p.y - d/2, d, d);
-      ctx.restore();
-    }
-  }catch(e){}
-  // Sin contorno alrededor del jugador local
-      if (a.justMarried && (performance.now() - a.justMarried < 5000)) {
-          ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
-          ctx.textAlign='center'; ctx.fillText('💕', p.x, p.y - 25 * ZOOM);
-      } else if (a.justMarried) { a.justMarried = null; }
-  // Mostrar nombre siempre visible con tamaño fijo en pixeles, independiente del zoom
-  ctx.font=`700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`;
-  ctx.fillStyle='#fff'; ctx.textAlign='center';
-  const ageYrs = (yearsSince(a.bornEpoch)|0);
-  ctx.fillText(`${a.name||a.code}·${ageYrs}`, p.x, p.y - (circleR + 12));
+    // Dibujo unificado de todos los agentes (locales y remotos ya sincronizados en agents[] si aplica)
+    try{
+      for(const ag of agents){
+        const pt = toScreen(ag.x, ag.y);
+        const baseR = (ag.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
+        const r = Math.max(CFG.MIN_AGENT_PX, baseR);
+        let drew=false;
+        try{
+          if(ag.avatar){ const img=getAvatarImage(ag.avatar); if(img&&img.complete&&img.naturalWidth){ ctx.save(); ctx.beginPath(); ctx.arc(pt.x,pt.y,r*0.95,0,Math.PI*2); ctx.clip(); const d=r*1.8; ctx.drawImage(img, pt.x-d/2, pt.y-d/2, d, d); ctx.restore(); drew=true; } }
+        }catch(_){ }
+        if(!drew){
+          const nameLow=(ag.name||ag.code||'').toLowerCase(); const femaleHints=['a','as','ia','ía']; const seemsF=(ag.gender==='F')||femaleHints.some(s=>nameLow.endsWith(s));
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, r*0.95, 0, Math.PI*2);
+          ctx.fillStyle= seemsF? 'rgba(255,105,180,0.85)':'rgba(64,132,255,0.85)'; ctx.fill();
+          ctx.lineWidth=2; ctx.strokeStyle=seemsF? 'rgba(255,182,210,0.9)':'rgba(120,180,255,0.9)'; ctx.stroke();
+        }
+        if (ag.justMarried && (performance.now() - ag.justMarried < 5000)){
+          ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`; ctx.textAlign='center'; ctx.fillText('💕', pt.x, pt.y - 25*ZOOM);
+        } else if (ag.justMarried) { ag.justMarried=null; }
+        const ageYrs=(yearsSince(ag.bornEpoch)|0);
+        ctx.font=`700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`; ctx.fillStyle='#fff'; ctx.textAlign='center';
+        ctx.fillText(`${ag.name||ag.code}·${ageYrs}`, pt.x, pt.y - (r + 12));
+      }
+    }catch(_){ }
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
     const instCount = government.placed.length;
@@ -2333,8 +2336,18 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }catch(e){}
   // Determinar avatar elegido (localStorage > progreso guardado > preview > por defecto)
   let chosenAvatar = null;
-  try{ chosenAvatar = localStorage.getItem('selectedAvatar') || (window.__progress && window.__progress.avatar) || (fGenderPreview && fGenderPreview.src) || '/assets/avatar1.png'; }catch(e){ chosenAvatar = '/assets/avatar1.png'; }
+  try{ chosenAvatar = window.__selectedAvatarCurrent || localStorage.getItem('selectedAvatar') || (window.__progress && window.__progress.avatar) || (fGenderPreview && fGenderPreview.src) || '/assets/avatar1.png'; }catch(e){ chosenAvatar = '/assets/avatar1.png'; }
   const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney, avatar: chosenAvatar});
+  // Restaurar vehículo comprado previamente (y velocidad) antes de insertar al array para que se aplique de inmediato
+  try{
+    const savedVehicle = (saved && saved.vehicle) || (window.__progress && window.__progress.vehicle);
+    if(savedVehicle){
+      user.vehicle = savedVehicle;
+      if(VEHICLES && VEHICLES[savedVehicle]){
+        user.speed = VEHICLES[savedVehicle].speed;
+      }
+    }
+  }catch(_){ }
   // Registrar al jugador local en la simulación y fijar su ID
   try{
     agents.push(user);
@@ -2359,7 +2372,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         }
         // Restaurar vehículo actual y lista de vehículos adquiridos
         try{
-          if(prog && prog.vehicle){ user.vehicle = prog.vehicle; window.sockApi?.update({ vehicle: prog.vehicle }); }
+          if(prog && prog.vehicle){
+            user.vehicle = prog.vehicle;
+            try{ if(VEHICLES && VEHICLES[prog.vehicle]) user.speed = VEHICLES[prog.vehicle].speed; }catch(_){ }
+            window.sockApi?.update({ vehicle: prog.vehicle });
+          }
           if(prog && Array.isArray(prog.vehicles)){ window.__progress.vehicles = prog.vehicles.slice(); }
           // Aplicar perfil guardado al agente si aún no está
           if(prog && prog.name){ user.name = prog.name; }
@@ -2719,6 +2736,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       // Vehículo actual del usuario (si ya hay agente) o del progreso
       let current = null;
       try{
+        // Prioridad: agente vivo > progreso guardado
         if(typeof USER_ID !== 'undefined' && USER_ID){
           const u = agents.find(a => a.id === USER_ID);
           if(u && u.vehicle) current = u.vehicle;
@@ -2809,6 +2827,13 @@ function makeAgent(state, options = {}) {
     if (!likes.includes(interest)) likes.push(interest);
   }
   
+  // Asignar avatar aleatorio a NPC si no se especifica y no es el jugador
+  const presetAvatars = ['/assets/avatar1.png','/assets/avatar2.png','/assets/avatar3.png','/assets/avatar4.png'];
+  let finalAvatar = options.avatar || null;
+  if(!finalAvatar){
+    // Si es un NPC (no se marcó explicitamente isPlayer), tomar uno al azar
+    if(!options.isPlayer){ finalAvatar = presetAvatars[Math.floor(Math.random()*presetAvatars.length)]; }
+  }
   return {
     id,
     code,
@@ -2826,7 +2851,7 @@ function makeAgent(state, options = {}) {
     houseIdx: null,
     likes,
   // avatar seleccionado (del grid, preview o subida por el usuario)
-  avatar: options.avatar || null,
+  avatar: finalAvatar,
     target: null,
     targetRole: 'idle',
     cooldownSocial: 0,

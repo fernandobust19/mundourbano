@@ -23,7 +23,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/login', express.static(path.join(__dirname, 'login')));
 // Servir assets descargados
 app.use('/game-assets', express.static(path.join(__dirname, 'game-assets')));
-app.use(express.json());
+// Aumentar límite del body JSON para permitir data URLs de avatar
+app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
 // Sesión simple via cookie firmada manualmente (sin exponer datos)
@@ -169,6 +170,9 @@ function ensureBots(n = 3) {
     const id = 'B' + (i + 1);
     const gender = Math.random() > 0.5 ? 'M' : 'F';
     const speed = 120 + Math.random()*120; // 120-240
+    // Avatares base alternados
+    const preset = ['/assets/avatar1.png','/assets/avatar2.png','/assets/avatar3.png','/assets/avatar4.png'];
+    const avatar = preset[Math.floor(Math.random()*preset.length)];
     state.players[id] = {
       id,
       socketId: null,
@@ -177,7 +181,7 @@ function ensureBots(n = 3) {
       y: Math.random() * 500 + 50,
       money: 400,
       gender,
-      avatar: null,
+      avatar,
       isBot: true,
       vx: 0,
       vy: 0,
@@ -263,8 +267,11 @@ function tickIdlePlayers(bounds = { w: 2200, h: 1400 }) {
 // Tick de movimiento automático para todos los jugadores
 setInterval(() => {
   ensureBots(5); // Aseguramos que haya 5 bots
-  tickBots({ w: 2200, h: 1400 });
-  tickIdlePlayers({ w: 2200, h: 1400 });
+  // Usar límites amplios: si el mundo crece, se pueden mapear al menos 1.2x del tamaño base
+  const w =  Math.max(2200, (globalThis.WORLD?.w)||2200);
+  const h =  Math.max(1400, (globalThis.WORLD?.h)||1400);
+  tickBots({ w, h });
+  tickIdlePlayers({ w, h });
 }, 120);
 
 io.on('connection', (socket) => {
