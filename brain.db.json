@@ -5,7 +5,7 @@
       "username": "fernando",
       "passHash": "$2a$10$R1pPknSTBnFH4R8baD/0iu8EIaT03yUD1.TnhpLLDnJFUWTIBFnCO",
       "createdAt": 1757089576111,
-      "lastLoginAt": 1757095438727
+      "lastLoginAt": 1757097254582
     },
     {
       "id": "843da596-5382-4ff7-9f20-cd14bf42fc15",
@@ -591,6 +591,276 @@
     },
     {
       "ts": 1757095444638,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757096668956,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757096672582,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096673254,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096673551,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096674440,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096674718,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096675144,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096675480,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096676425,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096676840,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096677943,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757096745604,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757096768973,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757096778494,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757097088433,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757097090877,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757097091550,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757097092077,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757097094189,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757097105268,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757097171358,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757097207077,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "name",
+          "avatar",
+          "likes",
+          "gender",
+          "age"
+        ]
+      }
+    },
+    {
+      "ts": 1757097254583,
+      "type": "login",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757097278197,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757097279003,
+      "type": "progress_update",
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "details": {
+        "keys": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "ts": 1757097280796,
       "type": "progress_update",
       "userId": "03252554-fb0a-433a-a24b-db848040bf91",
       "details": {

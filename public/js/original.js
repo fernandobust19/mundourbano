@@ -74,6 +74,8 @@
         // También guardar en el progreso actual para que el agente use este avatar al iniciar
         window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
         window.saveProgress && window.saveProgress({ avatar: src });
+  // Si el agente ya existe en el mundo, actualiza en vivo
+  if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ me.avatar = src; } }
       }catch(e){}
     });
     // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
@@ -115,6 +117,7 @@
           try{
             window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
             window.saveProgress && window.saveProgress({ avatar: src });
+            if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ me.avatar = src; } }
           }catch(_){}
         }catch(_){}
       };
@@ -141,6 +144,7 @@
         try{
           window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
           window.saveProgress && window.saveProgress({ avatar: src });
+          if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ me.avatar = src; } }
         }catch(_){ }
         toast('Se restauró el avatar por defecto.');
       }catch(e){}
@@ -2346,7 +2350,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     window.__progress = Object.assign({}, window.__progress||{}, patch);
     window.saveProgress && window.saveProgress(patch);
   }catch(e){}
-  try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(startMoney) }, ()=>{
+  try{ const _selectedAvatarAtStart = chosenAvatar; window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(startMoney) }, ()=>{
       // Tras crear jugador en el servidor, si hay progreso, restaurar ítems colocados
       try{
     const prog = (window.__progress||{});
@@ -2360,7 +2364,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           // Aplicar perfil guardado al agente si aún no está
           if(prog && prog.name){ user.name = prog.name; }
           if(prog && Array.isArray(prog.likes) && !user.likes?.length){ user.likes = prog.likes.slice(); }
-          if(prog && prog.avatar){ user.avatar = prog.avatar; }
+          // Solo sobreescribir avatar si no hubo uno seleccionado distinto al default al iniciar
+          try{
+            if(prog && prog.avatar){
+              const defA = '/assets/avatar1.png';
+              if(!user.avatar || user.avatar === defA || user.avatar === prog.avatar){ user.avatar = prog.avatar; }
+              // Si existe un avatar seleccionado en localStorage distinto, priorizarlo
+              try{ const sel = localStorage.getItem('selectedAvatar'); if(sel && sel !== prog.avatar){ user.avatar = sel; } }catch(_){ }
+            }
+            // Propagar imagen final al panel UI
+            const uiA = document.getElementById('uiAvatar'); if(uiA && user.avatar) uiA.src = user.avatar;
+          }catch(_){ }
           try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
         }catch(e){}
       }catch(e){}
