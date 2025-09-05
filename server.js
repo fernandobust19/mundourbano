@@ -2,6 +2,7 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const brain = require('./brain');
@@ -56,11 +57,13 @@ app.post('/api/login', (req, res) => {
     const out = brain.verifyLogin(username, password);
     if(!out.ok) return res.status(401).json(out);
     setSession(res, out.user.id);
-    return res.json({ ok:true, user: out.user, progress: brain.getProgress(out.user.id) });
+  // Restaurar saldo desde ledger (si existe snapshot)
+  try{ brain.restoreMoneyFromLedger(out.user.id); }catch(e){}
+  return res.json({ ok:true, user: out.user, progress: brain.getProgress(out.user.id) });
   }catch(e){ return res.status(500).json({ ok:false, msg:'Error' }); }
 });
 
-app.post('/api/logout', (req, res) => { try{ clearSession(res); return res.json({ ok:true }); }catch(e){ return res.status(500).json({ ok:false }); } });
+app.post('/api/logout', (req, res) => { try{ const uid = getSessionUserId(req); if(uid){ try{ brain.saveMoneySnapshot(uid, 'logout'); }catch(e){} } clearSession(res); return res.json({ ok:true }); }catch(e){ return res.status(500).json({ ok:false }); } });
 
 app.get('/api/me', (req, res) => {
   const uid = getSessionUserId(req);
@@ -299,7 +302,7 @@ io.on('connection', (socket) => {
     if ('y' in data) p.y = data.y;
     if ('money' in data) {
       p.money = data.money;
-      if(socket.userId){ try{ brain.setMoney(socket.userId, p.money, p.bank); }catch(e){} }
+  if(socket.userId){ try{ brain.setMoney(socket.userId, p.money, p.bank); brain.recordMoneyChange(socket.userId, brain.getUserById(socket.userId)?.username || null, 0, p.money, p.bank, 'tick'); }catch(e){} }
     }
   if ('bank' in data) p.bank = data.bank;
     if ('vehicle' in data) { p.vehicle = data.vehicle; if(socket.userId){ try{ brain.setVehicle(socket.userId, p.vehicle); }catch(e){} } }

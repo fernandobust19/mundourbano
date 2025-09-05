@@ -79,6 +79,10 @@
 			if(userName) userName.textContent = out.user.username;
 			// Inicializar saldo/vehículo desde progreso
 			window.__onAuthProgress && window.__onAuthProgress(window.__progress);
+			// Mostrar formulario de creación de personaje tras iniciar sesión
+			try { const fb = document.getElementById('formBar'); if(fb) fb.style.display = 'block'; }catch(e){}
+			// Asegurar que la UI del mundo permanezca oculta hasta crear la persona
+			try { const ui = document.getElementById('uiDock'); if(ui) ui.style.display = 'none'; }catch(e){}
 		} catch(e){}
 		showAuth(false);
 	}
@@ -87,7 +91,7 @@
 		ensureAuthModal();
 		document.getElementById('btnAuthRegister').addEventListener('click', handleRegister);
 		document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
-		// Botón SALIR
+		// Botón SALIR (el servidor hace snapshot de dinero en /api/logout)
 		const btnLogout = document.getElementById('btnLogout');
 		if(btnLogout){ btnLogout.addEventListener('click', async ()=>{ try{ await call('POST','/api/logout'); location.reload(); }catch(e){ location.reload(); } }); }
 		// Intentar sesión existente

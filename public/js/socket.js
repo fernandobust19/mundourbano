@@ -1,7 +1,8 @@
 // socket.js - cliente Socket.IO mínimo
 (function(){
 	'use strict';
-	const sock = io({ transports: ['websocket', 'polling'] });
+	// Prefer polling first to avoid websocket handshake failures, then upgrade
+	const sock = io({ transports: ['polling', 'websocket'] });
 	window.sock = sock;
 
 	// Exponer API sencilla para main.js
@@ -42,6 +43,8 @@
 			// exponer gobierno para helpers y HUD
 			window.government = payload?.government || window.government;
 			if (typeof window.updateGovDesc === 'function') window.updateGovDesc();
+			// actualizar contador de negocios propios si existe helper
+			try{ if(typeof window.updateOwnedShopsUI === 'function') window.updateOwnedShopsUI(); }catch(e){}
 			// podrías dibujar jugadores/tienda/casas aquí
 		try{ window.__dbgUpdate?.({ connected:sock.connected, players:Array.isArray(payload?.players)?payload.players.length:0, lastState:new Date().toLocaleTimeString() }); }catch(e){}
 		} catch (e) {}

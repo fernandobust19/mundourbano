@@ -138,6 +138,20 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const btnGovClose = $("#btnGovClose");
   if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
   let placingGov = null, placingHouse = null, placingShop = null;
+  const ownedShopsEl = document.getElementById('ownedShops');
+  function updateOwnedShopsUI(){
+    try{
+      if(!ownedShopsEl) return;
+      const myId = USER_ID;
+      let count = 0;
+      if(window.gameState && Array.isArray(window.gameState.shops)){
+        count = window.gameState.shops.filter(s => s && s.ownerId === myId).length;
+      } else {
+        count = (shops||[]).filter(s => s && s.ownerId === myId).length;
+      }
+      ownedShopsEl.textContent = `Negocios: ${count}`;
+    }catch(e){}
+  }
 
   const isMobile = ()=> innerWidth<=768;
   let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
@@ -1956,7 +1970,12 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
     const instCount = government.placed.length;
-    stats.textContent = `Pob: ${agents.length} | $ total: ${total$} | 🏛️ Fondo: ${Math.floor(government.funds)} | 🏪 ${shops.length} | Instituciones: ${instCount}/25`;
+    try{
+      const visibleShops = (window.gameState && Array.isArray(window.gameState.shops)) ? window.gameState.shops.length : shops.length;
+      stats.textContent = `Pob: ${agents.length} | $ total: ${total$} | 🏛️ Fondo: ${Math.floor(government.funds)} | 🏪 ${visibleShops} | Instituciones: ${instCount}/25`;
+    }catch(e){
+      stats.textContent = `Pob: ${agents.length} | $ total: ${total$} | 🏛️ Fondo: ${Math.floor(government.funds)} | 🏪 ${shops.length} | Instituciones: ${instCount}/25`;
+    }
     drawMiniMap();
     // Enviar mi posición al servidor cada ~120ms
     try{
@@ -2132,7 +2151,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money) }); }catch(e){} toast('Depósito realizado.'); };
 
   function setVisibleWorldUI(on){
-    $("#formBar").style.display = on ? 'none' : 'block';
+  // No forzar mostrar formulario aquí; el flujo de login controla su visibilidad
+  // $("#formBar").style.display = on ? 'none' : 'block';
     canvas.style.display = on ? 'block':'none';
     uiDock.style.display = on ? 'flex':'none';
     topBar.style.display = on ? 'flex':'none';
@@ -2143,7 +2163,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }
 
   function startWorldWithUser({name,gender,age,likes,usd}){
-    $("#formBar").style.display='none'; 
+  // Al crear persona, ocultar el formulario y mostrar la UI del mundo
+  try{ $("#formBar").style.display='none'; }catch(e){}
     setVisibleWorldUI(true); 
     STARTED=true; 
     setWorldSize(); 
@@ -2152,9 +2173,13 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Mantener las panaderías tal como vienen (no eliminar al iniciar)
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
-    const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
-    let startMoney = 400 + addCredits;
-    const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
+  const addCredits = Math.max(0, parseInt(usd||'0',10))*100;
+  // Si hay progreso guardado (login), usar ese saldo en vez de reiniciar a 400
+  const saved = (window.__progress || {});
+  let startMoney = (typeof saved.money === 'number') ? Math.floor(saved.money) : (400 + addCredits);
+  const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
+  // Reflejar también banco (si se usa en UI) como propiedad del agente para cálculos locales
+  if(typeof saved.bank === 'number') try{ user.bank = Math.max(0, Math.floor(saved.bank)); }catch(e){}
     try{
       // Prefer avatar explicitly selected by the user (persisted in localStorage or present in UI)
       let selected = null;
@@ -2171,10 +2196,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
     }catch(e){}
     agents.push(user); USER_ID=user.id;
-    try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(user.money||0) }, ()=>{
+  try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(startMoney) }, ()=>{
       // Tras crear jugador en el servidor, si hay progreso, restaurar ítems colocados
       try{
-        const prog = (window.__progress||{});
+    const prog = (window.__progress||{});
         if(prog && (Array.isArray(prog.shops) || Array.isArray(prog.houses))){
           window.sock?.emit('restoreItems', { shops: prog.shops||[], houses: prog.houses||[] }, ()=>{});
         }
@@ -2186,6 +2211,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     agents.forEach(a => { if (assignRental(a)) { const home = houses[a.houseIdx]; if (home) { a.target = centerOf(home); a.targetRole = 'home'; } } });
     const b0=cityBlocks[0]; if(b0){ cam.x = Math.max(0, b0.x - 40); cam.y = Math.max(0, b0.y - 40); clampCam(); }
     updateGovDesc();
+  try{ window.updateOwnedShopsUI = updateOwnedShopsUI; updateOwnedShopsUI(); }catch(e){}
     try{
       const uiAvatar = document.getElementById('uiAvatar');
       if(uiAvatar && user.avatar) uiAvatar.src = user.avatar;
@@ -2276,7 +2302,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       // enviar al servidor si corresponde
       if(hasNet()){
         window.sock?.emit('placeShop', newShop, (res) => {
-          if(res?.ok){ u.money -= (placingShop.price || 0); shops.push(newShop); placingShop = null; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} toast('Negocio colocado.'); }
+          if(res?.ok){ u.money -= (placingShop.price || 0); shops.push(newShop); placingShop = null; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} updateOwnedShopsUI(); toast('Negocio colocado.'); }
           else { toast(res?.msg || 'Error al colocar negocio'); placingShop = null; }
         });
       }else{
@@ -2284,6 +2310,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   shops.push(newShop);
   try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){}
         placingShop = null;
+        updateOwnedShopsUI();
         toast('Negocio colocado (local).');
       }
       return;
@@ -2309,14 +2336,14 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         console.log("Intentando colocar negocio vía red...");
         window.sock?.emit('placeShop', newShop, (res)=>{
           console.log("Respuesta del servidor:", res);
-          if(res?.ok){ u.money -= placingShop.price; newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop); placingShop=null; toast('Negocio colocado 🏪'); }
+          if(res?.ok){ u.money -= placingShop.price; newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop); placingShop=null; updateOwnedShopsUI(); toast('Negocio colocado 🏪'); }
           else { toast(res?.msg||'Error al colocar negocio'); placingShop=null; }
         });
         return;
       }
   u.money -= placingShop.price;
       newShop.id='S'+(shops.length+1); newShop.cashbox=0; shops.push(newShop);
-  placingShop=null; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} toast('Negocio colocado 🏪'); return;
+  placingShop=null; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), shops: shops.filter(s=>s.ownerId===u.id) }); }catch(e){} updateOwnedShopsUI(); toast('Negocio colocado 🏪'); return;
     }
     if(placingGov){
       const rectX = { x: pt.x - placingGov.w/2, y: pt.y - placingGov.h/2, w: placingGov.w, h: placingGov.h, label: placingGov.label, icon: placingGov.icon, fill: placingGov.fill, stroke: placingGov.stroke, k: placingGov.k };

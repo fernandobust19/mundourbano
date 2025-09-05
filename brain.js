@@ -6,6 +6,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 
 const DB_PATH = path.join(__dirname, 'brain.db.json');
+const LEDGER_PATH = path.join(__dirname, 'saldos.ledger.json');
 
 let db = {
 	users: [], // { id, username, passHash, createdAt, lastLoginAt }
@@ -13,10 +14,19 @@ let db = {
 	activityLog: [] // { ts, type, userId, details }
 };
 
+// Ledger en un solo archivo: { users: { userId: { username, lastMoney, lastBank, updatedAt } }, movements: [ { ts, userId, username, delta, money, bank, reason } ] }
+let ledger = { users: {}, movements: [] };
+
 function saveAtomic(dataStr) {
 	const tmp = DB_PATH + '.tmp';
 	fs.writeFileSync(tmp, dataStr);
 	fs.renameSync(tmp, DB_PATH);
+}
+
+function saveLedgerAtomic(dataStr){
+	const tmp = LEDGER_PATH + '.tmp';
+	fs.writeFileSync(tmp, dataStr);
+	fs.renameSync(tmp, LEDGER_PATH);
 }
 
 function load() {
@@ -31,6 +41,17 @@ function load() {
 	} catch (e) {
 		console.warn('brain load error, starting fresh', e);
 	}
+
+	// Cargar ledger
+	try{
+		if(fs.existsSync(LEDGER_PATH)){
+			const lr = fs.readFileSync(LEDGER_PATH, 'utf8');
+			const parsed = JSON.parse(lr);
+			if(parsed && typeof parsed === 'object') ledger = Object.assign(ledger, parsed);
+		} else {
+			persistLedger();
+		}
+	}catch(e){ console.warn('ledger load error', e); }
 }
 
 let _saveTimer = null;
@@ -43,9 +64,26 @@ function persist() {
 	}
 }
 
+function persistLedger(){
+	try{
+		// Limitar tamaño del array de movimientos
+		if(Array.isArray(ledger.movements) && ledger.movements.length > 20000){
+			ledger.movements.splice(0, ledger.movements.length - 20000);
+		}
+		const str = JSON.stringify(ledger, null, 2);
+		saveLedgerAtomic(str);
+	}catch(e){ console.warn('ledger persist error', e); }
+}
+
 function schedulePersist() {
 	if (_saveTimer) clearTimeout(_saveTimer);
 	_saveTimer = setTimeout(() => { _saveTimer = null; persist(); }, 250);
+}
+
+let _ledgerTimer = null;
+function scheduleLedgerPersist(){
+	if(_ledgerTimer) clearTimeout(_ledgerTimer);
+	_ledgerTimer = setTimeout(()=>{ _ledgerTimer = null; persistLedger(); }, 200);
 }
 
 function uid() {
@@ -139,15 +177,60 @@ function addHouse(userId, houseObj) {
 
 function setMoney(userId, money, bank = undefined) {
 	const p = ensureProgress(userId);
+	const prevMoney = p.money || 0;
+	const prevBank = p.bank || 0;
 	if (typeof money === 'number') p.money = Math.max(0, Math.floor(money));
 	if (typeof bank === 'number') p.bank = Math.max(0, Math.floor(bank));
 	schedulePersist();
+	try{
+		const user = getUserById(userId);
+		recordMoneyChange(userId, user?.username || null, (p.money||0) - prevMoney, p.money||0, p.bank||0, 'update');
+	}catch(e){}
 }
 
 function setVehicle(userId, vehicle) {
 	const p = ensureProgress(userId);
 	p.vehicle = vehicle || null;
 	schedulePersist();
+}
+
+// ===== Ledger helpers =====
+function recordMoneyChange(userId, username, delta, newMoney, newBank, reason){
+	try{
+		if(!userId) return;
+		ledger.movements.push({ ts: Date.now(), userId, username: username || null, delta: Math.floor(delta||0), money: Math.floor(newMoney||0), bank: Math.floor(newBank||0), reason: reason || 'update' });
+		// actualizar snapshot por usuario
+		ledger.users[userId] = { username: username || (ledger.users[userId]?.username||null), lastMoney: Math.floor(newMoney||0), lastBank: Math.floor(newBank||0), updatedAt: Date.now() };
+		scheduleLedgerPersist();
+	}catch(e){ console.warn('recordMoneyChange error', e); }
+}
+
+function saveMoneySnapshot(userId, reason='logout'){
+	try{
+		if(!userId) return;
+		const user = getUserById(userId);
+		const p = ensureProgress(userId);
+		recordMoneyChange(userId, user?.username||null, 0, p.money||0, p.bank||0, reason);
+	}catch(e){ console.warn('saveMoneySnapshot error', e); }
+}
+
+function latestMoney(userId){
+	try{ return ledger.users[userId]?.lastMoney ?? null; }catch(e){ return null; }
+}
+
+function restoreMoneyFromLedger(userId){
+	try{
+		const snap = ledger.users[userId];
+		if(!snap) return null;
+		const p = ensureProgress(userId);
+		if(snap.lastMoney != null){ p.money = Math.max(0, Math.floor(snap.lastMoney)); }
+		if(snap.lastBank != null){ p.bank = Math.max(0, Math.floor(snap.lastBank)); }
+		schedulePersist();
+		// snapshot en ledger para dejar constancia de la restauración
+		const user = getUserById(userId);
+		recordMoneyChange(userId, user?.username||null, 0, p.money||0, p.bank||0, 'login-restore');
+		return { money: p.money, bank: p.bank };
+	}catch(e){ console.warn('restoreMoneyFromLedger error', e); return null; }
 }
 
 // Cargar al iniciar
@@ -165,6 +248,11 @@ module.exports = {
 	addHouse,
 	setMoney,
 	setVehicle,
-	log
+	log,
+	// ledger API
+	recordMoneyChange,
+	saveMoneySnapshot,
+	latestMoney,
+	restoreMoneyFromLedger
 };
 
