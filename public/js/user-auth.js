@@ -90,6 +90,28 @@
 			try { const fb = document.getElementById('formBar'); if(fb) fb.style.display = 'block'; }catch(e){}
 			// Asegurar que la UI del mundo permanezca oculta hasta crear la persona
 			try { const ui = document.getElementById('uiDock'); if(ui) ui.style.display = 'none'; }catch(e){}
+			// Prefill del formulario con perfil guardado (nombre, avatar, gustos, género, edad)
+			try{
+				const prog = window.__progress || {};
+				const fName = document.getElementById('fName');
+				if(fName && prog.name){ fName.value = prog.name; }
+				const fGender = document.getElementById('fGender');
+				if(fGender && prog.gender){ fGender.value = prog.gender; }
+				const fAge = document.getElementById('fAge');
+				if(fAge && typeof prog.age === 'number'){ fAge.value = String(prog.age); }
+				const likesWrap = document.getElementById('likesWrap');
+				if(likesWrap && Array.isArray(prog.likes) && prog.likes.length){
+					const set = new Set(prog.likes);
+					likesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb=>{ cb.checked = set.has(cb.value); });
+					try{ const likesCount = document.getElementById('likesCount'); if(likesCount) likesCount.textContent = String(Math.min(5, prog.likes.length)); }catch(e){}
+				}
+				if(prog.avatar){
+					try{ localStorage.setItem('selectedAvatar', prog.avatar); }catch(e){}
+					try{ const uiAvatar = document.getElementById('uiAvatar'); if(uiAvatar) uiAvatar.src = prog.avatar; }catch(e){}
+				}
+			}catch(e){}
+			// Refrescar concesionario: marcar vehículos ya comprados
+			try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
 		} catch(e){}
 		showAuth(false);
 	}

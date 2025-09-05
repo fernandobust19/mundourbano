@@ -10,7 +10,8 @@ const LEDGER_PATH = path.join(__dirname, 'saldos.ledger.json');
 
 let db = {
 	users: [], // { id, username, passHash, createdAt, lastLoginAt }
-	progress: {}, // userId -> { money, bank, vehicle, vehicles:[], shops:[], houses:[] }
+	// userId -> { money, bank, vehicle, vehicles:[], shops:[], houses:[], name, avatar, likes:[], gender, age }
+	progress: {},
 	activityLog: [] // { ts, type, userId, details }
 };
 
@@ -106,8 +107,18 @@ function getUserById(userId) {
 }
 
 function ensureProgress(userId) {
-	if (!db.progress[userId]) db.progress[userId] = { money: 400, bank: 0, vehicle: null, vehicles: [], shops: [], houses: [] };
-	return db.progress[userId];
+	if (!db.progress[userId]) db.progress[userId] = { money: 400, bank: 0, vehicle: null, vehicles: [], shops: [], houses: [], name: null, avatar: null, likes: [], gender: null, age: null };
+	// backfill para repos anteriores
+	const p = db.progress[userId];
+	if(!('vehicles' in p)) p.vehicles = [];
+	if(!('shops' in p)) p.shops = [];
+	if(!('houses' in p)) p.houses = [];
+	if(!('name' in p)) p.name = null;
+	if(!('avatar' in p)) p.avatar = null;
+	if(!Array.isArray(p.likes)) p.likes = [];
+	if(!('gender' in p)) p.gender = null;
+	if(!('age' in p)) p.age = null;
+	return p;
 }
 
 function registerUser(username, password) {
@@ -146,10 +157,10 @@ function updateProgress(userId, patch) {
 	const p = ensureProgress(userId);
 	if (patch == null || typeof patch !== 'object') return { ok: false };
 	// Solo campos permitidos
-	const allowed = ['money', 'bank', 'vehicle', 'vehicles', 'shops', 'houses'];
+	const allowed = ['money', 'bank', 'vehicle', 'vehicles', 'shops', 'houses', 'name', 'avatar', 'likes', 'gender', 'age'];
 	for (const k of allowed) {
 		if (k in patch) {
-			if (k === 'shops' || k === 'houses' || k === 'vehicles') {
+			if (k === 'shops' || k === 'houses' || k === 'vehicles' || k === 'likes') {
 				if (Array.isArray(patch[k])) p[k] = patch[k];
 			} else {
 				p[k] = patch[k];

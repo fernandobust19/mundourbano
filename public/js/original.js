@@ -2203,6 +2203,13 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Si hay progreso guardado (login), usar ese saldo en vez de reiniciar a 400
   const saved = (window.__progress || {});
   let startMoney = (typeof saved.money === 'number') ? Math.floor(saved.money) : (400 + addCredits);
+  // Si hay perfil guardado, preferirlo para no re-seleccionar
+  try{
+    if(saved && saved.name){ name = saved.name; }
+    if(saved && Array.isArray(saved.likes) && saved.likes.length){ likes = saved.likes.slice(); }
+    if(saved && saved.gender){ gender = saved.gender; }
+    if(saved && typeof saved.age === 'number'){ age = saved.age; }
+  }catch(e){}
   const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney});
   // Reflejar también banco (si se usa en UI) como propiedad del agente para cálculos locales
   if(typeof saved.bank === 'number') try{ user.bank = Math.max(0, Math.floor(saved.bank)); }catch(e){}
@@ -2211,7 +2218,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       let selected = null;
       try{ selected = localStorage.getItem('selectedAvatar') || null; }catch(e){}
       try{ if(!selected){ const _ui = document.getElementById('uiAvatar'); if(_ui && _ui.src) selected = _ui.src; } }catch(e){}
-      if(selected) user.avatar = selected;
+  if(selected) user.avatar = selected;
   else user.avatar = (gender === 'M') ? MALE_IMG : FEMALE_IMG;
       // If gender is undefined placeholder 'U', try to infer from avatar filename (basic heuristic)
       if((!gender || gender === 'U') && user.avatar){
@@ -2223,6 +2230,12 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }catch(e){}
   agents.push(user); USER_ID=user.id;
   try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){}
+  // Guardar inmediatamente el perfil elegido para futuras sesiones
+  try{
+    const patch = { name: user.name, avatar: user.avatar, likes: (user.likes||[]).slice(0,5), gender: user.gender, age: age };
+    window.__progress = Object.assign({}, window.__progress||{}, patch);
+    window.saveProgress && window.saveProgress(patch);
+  }catch(e){}
   try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(startMoney) }, ()=>{
       // Tras crear jugador en el servidor, si hay progreso, restaurar ítems colocados
       try{
@@ -2234,6 +2247,11 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         try{
           if(prog && prog.vehicle){ user.vehicle = prog.vehicle; window.sockApi?.update({ vehicle: prog.vehicle }); }
           if(prog && Array.isArray(prog.vehicles)){ window.__progress.vehicles = prog.vehicles.slice(); }
+          // Aplicar perfil guardado al agente si aún no está
+          if(prog && prog.name){ user.name = prog.name; }
+          if(prog && Array.isArray(prog.likes) && !user.likes?.length){ user.likes = prog.likes.slice(); }
+          if(prog && prog.avatar){ user.avatar = prog.avatar; }
+          try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
         }catch(e){}
       }catch(e){}
     }); }catch(e){}
@@ -2244,6 +2262,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     const b0=cityBlocks[0]; if(b0){ cam.x = Math.max(0, b0.x - 40); cam.y = Math.max(0, b0.y - 40); clampCam(); }
     updateGovDesc();
   try{ window.updateOwnedShopsUI = updateOwnedShopsUI; updateOwnedShopsUI(); }catch(e){}
+  try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
     try{
       const uiAvatar = document.getElementById('uiAvatar');
       if(uiAvatar && user.avatar) uiAvatar.src = user.avatar;
@@ -2565,6 +2584,41 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }, CFG.SALARY_PAY_EVERY * 1000);
 
   const carTypeSelect = $('#carTypeSelect'), btnBuyCar = $('#btnBuyCar'), carMsg = $('#carMsg');
+  // Resaltar vehículos ya comprados en el menú del concesionario
+  function updateCarMenuHighlight(){
+    try{
+      const sel = carTypeSelect; if(!sel) return;
+      // Propia lista guardada en progreso
+      const owned = new Set((window.__progress && Array.isArray(window.__progress.vehicles)) ? window.__progress.vehicles : []);
+      // Vehículo actual del usuario (si ya hay agente) o del progreso
+      let current = null;
+      try{
+        if(typeof USER_ID !== 'undefined' && USER_ID){
+          const u = agents.find(a => a.id === USER_ID);
+          if(u && u.vehicle) current = u.vehicle;
+        }
+        if(!current && window.__progress && window.__progress.vehicle){ current = window.__progress.vehicle; }
+      }catch(e){}
+      // Actualizar cada opción (excepto placeholder)
+      for(const opt of sel.options){
+        if(!opt.value) continue;
+        if(!opt.dataset.baseLabel){ opt.dataset.baseLabel = opt.textContent; }
+        const base = opt.dataset.baseLabel;
+        const isOwned = owned.has(opt.value);
+        const isCurrent = current && (opt.value === current);
+        // Texto
+        opt.textContent = isOwned ? `${base} ✓ Comprado${isCurrent? ' (actual)':''}` : base;
+        // Estilos (nota: algunos navegadores limitan estilos en <option>)
+        opt.style.fontWeight = isOwned ? '700' : '400';
+        opt.style.backgroundColor = isOwned ? 'rgba(34,197,94,0.22)' : '';
+        opt.style.color = isOwned ? '' : '';
+      }
+      if(current){ sel.value = current; }
+    }catch(e){}
+  }
+  // Exponer para que otras partes (auth) refresquen el estado visual
+  try{ window.updateCarMenuHighlight = updateCarMenuHighlight; }catch(e){}
+
   btnBuyCar.addEventListener('click', () => {
       if(!USER_ID) { toast('Debes iniciar la simulación.'); return; }
       const u = agents.find(a => a.id === USER_ID);
@@ -2586,6 +2640,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         carMsg.textContent = `¡${vehicle.name} comprado!`;
         carMsg.style.color = 'var(--ok)';
         toast(`¡Vehículo comprado! Tu velocidad aumentó.`);
+  // Refrescar marcas visuales de "Comprado"
+  try{ updateCarMenuHighlight(); }catch(e){}
       }
       else { carMsg.textContent = `Créditos insuficientes. Necesitas ${vehicle.cost}.`; carMsg.style.color = 'var(--bad)'; }
   });
