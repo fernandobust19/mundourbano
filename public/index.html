@@ -75,11 +75,20 @@
   #govDock{left:10px;}
   /* Posicionar el botón de ocultar UI en la parte inferior del panel */
   #uiHideBtn{position:absolute;right:8px;bottom:8px;top:auto;width:34px;height:34px;border-radius:999px;border:1px solid rgba(0,0,0,0.08);background:var(--ui);color:var(--text);display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.06);font-size:18px;line-height:0}
-  #uiShowBtn{position:fixed;left:12px;top:10px;z-index:25;width:38px;height:38px;border-radius:999px;border:1px solid rgba(0,0,0,0.08);background:var(--ui);color:var(--text);display:none;place-items:center;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.04);}
+  #uiShowBtn{position:fixed;left:12px;top:10px;z-index:25;width:38px;height:38px;border-radius:999px;border:1px solid rgba(0,0,0,0.08);background:var(--ui);color:var(--text);cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.04);text-align:center;padding:0;display:none;display:grid;place-items:center}
+  /* Triángulo centrado ópticamente dentro del círculo */
+  #uiShowBtn::before{
+    content:"";
+    width:0;height:0;
+    border-left:7px solid transparent;
+    border-right:7px solid transparent;
+    border-top:11px solid currentColor;
+    transform: translateX(5px);
+  }
 
 
   .actions{display:flex;gap:8px;flex-wrap:wrap}
-  pre{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;max-height:40vh;overflow:auto;margin:0}
+  pre{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:7px;max-height:40vh;overflow:auto;margin:0}
 
 
   #zoomFab{position:fixed;right:12px;bottom:12px;z-index:26;display:flex;flex-direction:column;gap:10px;pointer-events:auto}
@@ -116,14 +125,17 @@
     <div class="field col-3">
       <!-- Gender select removed: avatars are selectable only. Keep hidden field to avoid JS errors. -->
       <input type="hidden" id="fGender" value="U" />
-      <div style="display:flex;align-items:center;gap:8px;">
-  <img id="fGenderPreview" src="/assets/avatar1.png" alt="preview" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2b3553;background:#fff" />
-      </div>
       <div id="avatarGrid" style="margin-top:8px">
   <button type="button" class="avatar-option" data-src="/assets/avatar1.png"><img src="/assets/avatar1.png" alt="H1"/></button>
   <button type="button" class="avatar-option" data-src="/assets/avatar2.png"><img src="/assets/avatar2.png" alt="H2"/></button>
   <button type="button" class="avatar-option" data-src="/assets/avatar3.png"><img src="/assets/avatar3.png" alt="F1"/></button>
   <button type="button" class="avatar-option" data-src="/assets/avatar4.png"><img src="/assets/avatar4.png" alt="F2"/></button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="avatarFile" type="file" accept="image/*" style="display:none" />
+  <button id="btnUploadAvatar" type="button" class="btn">Subir foto</button>
+  <button id="btnRemoveAvatar" type="button" class="btn">Quitar foto</button>
+        <span class="hint">Puedes subir una foto para usarla como avatar. Se mostrará en el panel y en tu agente.</span>
       </div>
     </div>
   <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/></div>
@@ -191,7 +203,7 @@
 
 <canvas id="world"></canvas>
 
-<button id="uiShowBtn" title="Mostrar panel">▼</button>
+<button id="uiShowBtn" title="Mostrar panel" aria-label="Mostrar panel"></button>
 <div id="uiDock">
   <div class="card">
     <b>Mundo activo</b><br/><small>Trabajo 60s = +15 → 💰 banco</small>

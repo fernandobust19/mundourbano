@@ -54,6 +54,9 @@
   // Avatar grid clickable thumbnails
   const avatarGrid = document.getElementById('avatarGrid');
   const uiAvatarEl = document.getElementById('uiAvatar');
+  const avatarFile = document.getElementById('avatarFile');
+  const btnUploadAvatar = document.getElementById('btnUploadAvatar');
+  const btnRemoveAvatar = document.getElementById('btnRemoveAvatar');
   function clearAvatarSelection(){ if(!avatarGrid) return; avatarGrid.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected')); }
   if(avatarGrid){
     avatarGrid.addEventListener('click', (ev)=>{
@@ -61,8 +64,8 @@
       const src = btn.getAttribute('data-src');
       if(!src) return;
       clearAvatarSelection(); btn.classList.add('selected');
-      // set preview and UI avatar
-      try{ fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(e){}
+  // set preview and UI avatar
+  try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(e){}
       // set the select value too for form persistence (safe check if avatarSelect isn't declared)
       try{ if(typeof avatarSelect !== 'undefined' && avatarSelect) avatarSelect.value = src; }catch(e){}
       // persist selection so it survives reloads and is applied to UI avatar
@@ -74,21 +77,71 @@
       if(saved){
         // mark matching option selected
         const match = avatarGrid.querySelector(`.avatar-option[data-src="${saved}"]`);
-        if(match){ clearAvatarSelection(); match.classList.add('selected'); fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved; }
+  if(match){ clearAvatarSelection(); match.classList.add('selected'); if(fGenderPreview) fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved; }
         else {
           // fallback to applying saved src directly
-          fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved;
+          if(fGenderPreview) fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved;
         }
       } else {
         const first = avatarGrid.querySelector('.avatar-option');
-        if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
+  if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
       }
     }catch(e){
       // ignore localStorage errors
-      const first = avatarGrid.querySelector('.avatar-option'); if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
+  const first = avatarGrid.querySelector('.avatar-option'); if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
     }
   }
-  function updateGenderPreview(){ try{ if(!fGender || !fGender.value) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
+  // Soporte para subir foto como avatar (Data URL en cliente)
+  if(btnUploadAvatar && avatarFile){
+    btnUploadAvatar.addEventListener('click', ()=> avatarFile.click());
+    avatarFile.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+      if(!file.type.startsWith('image/')){ toast('El archivo debe ser una imagen.'); return; }
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const src = reader.result; // data URL
+          // actualizar preview e UI
+          try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){}
+          // persistir como selección actual
+          try{ localStorage.setItem('selectedAvatar', src); }catch(_){}
+          // guardar en progreso para futuras sesiones
+          try{
+            window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
+            window.saveProgress && window.saveProgress({ avatar: src });
+          }catch(_){}
+        }catch(_){}
+      };
+      reader.onerror = ()=>{ toast('No se pudo leer la imagen.'); };
+      reader.readAsDataURL(file);
+    }, { passive:true });
+  }
+  // Quitar foto y volver a avatar por defecto
+  if(btnRemoveAvatar){
+    btnRemoveAvatar.addEventListener('click', ()=>{
+      try{
+        // elegir avatar por defecto según género (si existe), sino usar el primero del grid
+        let src = null;
+        try{ src = (fGender && fGender.value === 'M') ? MALE_IMG : FEMALE_IMG; }catch(_){ src = MALE_IMG; }
+        try{
+          // si el grid tiene un seleccionado, úsalo como valor por defecto visual
+          const first = avatarGrid && avatarGrid.querySelector('.avatar-option');
+          if(first){ const s = first.getAttribute('data-src'); if(s) src = s; }
+        }catch(_){}
+  // actualizar UI
+  try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){}
+        // persistir
+        try{ localStorage.setItem('selectedAvatar', src); }catch(_){}
+        try{
+          window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
+          window.saveProgress && window.saveProgress({ avatar: src });
+        }catch(_){ }
+        toast('Se restauró el avatar por defecto.');
+      }catch(e){}
+    });
+  }
+  function updateGenderPreview(){ try{ if(!fGender || !fGender.value || !fGenderPreview) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
   if(fGender){ fGender.addEventListener('change', updateGenderPreview); updateGenderPreview(); }
   const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
   const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
@@ -132,6 +185,14 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const stats=$("#stats"), toggleLinesBtn=$("#toggleLines");
   const btnShowDoc=$("#btnShowDoc"), accDocBody=$("#docBody");
   const panelDepositAll=$("#panelDepositAll"), accBankBody=$("#bankBody");
+  // Cache de imágenes de avatar para no crear objetos por frame
+  const AVATAR_CACHE = new Map();
+  function getAvatarImage(src){
+    if(!src) return null;
+    let img = AVATAR_CACHE.get(src);
+    if(!img){ img = new Image(); img.src = src; AVATAR_CACHE.set(src, img); }
+    return img;
+  }
   // Helper para actualizar el panel del banco desde progreso o desde el agente actual
   function __fmtAmount(n){ try{ return Math.floor(n||0); }catch(e){ return 0; } }
   window.updateBankPanel = function(amount=null, code=null){
@@ -351,10 +412,10 @@ BG_IMG.src = '/assets/fondo1.jpg';
   const CFG = {
   LINES_ON:true, PARKS:8, SCHOOLS:8, FACTORIES:12, BANKS:8, MALLS:4, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:24,  // Más infraestructuras y casas iniciales
     // Radio base de los agentes (en unidades de mundo). Aumentado para que se vean más grandes.
-    R_ADULT:5.0, R_CHILD:4.0, R_ELDER:5.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+  R_ADULT:7.5, R_CHILD:6.0, R_ELDER:7.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
     // Tamaños mínimos en pantalla para que no desaparezcan con el zoom.
-    MIN_AGENT_PX: 6,
-    NAME_FONT_PX: 12,
+  MIN_AGENT_PX: 12,
+  NAME_FONT_PX: 13,
     YEARS_PER_SECOND:1/86400, ADULT_AGE:18, ELDER_AGE:65, DEATH_AGE:90,
     HOUSE_BUY_COST:3000,
     GOV_TAX_EVERY: 20*60,      // cada 20 min
@@ -1823,16 +1884,25 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
 
   const pt = toScreen(s.x, s.y);
-  ctx.beginPath();
   const baseR = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
   const r = Math.max(CFG.MIN_AGENT_PX, baseR);
-  ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
-      ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af';
-      ctx.fill();
+  // Fondo del círculo
+  ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI*2);
+  ctx.fillStyle = (p.gender==='M') ? '#93c5fd' : '#fda4af'; ctx.fill();
+  // Imagen de avatar (si existe)
+  try{
+    const img = getAvatarImage(p.avatar);
+    if(img && img.complete){
+      ctx.save();
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, r*0.95, 0, Math.PI*2); ctx.clip();
+      const d = r*1.8; ctx.drawImage(img, pt.x - d/2, pt.y - d/2, d, d);
+      ctx.restore();
+    }
+  }catch(e){}
   // Mostrar nombre siempre visible con tamaño fijo en pixeles, independiente del zoom
   ctx.font = `700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`;
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - (r + 10));
+  ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - (r + 12));
     }
   }
 
@@ -1982,9 +2052,19 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const p=toScreen(a.x,a.y);
   const baseR = (a.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
   const circleR = Math.max(CFG.MIN_AGENT_PX, baseR);
+  // Fondo del círculo
   ctx.beginPath(); ctx.arc(p.x,p.y, circleR, 0, Math.PI*2);
-      ctx.fillStyle = (a.gender==='M')?'#93c5fd':'#fda4af';
-      ctx.fill();
+  ctx.fillStyle = (a.gender==='M')?'#93c5fd':'#fda4af'; ctx.fill();
+  // Imagen de avatar (si existe)
+  try{
+    const img = getAvatarImage(a.avatar);
+    if(img && img.complete){
+      ctx.save();
+      ctx.beginPath(); ctx.arc(p.x, p.y, circleR*0.95, 0, Math.PI*2); ctx.clip();
+      const d = circleR*1.8; ctx.drawImage(img, p.x - d/2, p.y - d/2, d, d);
+      ctx.restore();
+    }
+  }catch(e){}
       if ( a.id === USER_ID) { ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2 * ZOOM; ctx.stroke(); }
       if (a.justMarried && (performance.now() - a.justMarried < 5000)) {
           ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
@@ -1994,7 +2074,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   ctx.font=`700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`;
   ctx.fillStyle='#fff'; ctx.textAlign='center';
   const ageYrs = (yearsSince(a.bornEpoch)|0);
-  ctx.fillText(`${a.name||a.code}·${ageYrs}`, p.x, p.y - (circleR + 10));
+  ctx.fillText(`${a.name||a.code}·${ageYrs}`, p.x, p.y - (circleR + 12));
     }
     const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
     const instCount = government.placed.length;
