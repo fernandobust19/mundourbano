@@ -111,6 +111,8 @@
     const nameOk = fName && fName.value.trim().length > 0;
     btnStart.disabled = !(nameOk && count === 5);
   }
+  // Exponer para que el flujo de login pueda refrescar el estado del botón Comenzar
+  try{ window.updateLikesUI = updateLikesUI; }catch(e){}
   function attachLimit(){getBoxes().forEach(cb=>{['click','change','touchend'].forEach(ev=>{cb.addEventListener(ev, ()=>{const checked=getChecked();if(checked.length>5){cb.checked=false;}updateLikesUI();},{passive:true});});});}
   attachLimit(); updateLikesUI();
   if(fName){

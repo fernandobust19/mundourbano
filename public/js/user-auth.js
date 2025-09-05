@@ -109,6 +109,8 @@
 					try{ localStorage.setItem('selectedAvatar', prog.avatar); }catch(e){}
 					try{ const uiAvatar = document.getElementById('uiAvatar'); if(uiAvatar) uiAvatar.src = prog.avatar; }catch(e){}
 				}
+				// Si ya hay nombre y 5 gustos, habilitar el botón Comenzar de inmediato
+				try{ window.updateLikesUI && window.updateLikesUI(); }catch(e){}
 			}catch(e){}
 			// Refrescar concesionario: marcar vehículos ya comprados
 			try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
