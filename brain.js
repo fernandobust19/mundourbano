@@ -228,6 +228,33 @@ function recordMoneyChange(userId, username, delta, newMoney, newBank, reason){
 	}catch(e){ console.warn('recordMoneyChange error', e); }
 }
 
+// Sumar créditos y registrar en el ledger (una sola entrada)
+function addMoney(userId, delta, reason='credit'){
+	try{
+		if(!userId) return { ok:false };
+		const p = ensureProgress(userId);
+		const add = Math.floor(delta||0);
+		if(add <= 0) return { ok:false };
+		const prev = Math.floor(p.money||0);
+		p.money = Math.max(0, prev + add);
+		schedulePersist();
+		const user = getUserById(userId);
+		recordMoneyChange(userId, user?.username||null, add, p.money||0, p.bank||0, reason||'credit');
+		return { ok:true, money: p.money };
+	}catch(e){ console.warn('addMoney error', e); return { ok:false }; }
+}
+
+// Idempotencia simple: evitar duplicar un pago ya aplicado buscando por razón exacta
+function hasLedgerReason(reason){
+	try{ return !!(ledger.movements || []).find(m => m && m.reason === reason); }catch(e){ return false; }
+}
+
+function addMoneyOnce(userId, delta, reasonKey){
+	const reason = String(reasonKey||'credit:once');
+	if(hasLedgerReason(reason)) return { ok:false, duplicated:true };
+	return addMoney(userId, delta, reason);
+}
+
 function saveMoneySnapshot(userId, reason='logout'){
 	try{
 		if(!userId) return;
@@ -287,6 +314,10 @@ module.exports = {
 	saveMoneySnapshot,
 	latestMoney,
 	restoreMoneyFromLedger,
-	changePassword
+	changePassword,
+	// credits helpers
+	addMoney,
+	addMoneyOnce,
+	hasLedgerReason
 };
 

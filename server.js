@@ -14,6 +14,11 @@ const io = require('socket.io')(server, {
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// Pago sencillo: secret compartido para webhooks y generación de intents
+const PAYMENT_SECRET = process.env.PAYMENT_SECRET || 'dev-pay-secret';
+const PAY_BASE_LINK = process.env.PAY_BASE_LINK || 'https://ppls.me/ptnd6qxvmV1Km0yys7Hg';
+// Intenciones de pago en memoria (token -> { userId, createdAt, creditedAt?, txId? })
+const pendingPayments = new Map();
 
 // Silenciar el error de favicon.ico en la consola del navegador
 app.get('/favicon.ico', (req, res) => res.status(204).send());
@@ -24,7 +29,7 @@ app.use('/login', express.static(path.join(__dirname, 'login')));
 // Servir assets descargados
 app.use('/game-assets', express.static(path.join(__dirname, 'game-assets')));
 // Aumentar límite del body JSON para permitir data URLs de avatar
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '12mb' }));
 app.use(cookieParser());
 
 // Sesión simple via cookie firmada manualmente (sin exponer datos)
@@ -90,6 +95,89 @@ app.post('/api/progress', (req, res) => {
   if(!uid) return res.status(401).json({ ok:false });
   const out = brain.updateProgress(uid, req.body || {});
   return res.json(out);
+});
+
+// ==== Pagos (demo) ====
+// 1) Crear intención para adjuntar un token al link del proveedor
+app.post('/api/pay/create-intent', (req, res) => {
+  try{
+    const uid = getSessionUserId(req);
+    if(!uid) return res.status(401).json({ ok:false, msg:'No autenticado' });
+    const token = crypto.randomBytes(16).toString('hex');
+    pendingPayments.set(token, { userId: uid, createdAt: Date.now() });
+    const url = PAY_BASE_LINK + (PAY_BASE_LINK.includes('?') ? '&' : '?') + 'ref=' + token;
+    return res.json({ ok:true, url, ref: token });
+  }catch(e){ return res.status(500).json({ ok:false }); }
+});
+
+// 2) Webhook del proveedor: debe enviar cabecera x-pay-secret o firma HMAC del cuerpo
+// Estructura esperada del body: { txId, amountUsd, currency:'USD', ref }
+app.post('/api/pay/webhook', (req, res) => {
+  try{
+    // Verificación básica con secreto compartido
+    const hdr = req.headers['x-pay-secret'] || req.headers['x-pay-signature'];
+    const provided = String(hdr || '');
+    // Permitir dos modos: coincidencia exacta del secreto o HMAC del body
+    let verified = false;
+    if(provided && provided.length < 80){ verified = crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(PAYMENT_SECRET)); }
+    if(!verified){
+      try{
+        const raw = JSON.stringify(req.body||{});
+        const mac = crypto.createHmac('sha256', PAYMENT_SECRET).update(raw).digest('hex');
+        verified = !!provided && crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(mac));
+      }catch(_){ }
+    }
+    if(!verified) return res.status(401).json({ ok:false });
+
+    const { txId, amountUsd, currency, ref } = req.body || {};
+    if(!txId || !ref) return res.status(400).json({ ok:false, msg:'faltan datos' });
+    if(String(currency||'USD').toUpperCase() !== 'USD' || Number(amountUsd) < 5){
+      return res.status(400).json({ ok:false, msg:'importe no válido' });
+    }
+    const intent = pendingPayments.get(String(ref));
+    if(!intent){ return res.status(404).json({ ok:false, msg:'ref desconocido' }); }
+    const userId = intent.userId;
+    // Idempotencia por txId
+    const reason = 'payment:' + txId;
+    const out = brain.addMoneyOnce(userId, 500, reason);
+    if(out && out.ok){ intent.creditedAt = Date.now(); intent.txId = txId; pendingPayments.set(String(ref), intent); }
+    return res.json({ ok:true, credited: !!(out && out.ok), duplicated: !!(out && out.duplicated) });
+  }catch(e){ return res.status(500).json({ ok:false }); }
+});
+
+// 3) Consulta de estado (permite al cliente verificar si ya se acreditó)
+app.get('/api/pay/status', (req, res) => {
+  try{
+    const uid = getSessionUserId(req);
+    if(!uid) return res.status(401).json({ ok:false });
+    const ref = String(req.query.ref||'');
+    const intent = pendingPayments.get(ref);
+    if(!intent || intent.userId !== uid) return res.status(404).json({ ok:false });
+    return res.json({ ok:true, credited: !!intent.creditedAt, txId: intent.txId||null });
+  }catch(e){ return res.status(500).json({ ok:false }); }
+});
+
+// 4) Subida de comprobante manual -> carpeta /pagos
+app.post('/api/pay/upload-proof', (req, res) => {
+  try{
+    const uid = getSessionUserId(req);
+    if(!uid) return res.status(401).json({ ok:false });
+    const { filename, mime, data } = req.body || {};
+    if(!data || typeof data !== 'string') return res.status(400).json({ ok:false, msg:'faltan datos' });
+    const safeName = String(filename||'comprobante').replace(/[^a-zA-Z0-9_.-]/g,'_');
+    const ext = (safeName.includes('.') ? safeName.split('.').pop() : 'bin');
+    const ts = new Date().toISOString().replace(/[:]/g,'-');
+    const outDir = path.join(__dirname, 'pagos');
+    if(!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    const outName = `${ts}-${uid}.${ext}`;
+    const outPath = path.join(outDir, outName);
+    const buf = Buffer.from(data, 'base64');
+    fs.writeFileSync(outPath, buf);
+    // Guardar pequeño .json con metadatos
+    const meta = { ts: Date.now(), userId: uid, filename: safeName, savedAs: outName, mime: mime||null };
+    fs.writeFileSync(path.join(outDir, `${ts}-${uid}.json`), JSON.stringify(meta, null, 2));
+    return res.json({ ok:true, file: `pagos/${outName}` });
+  }catch(e){ console.error('upload-proof error', e); return res.status(500).json({ ok:false }); }
 });
 
 // Proxy/cache sencillo de imágenes remotas (evita CORS/404 externos).

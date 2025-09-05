@@ -1,4 +1,3618 @@
 {
-  "users": {},
-  "movements": []
+  "users": {
+    "03252554-fb0a-433a-a24b-db848040bf91": {
+      "username": null,
+      "lastMoney": 400,
+      "lastBank": 0,
+      "updatedAt": 1757106684386
+    },
+    "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa": {
+      "username": "fernando1",
+      "lastMoney": 400,
+      "lastBank": 0,
+      "updatedAt": 1757107954926
+    }
+  },
+  "movements": [
+    {
+      "ts": 1757106679509,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106679509,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106679615,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106679615,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106679737,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106679737,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106679863,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106679863,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106679985,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106679986,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680113,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680113,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680246,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680246,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680379,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680379,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680512,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680512,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680647,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680647,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680779,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680779,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106680912,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106680912,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681046,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681046,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681179,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681179,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681312,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681312,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681446,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681446,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681579,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681579,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681713,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681713,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681845,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681845,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106681979,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106681979,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682112,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682112,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682245,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682245,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682378,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682378,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682512,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682512,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682644,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682644,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682779,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682779,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106682911,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106682911,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683045,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683045,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683179,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683179,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683311,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683311,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683444,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683444,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683579,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683579,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683711,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683711,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683845,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683845,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106683979,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106683979,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106684111,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106684111,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106684244,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106684244,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106684353,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "logout"
+    },
+    {
+      "ts": 1757106684386,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757106684386,
+      "userId": "03252554-fb0a-433a-a24b-db848040bf91",
+      "username": null,
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757106693980,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "login-restore"
+    },
+    {
+      "ts": 1757107325981,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "logout"
+    },
+    {
+      "ts": 1757107432777,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "login-restore"
+    },
+    {
+      "ts": 1757107780457,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "login-restore"
+    },
+    {
+      "ts": 1757107808015,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808015,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808185,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808185,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808308,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808308,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808438,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808438,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808572,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808572,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808706,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808706,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808839,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808839,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107808972,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107808972,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809106,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809106,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809239,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809239,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809372,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809372,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809506,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809506,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809639,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809639,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809772,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809772,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107809904,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107809904,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810037,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810037,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810158,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810158,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810286,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810286,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810421,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810421,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810554,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810554,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810687,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810687,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810821,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810821,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107810954,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107810954,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811087,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811087,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811222,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811222,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811353,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811353,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811486,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811486,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811623,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811623,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811754,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811754,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107811886,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107811886,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812020,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812020,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812154,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812154,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812287,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812287,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812420,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812420,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812553,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812553,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812687,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812687,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812820,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812820,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107812953,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107812953,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813087,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813087,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813221,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813221,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813353,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813353,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813488,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813488,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813621,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813621,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813753,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813753,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107813888,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107813888,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814020,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814020,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814154,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814154,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814287,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814287,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814420,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814420,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814553,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814553,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814686,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814686,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814819,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814819,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107814951,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107814951,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815086,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815086,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815212,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815212,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815337,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815337,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815477,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815477,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815735,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815735,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107815869,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107815869,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816002,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816002,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816136,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816136,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816269,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816269,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816407,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816407,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816535,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816535,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816669,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816669,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816802,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816802,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107816935,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107816935,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817069,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817069,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817202,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817202,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817334,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817334,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817468,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817469,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817736,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817736,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107817868,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107817868,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818001,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818001,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818135,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818135,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818273,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818273,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818401,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818401,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818534,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818534,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818670,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818670,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818802,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818802,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107818934,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107818934,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819068,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819068,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819200,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819200,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819334,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819334,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819469,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819469,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819736,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819737,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107819868,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107819869,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820001,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820001,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820135,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820135,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820266,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820267,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820400,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820400,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820533,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820533,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820667,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820667,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820799,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820799,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107820933,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107820933,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821066,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821066,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821202,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821202,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821333,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821333,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821466,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821467,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821604,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821604,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821735,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821735,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107821869,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107821869,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822002,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822002,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822133,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822133,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822270,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822270,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822399,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822399,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822533,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822533,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822668,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822668,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822800,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822800,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107822936,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107822936,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823068,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823068,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823202,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823202,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823336,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823336,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823467,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823467,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823602,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823733,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823733,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823867,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823867,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107823989,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107823989,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824117,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824117,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824254,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824254,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824386,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824386,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824519,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824519,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824639,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824639,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824768,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824768,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107824900,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107824900,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107825033,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107825033,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107825165,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107825165,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107825300,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107825300,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107825432,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107825432,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107825566,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107825566,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107951615,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107951616,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107951739,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107951739,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107951862,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107951862,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107951995,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107951996,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952127,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952127,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952262,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952262,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952394,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952394,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952528,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952528,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952660,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952660,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952795,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952795,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107952928,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107952928,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953063,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953063,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953195,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953195,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953329,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953329,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953464,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953464,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953595,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953595,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953729,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953729,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953862,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953862,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107953995,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107953995,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954129,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954129,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954260,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954260,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954394,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954394,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954527,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954527,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954660,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954660,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954793,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954793,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    },
+    {
+      "ts": 1757107954904,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "logout"
+    },
+    {
+      "ts": 1757107954926,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "update"
+    },
+    {
+      "ts": 1757107954926,
+      "userId": "1a61fe5c-466e-4ca2-bf46-43df2c6e22fa",
+      "username": "fernando1",
+      "delta": 0,
+      "money": 400,
+      "bank": 0,
+      "reason": "tick"
+    }
+  ]
 }

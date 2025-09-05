@@ -45,6 +45,87 @@
 
     /* ===== FORMULARIO ===== */
   const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
+  const btnBuy500 = document.getElementById('btnBuy500');
+  const btnUploadProof = document.getElementById('btnUploadProof');
+  const proofFile = document.getElementById('proofFile');
+  async function createPaymentIntent(){
+    const r = await fetch('/api/pay/create-intent', { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({}) });
+    if(!r.ok) throw new Error('No se pudo crear la intención');
+    return r.json();
+  }
+  async function pollPaymentStatus(ref, ms=10000){
+    const started = Date.now();
+    while(Date.now()-started < ms){
+      await new Promise(r=>setTimeout(r, 1500));
+      try{
+        const q = await fetch('/api/pay/status?ref='+encodeURIComponent(ref));
+        if(!q.ok) continue;
+        const js = await q.json();
+        if(js && js.ok && js.credited){ return true; }
+      }catch(_){ }
+    }
+    return false;
+  }
+  if(btnBuy500){
+    btnBuy500.addEventListener('click', async ()=>{
+      try{
+        if(!window.__user){
+          try{ const m = document.getElementById('authModal'); if(m) m.style.display='flex'; }catch(_){ }
+          toast('Inicia sesión para comprar créditos.');
+          return;
+        }
+        const res = await createPaymentIntent();
+        if(!res || !res.ok) throw new Error('Intent falló');
+        const url = res.url; const ref = res.ref;
+        window.open(url, '_blank', 'noopener');
+        toast('Abriendo pago en nueva pestaña…');
+        const ok = await pollPaymentStatus(ref, 120000);
+        if(ok){
+          try{
+            // Intentar refrescar progreso del servidor para evitar doble conteo
+            const me = await fetch('/api/me');
+            if(me.ok){
+              const data = await me.json();
+              if(data && data.ok && data.progress){
+                window.__progress = Object.assign({}, window.__progress||{}, data.progress);
+                toast('Pago verificado: tu saldo se actualizó en el servidor.');
+                return;
+              }
+            }
+            // Fallback: si no pudimos refrescar, marca fUsd para sumar +500 al inicio
+            if(fUsd) fUsd.value = '5';
+            toast('Pago verificado. Se sumarán +500 al iniciar.');
+          }catch(_){ if(fUsd) fUsd.value = '5'; toast('Pago verificado. Se sumarán +500 al iniciar.'); }
+        } else {
+          toast('Aún no se confirmó el pago. Puedes intentarlo de nuevo.');
+        }
+      }catch(e){ console.warn('buy500 error', e); toast('No se pudo iniciar el pago.'); }
+    });
+  }
+
+  // Subir comprobante de pago -> carpeta 'pagos' (servidor)
+  if(btnUploadProof && proofFile){
+    btnUploadProof.addEventListener('click', ()=>{
+      if(!window.__user){ try{ const m=document.getElementById('authModal'); if(m) m.style.display='flex'; }catch(_){ } toast('Inicia sesión para subir comprobantes.'); return; }
+      proofFile.click();
+    });
+    proofFile.addEventListener('change', async (e)=>{
+      try{
+        const file = e.target.files && e.target.files[0];
+        if(!file){ return; }
+        if(file.size > 8*1024*1024){ toast('Archivo muy grande (máx 8MB).'); return; }
+        const buf = await file.arrayBuffer();
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const payload = { filename: file.name, mime: file.type || 'application/octet-stream', data: b64 };
+        const r = await fetch('/api/pay/upload-proof', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload), credentials:'include' });
+        const js = await r.json().catch(()=>({ ok:false }));
+        if(!r.ok || !js.ok){ throw new Error(js.msg||'Error subiendo comprobante'); }
+        toast('Comprobante enviado. Gracias.');
+        // limpiar input
+        e.target.value='';
+      }catch(err){ console.warn('upload-proof', err); toast(err.message||'No se pudo subir'); }
+    });
+  }
   const fGenderPreview = document.getElementById('fGenderPreview');
   const MALE_IMG = '/assets/avatar1.png';
   const MALE_IMG_2 = '/assets/avatar2.png';
