@@ -5,7 +5,7 @@
       "username": "fernando",
       "passHash": "$2a$10$Lc8QizdJ4V5F.lG0rHZ1L.RNYJ23oDG1lUzzYXpNcgYsZ/Qg9eMB6",
       "createdAt": 1756986731248,
-      "lastLoginAt": 1757034544050
+      "lastLoginAt": 1757036707852
     },
     {
       "id": "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3",
@@ -19,12 +19,19 @@
       "username": "manuel",
       "passHash": "$2a$10$DYgW/51JmHMR7GPOsZSg5Octwit7A6/KR4aLnvtAkk5Sx53ZuIg9u",
       "createdAt": 1757034503676,
-      "lastLoginAt": 1757034564114
+      "lastLoginAt": 1757036181515
+    },
+    {
+      "id": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "username": "pedro1",
+      "passHash": "$2a$10$0EWiaHjbfm33wSm0TQazAudRfGD6wiatD.SEPZ4QipeCZ8eTr2s9G",
+      "createdAt": 1757036587519,
+      "lastLoginAt": 1757036729354
     }
   ],
   "progress": {
     "1a4064b1-b943-4d30-8cd6-ddc7532cd40e": {
-      "money": 49,
+      "money": 64,
       "bank": 0,
       "vehicle": null,
       "shops": [
@@ -66,9 +73,16 @@
       "houses": []
     },
     "18eb0615-08a7-4239-aa92-ee22bd0582aa": {
-      "money": 350,
+      "money": 49,
       "bank": 0,
       "vehicle": "bicicleta",
+      "shops": [],
+      "houses": []
+    },
+    "c65b40e3-8ad8-4c49-aba1-caf719951c95": {
+      "money": 200,
+      "bank": 0,
+      "vehicle": "moto",
       "shops": [],
       "houses": []
     }
@@ -845,6 +859,163 @@
       "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
       "details": {
         "username": "manuel"
+      }
+    },
+    {
+      "ts": 1757035708142,
+      "type": "login",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "username": "manuel"
+      }
+    },
+    {
+      "ts": 1757035795708,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757035805532,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036041026,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036181515,
+      "type": "login",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "username": "manuel"
+      }
+    },
+    {
+      "ts": 1757036202018,
+      "type": "progress_update",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036247351,
+      "type": "progress_update",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036266618,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757036278503,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036351740,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036567207,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036587519,
+      "type": "register",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "username": "pedro1"
+      }
+    },
+    {
+      "ts": 1757036611696,
+      "type": "progress_update",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036624402,
+      "type": "progress_update",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "keys": [
+          "money",
+          "vehicle"
+        ]
+      }
+    },
+    {
+      "ts": 1757036630709,
+      "type": "progress_update",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757036707852,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757036729354,
+      "type": "login",
+      "userId": "c65b40e3-8ad8-4c49-aba1-caf719951c95",
+      "details": {
+        "username": "pedro1"
       }
     }
   ]

@@ -12,7 +12,12 @@
 		wrap.style.alignItems = 'flex-start';
 		wrap.style.justifyContent = 'center';
 		wrap.style.paddingTop = '8vh';
-		wrap.style.background = 'rgba(0,0,0,0.35)';
+		// Fondo con imagen de registro y leve oscurecido para legibilidad
+		wrap.style.background = 'linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url("/assets/registro.jpg")';
+		wrap.style.backgroundSize = 'cover';
+		wrap.style.backgroundPosition = 'center';
+		wrap.style.backgroundRepeat = 'no-repeat';
+		wrap.style.backgroundAttachment = 'fixed';
 		wrap.innerHTML = `
 			<div class="modalBox" style="width:min(460px,94vw);">
 				<div style="display:flex;align-items:center;gap:12px">
