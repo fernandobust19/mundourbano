@@ -5,7 +5,7 @@
       "username": "fernando",
       "passHash": "$2a$10$Lc8QizdJ4V5F.lG0rHZ1L.RNYJ23oDG1lUzzYXpNcgYsZ/Qg9eMB6",
       "createdAt": 1756986731248,
-      "lastLoginAt": 1757033542743
+      "lastLoginAt": 1757034544050
     },
     {
       "id": "ba2cad5a-7cc4-4a0a-8a93-b6650c149fe3",
@@ -13,6 +13,13 @@
       "passHash": "$2a$10$zweJ.z2pdZNOwJnZZnMg4uBNAh/MmWBeF7GORIfTu0lvhcFe4Ko8O",
       "createdAt": 1756986821863,
       "lastLoginAt": null
+    },
+    {
+      "id": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "username": "manuel",
+      "passHash": "$2a$10$DYgW/51JmHMR7GPOsZSg5Octwit7A6/KR4aLnvtAkk5Sx53ZuIg9u",
+      "createdAt": 1757034503676,
+      "lastLoginAt": 1757034564114
     }
   ],
   "progress": {
@@ -56,6 +63,13 @@
           "createdAt": 1757020468677
         }
       ],
+      "houses": []
+    },
+    "18eb0615-08a7-4239-aa92-ee22bd0582aa": {
+      "money": 350,
+      "bank": 0,
+      "vehicle": "bicicleta",
+      "shops": [],
       "houses": []
     }
   },
@@ -758,6 +772,79 @@
         "keys": [
           "money"
         ]
+      }
+    },
+    {
+      "ts": 1757034449799,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757034479800,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757034503676,
+      "type": "register",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "username": "manuel"
+      }
+    },
+    {
+      "ts": 1757034522697,
+      "type": "progress_update",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "keys": [
+          "money",
+          "vehicle"
+        ]
+      }
+    },
+    {
+      "ts": 1757034533946,
+      "type": "progress_update",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757034544050,
+      "type": "login",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "username": "fernando"
+      }
+    },
+    {
+      "ts": 1757034550601,
+      "type": "progress_update",
+      "userId": "1a4064b1-b943-4d30-8cd6-ddc7532cd40e",
+      "details": {
+        "keys": [
+          "money"
+        ]
+      }
+    },
+    {
+      "ts": 1757034564114,
+      "type": "login",
+      "userId": "18eb0615-08a7-4239-aa92-ee22bd0582aa",
+      "details": {
+        "username": "manuel"
       }
     }
   ]

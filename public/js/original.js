@@ -123,11 +123,32 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   /* ===== CANVAS / MUNDO ===== */
   const canvas=$("#world"), ctx=canvas.getContext('2d', {alpha: false});
   const uiDock=$("#uiDock"), uiHideBtn=$("#uiHideBtn"), uiShowBtn=$("#uiShowBtn");
+  // Mantener UI del mundo oculta al cargar; se mostrará tras crear personaje
+  try{ if(uiDock) uiDock.style.display='none'; }catch(e){}
   const zoomFab=$("#zoomFab"), zoomIn=$("#zoomIn"), zoomOut=$("#zoomOut"), docDock=$("#docDock"), govDock=$("#govDock"), topBar=$("#top-bar");
   const mini=$("#mini"), miniCanvas=$("#miniCanvas"), mctx=miniCanvas.getContext('2d');
   const stats=$("#stats"), toggleLinesBtn=$("#toggleLines");
   const btnShowDoc=$("#btnShowDoc"), accDocBody=$("#docBody");
   const panelDepositAll=$("#panelDepositAll"), accBankBody=$("#bankBody");
+  // Helper para actualizar el panel del banco desde progreso o desde el agente actual
+  function __fmtAmount(n){ try{ return Math.floor(n||0); }catch(e){ return 0; } }
+  window.updateBankPanel = function(amount=null, code=null){
+    try{
+      if(!accBankBody) return;
+      // Si hay agente del usuario, priorizar su nombre y money actual
+      const you = (typeof USER_ID !== 'undefined') ? agents.find(a=>a.id===USER_ID) : null;
+      if(you){
+        const val = __fmtAmount(you.money) + __fmtAmount(you.pendingDeposit);
+        accBankBody.innerHTML = `Saldo de ${you.code}: <span class="balance-amount">${val}</span>`;
+        return;
+      }
+      // Si aún no hay agente (antes de crear persona), usar progreso guardado
+      const saved = (window.__progress||{});
+      const val = __fmtAmount((amount!=null)?amount:saved.money);
+      const label = code || (window.__user?.username || 'Tu cuenta');
+      accBankBody.innerHTML = `Saldo de ${label}: <span class="balance-amount">${val}</span>`;
+    }catch(e){}
+  };
   const btnHouse=$("#btnHouse"), btnShop=$("#btnShop");
   const btnShowMarried = $("#btnShowMarried"), marriedDock = $("#marriedDock"), marriedList = $("#marriedList");
   const builderModal=$("#builderModal"), btnBuy=$("#btnBuy"), btnBuilderClose=$("#btnBuilderClose"), builderMsg=$("#builderMsg");
@@ -2148,7 +2169,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }, {passive:true});
   $("#uiHideBtn").onclick = ()=>{ show($("#uiDock"), false); show($("#uiShowBtn"), true); };
   $("#uiShowBtn").onclick = ()=>{ show($("#uiDock"), true); show($("#uiShowBtn"), false); };
-  panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; accBankBody.innerHTML = `Saldo de ${u.code}: <span class="balance-amount">${Math.floor(u.money)}</span>`; try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money) }); }catch(e){} toast('Depósito realizado.'); };
+  panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){} try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money) }); }catch(e){} toast('Depósito realizado.'); };
 
   function setVisibleWorldUI(on){
   // No forzar mostrar formulario aquí; el flujo de login controla su visibilidad
@@ -2195,7 +2216,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         user.gender = gender;
       }
     }catch(e){}
-    agents.push(user); USER_ID=user.id;
+  agents.push(user); USER_ID=user.id;
+  try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){}
   try{ window.sockApi?.createPlayer({ code: user.code, gender: user.gender, avatar: user.avatar, startMoney: Math.floor(startMoney) }, ()=>{
       // Tras crear jugador en el servidor, si hay progreso, restaurar ítems colocados
       try{
@@ -2242,7 +2264,14 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }catch(e){}
     loop();
   }
-  const startHandler = ()=>{const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }errBox.style.display='none';startWorldWithUser({name,gender,age,likes,usd});};
+  const startHandler = ()=>{
+    // Seguridad extra: exigir sesión iniciada antes de crear personaje
+    if(!window.__user){ toast('Inicia sesión primero.'); return; }
+    const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;
+    if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }
+    errBox.style.display='none';
+    startWorldWithUser({name,gender,age,likes,usd});
+  };
   btnStart.addEventListener('click', startHandler);
   $("#formInner").addEventListener('submit',(e)=>{ e.preventDefault(); startHandler(); });
 

@@ -79,6 +79,8 @@
 			if(userName) userName.textContent = out.user.username;
 			// Inicializar saldo/vehículo desde progreso
 			window.__onAuthProgress && window.__onAuthProgress(window.__progress);
+			// Refrescar panel del banco con el saldo restaurado (antes de crear persona)
+			try{ if(window.updateBankPanel){ window.updateBankPanel(window.__progress.money, out.user.username); } }catch(e){}
 			// Mostrar formulario de creación de personaje tras iniciar sesión
 			try { const fb = document.getElementById('formBar'); if(fb) fb.style.display = 'block'; }catch(e){}
 			// Asegurar que la UI del mundo permanezca oculta hasta crear la persona
@@ -94,9 +96,11 @@
 		// Botón SALIR (el servidor hace snapshot de dinero en /api/logout)
 		const btnLogout = document.getElementById('btnLogout');
 		if(btnLogout){ btnLogout.addEventListener('click', async ()=>{ try{ await call('POST','/api/logout'); location.reload(); }catch(e){ location.reload(); } }); }
-		// Intentar sesión existente
-		const me = await checkMe();
-		if(me && me.ok){ applyLogin(me); } else { showAuth(true); }
+		// Forzar mostrar la ventana de autenticación primero
+		const me = await checkMe().catch(()=>null);
+		showAuth(true);
+		// Si hay sesión existente, prellenar el usuario para facilitar continuar
+		try{ if(me && me.ok && me.user?.username){ const u=document.getElementById('authUser'); if(u) u.value = me.user.username; } }catch(e){}
 	}
 
 	// Exponer helper para que original.js aplique progreso inicial a la entidad del jugador
