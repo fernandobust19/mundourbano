@@ -1,9 +1,12 @@
 // server.js — servidor Express + socket.io (estado simple en memoria)
+// Cargar variables de entorno desde .env si existe
+try { require('dotenv').config(); } catch(_) {}
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const cookieParser = require('cookie-parser');
+const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const brain = require('./brain');
 
@@ -19,6 +22,31 @@ const PAYMENT_SECRET = process.env.PAYMENT_SECRET || 'dev-pay-secret';
 const PAY_BASE_LINK = process.env.PAY_BASE_LINK || 'https://ppls.me/ptnd6qxvmV1Km0yys7Hg';
 // Intenciones de pago en memoria (token -> { userId, createdAt, creditedAt?, txId? })
 const pendingPayments = new Map();
+
+// --- Email (SMTP) para notificar subida de comprobantes ---
+// Configurar via variables de entorno, por ejemplo para Gmail con App Password:
+// SMTP_HOST=smtp.gmail.com SMTP_PORT=465 SMTP_SECURE=true SMTP_USER=tu@gmail.com SMTP_PASS=xxxx NOTIFY_TO=ventasporweb19@gmail.com
+const SMTP_HOST = process.env.SMTP_HOST || null;
+const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT,10) : null;
+const SMTP_SECURE = String(process.env.SMTP_SECURE||'true').toLowerCase() !== 'false';
+const SMTP_USER = process.env.SMTP_USER || null;
+const SMTP_PASS = process.env.SMTP_PASS || null;
+const SMTP_DEBUG = String(process.env.SMTP_DEBUG||'false').toLowerCase() === 'true';
+const NOTIFY_TO = process.env.NOTIFY_TO || 'ventasporweb19@gmail.com';
+let mailer = null;
+if(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS){
+  try{
+    mailer = nodemailer.createTransport({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_SECURE, auth: { user: SMTP_USER, pass: SMTP_PASS }, logger: SMTP_DEBUG, debug: SMTP_DEBUG });
+    // Verificar conexión/credenciales al inicio (ayuda a diagnosticar por consola)
+    mailer.verify().then(()=>{
+      console.log(`[SMTP] listo: ${SMTP_USER}@${SMTP_HOST}:${SMTP_PORT} secure=${SMTP_SECURE}`);
+    }).catch(err=>{
+      console.warn('[SMTP] verificación falló:', err && err.message ? err.message : err);
+    });
+  }catch(e){ console.warn('No se pudo inicializar SMTP:', e.message); }
+} else {
+  console.warn('SMTP no configurado: define SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS para enviar correos.');
+}
 
 // Silenciar el error de favicon.ico en la consola del navegador
 app.get('/favicon.ico', (req, res) => res.status(204).send());
@@ -158,7 +186,7 @@ app.get('/api/pay/status', (req, res) => {
 });
 
 // 4) Subida de comprobante manual -> carpeta /pagos
-app.post('/api/pay/upload-proof', (req, res) => {
+app.post('/api/pay/upload-proof', async (req, res) => {
   try{
     const uid = getSessionUserId(req);
     if(!uid) return res.status(401).json({ ok:false });
@@ -176,9 +204,41 @@ app.post('/api/pay/upload-proof', (req, res) => {
     // Guardar pequeño .json con metadatos
     const meta = { ts: Date.now(), userId: uid, filename: safeName, savedAs: outName, mime: mime||null };
     fs.writeFileSync(path.join(outDir, `${ts}-${uid}.json`), JSON.stringify(meta, null, 2));
+      console.log(`[upload-proof] saved ${outName} for user ${uid}`);
+      // Enviar email si está configurado SMTP
+      if(mailer){
+        try{
+          await mailer.sendMail({
+            from: SMTP_USER,
+            to: NOTIFY_TO,
+            subject: `Nuevo comprobante subido — usuario ${uid}`,
+            text: `Se subió un comprobante.\n\nUsuario: ${uid}\nArchivo: ${safeName}\nGuardado como: ${outName}\nMIME: ${mime||'n/d'}\nFecha: ${new Date(meta.ts).toISOString()}`,
+            attachments: [{ filename: safeName || outName, path: outPath }]
+          });
+          console.log('[upload-proof] correo de notificación enviado');
+        }catch(e){ console.warn('No se pudo enviar correo de notificación:', e.message); }
+      }
     return res.json({ ok:true, file: `pagos/${outName}` });
   }catch(e){ console.error('upload-proof error', e); return res.status(500).json({ ok:false }); }
 });
+
+  // Listar comprobantes del usuario autenticado (solo metadatos)
+  app.get('/api/pay/proofs', (req, res) => {
+    try{
+      const uid = getSessionUserId(req);
+      if(!uid) return res.status(401).json({ ok:false });
+      const outDir = path.join(__dirname, 'pagos');
+      if(!fs.existsSync(outDir)) return res.json({ ok:true, items: [] });
+      const files = fs.readdirSync(outDir).filter(f => typeof f === 'string' && f.endsWith(`${uid}.json`));
+      const items = [];
+      for(const f of files){
+        try{ const meta = JSON.parse(fs.readFileSync(path.join(outDir, f), 'utf8')); items.push(meta); }catch(_){ }
+      }
+      // Ordenar por ts desc
+      items.sort((a,b)=> (b.ts||0)-(a.ts||0));
+      return res.json({ ok:true, items });
+    }catch(e){ return res.status(500).json({ ok:false }); }
+  });
 
 // Proxy/cache sencillo de imágenes remotas (evita CORS/404 externos).
 // GET /img/:key -> mapea por images.json; GET /img?url=...

@@ -45,11 +45,30 @@
 
     /* ===== FORMULARIO ===== */
   const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
+  // Enforce age rules: default 20, min 20, max 90, cannot decrease once increased
+  (function enforceAgeField(){
+    try{
+      if(!fAge) return;
+      // HTML constraints (in case DOM loaded before patch)
+      fAge.min = '20'; fAge.max = '90'; fAge.step = '1';
+      if(!fAge.value || Number(fAge.value) < 20) fAge.value = '20';
+      const clamp = (v)=> Math.max(20, Math.min(90, v|0));
+      const onChange = ()=>{
+        let v = clamp(parseInt(fAge.value||'20',10));
+        // update field within bounds only (allow increasing or decreasing within 20–90)
+        fAge.value = String(v);
+      };
+      fAge.addEventListener('input', onChange);
+      fAge.addEventListener('change', onChange);
+      // Wheel adjustments should respect bounds
+      fAge.addEventListener('wheel', (e)=>{ e.preventDefault(); onChange(); }, { passive:false });
+    }catch(_){}
+  })();
   const btnBuy500 = document.getElementById('btnBuy500');
   const btnUploadProof = document.getElementById('btnUploadProof');
   const proofFile = document.getElementById('proofFile');
   async function createPaymentIntent(){
-    const r = await fetch('/api/pay/create-intent', { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({}) });
+    const r = await fetch('/api/pay/create-intent', { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({}), credentials:'include' });
     if(!r.ok) throw new Error('No se pudo crear la intención');
     return r.json();
   }
@@ -58,7 +77,7 @@
     while(Date.now()-started < ms){
       await new Promise(r=>setTimeout(r, 1500));
       try{
-        const q = await fetch('/api/pay/status?ref='+encodeURIComponent(ref));
+        const q = await fetch('/api/pay/status?ref='+encodeURIComponent(ref), { credentials:'include' });
         if(!q.ok) continue;
         const js = await q.json();
         if(js && js.ok && js.credited){ return true; }
@@ -83,7 +102,7 @@
         if(ok){
           try{
             // Intentar refrescar progreso del servidor para evitar doble conteo
-            const me = await fetch('/api/me');
+            const me = await fetch('/api/me', { credentials:'include' });
             if(me.ok){
               const data = await me.json();
               if(data && data.ok && data.progress){
@@ -114,8 +133,19 @@
         const file = e.target.files && e.target.files[0];
         if(!file){ return; }
         if(file.size > 8*1024*1024){ toast('Archivo muy grande (máx 8MB).'); return; }
-        const buf = await file.arrayBuffer();
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        // Usar FileReader para evitar crear strings enormes con fromCharCode (...spread)
+        const b64 = await new Promise((resolve, reject)=>{
+          const r = new FileReader();
+          r.onload = ()=>{
+            try{
+              const dataUrl = r.result; // "data:<mime>;base64,...."
+              const comma = (dataUrl||'').indexOf(',');
+              if(comma>0) resolve(dataUrl.slice(comma+1)); else reject(new Error('lectura inválida'));
+            }catch(err){ reject(err); }
+          };
+          r.onerror = ()=> reject(r.error || new Error('no se pudo leer el archivo'));
+          r.readAsDataURL(file);
+        });
         const payload = { filename: file.name, mime: file.type || 'application/octet-stream', data: b64 };
         const r = await fetch('/api/pay/upload-proof', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload), credentials:'include' });
         const js = await r.json().catch(()=>({ ok:false }));
@@ -126,6 +156,8 @@
       }catch(err){ console.warn('upload-proof', err); toast(err.message||'No se pudo subir'); }
     });
   }
+
+  // (Botón de verificación de comprobantes eliminado por solicitud)
   const fGenderPreview = document.getElementById('fGenderPreview');
   const MALE_IMG = '/assets/avatar1.png';
   const MALE_IMG_2 = '/assets/avatar2.png';
@@ -162,22 +194,35 @@
     });
     // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
     try{
-      const saved = localStorage.getItem('selectedAvatar');
-      if(saved){
-        // mark matching option selected
-        const match = avatarGrid.querySelector(`.avatar-option[data-src="${saved}"]`);
-  if(match){ clearAvatarSelection(); match.classList.add('selected'); if(fGenderPreview) fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved; }
-        else {
-          // fallback to applying saved src directly
-          if(fGenderPreview) fGenderPreview.src = saved; if(uiAvatarEl) uiAvatarEl.src = saved;
-        }
+      const isValidSrc = (v)=> typeof v === 'string' && v.length > 0 && (/^data:/.test(v) || /^https?:/.test(v) || v.startsWith('/'));
+      let saved = null;
+      try{ saved = localStorage.getItem('selectedAvatar'); }catch(_){ saved = null; }
+      // Si viene algo raro (e.g., "[object Object]" o JSON), intentar normalizar
+      if(saved && !isValidSrc(saved)){
+        try{ const parsed = JSON.parse(saved); if(isValidSrc(parsed)) saved = parsed; else saved = null; }catch(_){ saved = null; }
+      }
+      if(isValidSrc(saved)){
+        // marcar opción si coincide con el grid
+        try{
+          const match = avatarGrid.querySelector(`.avatar-option[data-src="${CSS.escape(saved)}"]`);
+          if(match){ clearAvatarSelection(); match.classList.add('selected'); }
+        }catch(_){ }
+        try{
+          const src = (typeof saved === 'string') ? saved : String(saved || '');
+          if(fGenderPreview) fGenderPreview.src = src;
+          if(uiAvatarEl) uiAvatarEl.src = src;
+        }catch(_){ }
       } else {
         const first = avatarGrid.querySelector('.avatar-option');
-  if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
+        if(first){
+          first.classList.add('selected');
+          try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(_){ }
+        }
       }
     }catch(e){
-      // ignore localStorage errors
-  const first = avatarGrid.querySelector('.avatar-option'); if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(e){} }
+      // ignore localStorage errors y aplicar primer avatar del grid
+      const first = avatarGrid.querySelector('.avatar-option');
+      if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(_){ } }
     }
   }
   // Soporte para subir foto como avatar (Data URL en cliente)
@@ -300,8 +345,12 @@ btnRandLikes.addEventListener('click', updateLikesUI);
       const val = __fmtAmount((amount!=null)?amount:saved.money);
       const label = code || (window.__user?.username || 'Tu cuenta');
       accBankBody.innerHTML = `Saldo de ${label}: <span class="balance-amount">${val}</span>`;
-    // Guardar también en variable runtime si aún no está
-    if(!window.__selectedAvatarCurrent) window.__selectedAvatarCurrent = saved;
+    // Guardar también en variable runtime si aún no está (usar string, nunca objeto)
+    try{
+      if(!window.__selectedAvatarCurrent && saved && typeof saved.avatar === 'string' && saved.avatar.length){
+        window.__selectedAvatarCurrent = saved.avatar;
+      }
+    }catch(_){ }
     }catch(e){}
   };
   const btnHouse=$("#btnHouse"), btnShop=$("#btnShop");
@@ -632,6 +681,8 @@ BG_IMG.src = '/assets/fondo1.jpg';
   /* Utils */
   const randi=(a,b)=> (Math.random()*(b-a)+a)|0, rand=(a,b)=> a + Math.random()*(b-a), clamp=(v,a,b)=> Math.max(a,Math.min(b,v));
   const centerOf=r=> ({x:r.x+r.w/2, y:r.y+r.h/2});
+  // Compat: algunos fragmentos antiguos usaban 'CenterOf' (mayúscula). Expón alias seguro.
+  try{ window.centerOf = centerOf; window.CenterOf = centerOf; }catch(_){ }
   const rectsOverlap=(a,b)=> !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
   // Función global para remover elementos por labels (case-insensitive) de las colecciones visibles
   function removeByLabels(labels){
@@ -1396,7 +1447,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           const set = sectorHas.get(sKey) || new Set();
           // count how many of this type in this sector
           let count = 0;
-          for(const o of allLists){ if(getTypeKey(o) === t && sectorOf(centerOf(o).x, CenterOf(o).y) === sKey) count++; }
+          for(const o of allLists){ if(getTypeKey(o) === t && sectorOf(centerOf(o).x, centerOf(o).y) === sKey) count++; }
           if(count <= 1) continue; // ok
 
           // find nearest sector without this type
@@ -2417,7 +2468,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   }catch(e){}
   // Determinar avatar elegido (localStorage > progreso guardado > preview > por defecto)
   let chosenAvatar = null;
-  try{ chosenAvatar = window.__selectedAvatarCurrent || localStorage.getItem('selectedAvatar') || (window.__progress && window.__progress.avatar) || (fGenderPreview && fGenderPreview.src) || '/assets/avatar1.png'; }catch(e){ chosenAvatar = '/assets/avatar1.png'; }
+  try{
+    const pick = window.__selectedAvatarCurrent || localStorage.getItem('selectedAvatar') || (window.__progress && window.__progress.avatar) || (fGenderPreview && fGenderPreview.src) || '/assets/avatar1.png';
+    chosenAvatar = (typeof pick === 'string' && pick.length) ? pick : '/assets/avatar1.png';
+  }catch(e){ chosenAvatar = '/assets/avatar1.png'; }
   const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney, avatar: chosenAvatar});
   // Restaurar vehículo comprado previamente (y velocidad) antes de insertar al array para que se aplique de inmediato
   try{
@@ -2520,7 +2574,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const startHandler = ()=>{
     // Seguridad extra: exigir sesión iniciada antes de crear personaje
     if(!window.__user){ toast('Inicia sesión primero.'); return; }
-    const name=fName.value.trim(),gender=fGender.value,age=Math.max(0, Math.min(120, parseInt(fAge.value||'0',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;
+  const name=fName.value.trim(),gender=fGender.value,age=Math.max(20, Math.min(90, parseInt(fAge.value||'20',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;
     if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }
     errBox.style.display='none';
     startWorldWithUser({name,gender,age,likes,usd});

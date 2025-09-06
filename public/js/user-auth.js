@@ -19,6 +19,7 @@
 		wrap.style.backgroundRepeat = 'no-repeat';
 		wrap.style.backgroundAttachment = 'fixed';
 		wrap.innerHTML = `
+			<form id="authForm" autocomplete="on">
 			<div class="modalBox" style="width:min(460px,94vw);">
 				<div style="display:flex;align-items:center;gap:12px">
 					<img src="/login/creador.png" alt="creador" style="width:64px;height:64px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover"/>
@@ -29,18 +30,19 @@
 				</div>
 				<div class="field" style="margin-top:10px">
 					<label>Usuario</label>
-					<input id="authUser" class="input" type="text" placeholder="usuario" maxlength="24">
+					<input id="authUser" name="username" class="input" type="text" placeholder="usuario" maxlength="24" autocomplete="username">
 				</div>
 				<div class="field" style="margin-top:6px">
 					<label>Contraseña</label>
-					<input id="authPass" class="input" type="password" placeholder="••••" maxlength="64">
+					<input id="authPass" name="password" class="input" type="password" placeholder="••••" maxlength="64" autocomplete="current-password">
 				</div>
 				<div id="authErr" class="err" style="display:none;margin-top:6px"></div>
 				<div class="actions" style="margin-top:10px">
-					<button id="btnAuthRegister" class="btn">Registrar</button>
-					<button id="btnAuthLogin" class="btn primary">Iniciar sesión</button>
+					<button id="btnAuthRegister" type="button" class="btn">Registrar</button>
+					<button id="btnAuthLogin" type="button" class="btn primary">Iniciar sesión</button>
 				</div>
-			</div>`;
+			</div>
+			</form>`;
 		document.body.appendChild(wrap);
 	}
 
@@ -122,6 +124,9 @@
 		ensureAuthModal();
 		document.getElementById('btnAuthRegister').addEventListener('click', handleRegister);
 		document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
+		// Enviar con Enter: por defecto, intentar login
+		const form = document.getElementById('authForm');
+		if(form){ form.addEventListener('submit', (e)=>{ e.preventDefault(); handleLogin(); }); }
 		// Botón SALIR (el servidor hace snapshot de dinero en /api/logout)
 		const btnLogout = document.getElementById('btnLogout');
 		if(btnLogout){ btnLogout.addEventListener('click', async ()=>{ try{ await call('POST','/api/logout'); location.reload(); }catch(e){ location.reload(); } }); }
@@ -140,11 +145,23 @@
 		} catch(e){}
 	};
 
-	// Guardar progreso periódicamente
-	window.saveProgress = async function(patch){
+	// Guardar progreso con debounce para evitar ráfagas/recursión indirecta
+	let __saveTimer = null;
+	let __saveQueued = null;
+	window.saveProgress = function(patch){
 		try{
-			await call('POST', '/api/progress', patch || window.__progress || {});
-		}catch(e){ /* ignorar errores de red */ }
+			// Acumular cambios (merge superficial)
+			if (!__saveQueued) __saveQueued = Object.assign({}, window.__progress || {});
+			if (patch && typeof patch === 'object') {
+				Object.assign(__saveQueued, patch);
+			}
+			clearTimeout(__saveTimer);
+			__saveTimer = setTimeout(async ()=>{
+				const payload = __saveQueued || (window.__progress || {});
+				__saveQueued = null;
+				try{ await call('POST', '/api/progress', payload); }catch(_){ /* ignorar */ }
+			}, 400);
+		}catch(_){ /* noop */ }
 	};
 
 	// Iniciar

@@ -151,15 +151,15 @@
         <span class="hint">Puedes subir una foto para usarla como avatar. Se mostrará en el panel y en tu agente.</span>
       </div>
     </div>
-  <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario"/></div>
-    <div class="field col-3"><label>Edad</label><input id="fAge" type="number" min="0" max="120" value="20" class="input"/></div>
+  <div class="field col-3"><label>Nombre</label><input id="fName" type="text" maxlength="12" class="input" placeholder="nombre de usuario" autocomplete="username"/></div>
+  <div class="field col-3"><label>Edad</label><input id="fAge" type="number" min="20" max="90" value="20" step="1" class="input"/></div>
   <div class="field col-3">
-    <label>Créditos iniciales</label>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="fUsd" type="number" min="0" max="0" step="1" value="0" class="input" disabled/>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch">
+      <!-- Campo oculto para compatibilidad con la lógica existente -->
+      <input id="fUsd" type="hidden" value="0" />
       <button id="btnBuy500" type="button" class="btn good" title="Pagar US$5 para obtener +500 créditos">Comprar 500 (+US$5)</button>
       <input id="proofFile" type="file" accept="image/*,application/pdf" style="display:none" />
-      <button id="btnUploadProof" type="button" class="btn" title="Subir comprobante de pago">Subir comprobante</button>
+  <button id="btnUploadProof" type="button" class="btn" title="Subir comprobante de pago">Subir comprobante</button>
     </div>
     <div class="hint">Todos comienzan con 400 créditos gratis. Si compras, se suman +500 créditos al crear tu persona. También puedes subir tu comprobante para verificación manual.</div>
   </div>
@@ -221,7 +221,7 @@
   <div style="background:var(--card);border-radius:14px;padding:24px;max-width:370px;margin:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18);text-align:left;">
     <h3 style="margin-top:0">Agrega una contraseña más segura</h3>
     <div style="font-size:16px;margin-bottom:12px;color:#d97706;font-weight:500;">Recomendación: Usa una contraseña con mínimo 8 caracteres, combinando mayúsculas, minúsculas, números y símbolos. Ejemplo: <span style="color:#2563eb;font-weight:600;">Mundo!2025@urbano</span></div>
-    <input id="newPwdInput" type="password" placeholder="Nueva contraseña" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d4a300;font-size:18px;margin-bottom:12px;" />
+  <input id="newPwdInput" type="password" autocomplete="new-password" placeholder="Nueva contraseña" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d4a300;font-size:18px;margin-bottom:12px;" />
     <button id="btnSaveNewPwd" class="btn good" style="width:100%;font-size:18px;">Guardar nueva contraseña</button>
     <div id="pwdMsg" style="margin-top:10px;font-size:15px;color:#22c55e;display:none;"></div>
     <button id="btnClosePwdModal" class="btn" style="margin-top:18px;">Cerrar</button>
