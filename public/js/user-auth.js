@@ -20,12 +20,12 @@
 		wrap.style.backgroundAttachment = 'fixed';
 		wrap.innerHTML = `
 			<form id="authForm" autocomplete="on">
-			<div class="modalBox" style="width:min(460px,94vw);">
+			<div class="modalBox" style="width:min(520px,94vw);">
 				<div style="display:flex;align-items:center;gap:12px">
 					<img src="/login/creador.png" alt="creador" style="width:64px;height:64px;border-radius:8px;border:1px solid #2b3553;background:#fff;object-fit:cover"/>
 					<div>
-						<h3 style="margin:0">Bienvenido</h3>
-						<div class="hint">Regístrate o inicia sesión para guardar tu progreso.</div>
+						<h3 id="authTitle" style="margin:0">Inicia sesión</h3>
+						<div id="authHint" class="hint">Ingresa tu usuario y contraseña para continuar.</div>
 					</div>
 				</div>
 				<div class="field" style="margin-top:10px">
@@ -34,12 +34,60 @@
 				</div>
 				<div class="field" style="margin-top:6px">
 					<label>Contraseña</label>
-					<input id="authPass" name="password" class="input" type="password" placeholder="••••" maxlength="64" autocomplete="current-password">
+					<input id="authPass" name="password" class="input" type="text" placeholder="" maxlength="64" autocomplete="current-password" data-plain="1">
+				</div>
+				<!-- Campos adicionales para registro de nuevos usuarios (ocultos por defecto) -->
+				<div class="field regOnly" style="margin-top:10px; display:none;">
+					<label>País</label>
+					<select id="authCountry" class="select">
+						<option value="" selected>— Selecciona tu país —</option>
+						<option>Argentina</option>
+						<option>Bolivia</option>
+						<option>Chile</option>
+						<option>Colombia</option>
+						<option>Costa Rica</option>
+						<option>Cuba</option>
+						<option>Ecuador</option>
+						<option>El Salvador</option>
+						<option>España</option>
+						<option>Guatemala</option>
+						<option>Honduras</option>
+						<option>México</option>
+						<option>Nicaragua</option>
+						<option>Panamá</option>
+						<option>Paraguay</option>
+						<option>Perú</option>
+						<option>Puerto Rico</option>
+						<option>República Dominicana</option>
+						<option>Uruguay</option>
+						<option>Venezuela</option>
+						<option>Otro</option>
+					</select>
+					<span class="hint">País, correo y género son obligatorios. Teléfono es opcional.</span>
+				</div>
+				<div class="field regOnly" style="margin-top:6px; display:none;">
+					<label>Correo electrónico</label>
+					<input id="authEmail" class="input" type="email" placeholder="tucorreo@ejemplo.com" maxlength="120" autocomplete="email">
+				</div>
+				<div class="field regOnly" style="margin-top:6px; display:none;">
+					<label>Teléfono (opcional)</label>
+					<input id="authPhone" class="input" type="tel" placeholder="Ej: +57 300 123 4567" maxlength="24" autocomplete="tel">
+				</div>
+				<div class="field regOnly" style="margin-top:6px; display:none;">
+					<label>Género</label>
+					<select id="authGender" class="select">
+						<option value="" selected>— Selecciona género —</option>
+						<option value="M">Hombre</option>
+						<option value="F">Mujer</option>
+					</select>
 				</div>
 				<div id="authErr" class="err" style="display:none;margin-top:6px"></div>
-				<div class="actions" style="margin-top:10px">
-					<button id="btnAuthRegister" type="button" class="btn">Registrar</button>
-					<button id="btnAuthLogin" type="button" class="btn primary">Iniciar sesión</button>
+				<div class="actions" style="margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+					<div style="display:flex; gap:8px;">
+						<button id="btnAuthRegister" type="button" class="btn regOnly" style="display:none;">Registrar</button>
+						<button id="btnAuthLogin" type="button" class="btn primary loginOnly">Iniciar sesión</button>
+					</div>
+					<button id="authToggle" type="button" class="btn" style="background:transparent; border-color:transparent; color:#2563eb;">¿No tienes cuenta? Regístrate</button>
 				</div>
 			</div>
 			</form>`;
@@ -62,8 +110,18 @@
 		setErr('');
 		const u = document.getElementById('authUser').value.trim();
 		const p = document.getElementById('authPass').value;
+		const country = (document.getElementById('authCountry')?.value || '').trim();
+		const email = (document.getElementById('authEmail')?.value || '').trim();
+		const phone = (document.getElementById('authPhone')?.value || '').trim();
+		const gender = (document.getElementById('authGender')?.value || '').trim();
+		// Validaciones: país, correo y género obligatorios; teléfono opcional
+		if(!country){ setErr('Selecciona tu país'); return; }
+		if(!email){ setErr('Ingresa tu correo'); return; }
+		if(!/^\S+@\S+\.\S+$/.test(email)){ setErr('Correo inválido'); return; }
+		if(phone && (phone.replace(/[^0-9]/g,'').length < 7)){ setErr('Teléfono inválido'); return; }
+		if(!['M','F'].includes(gender)) { setErr('Selecciona género (Hombre o Mujer)'); return; }
 		try{
-			const out = await call('POST', '/api/register', { username: u, password: p });
+			const out = await call('POST', '/api/register', { username: u, password: p, country, email, phone, gender });
 			applyLogin(out);
 		}catch(e){ setErr(e.message || 'No se pudo registrar'); }
 	}
@@ -81,6 +139,18 @@
 		try {
 			window.__user = out.user;
 			window.__progress = out.progress || {};
+			// Sincronizar género al progreso:
+			// 1) Si el usuario tiene M/F y al progreso le falta, úsalo.
+			// 2) Si el usuario no tiene M/F pero en el modal se eligió uno válido, tomarlo para esta sesión.
+			try{
+				const chosen = (document.getElementById('authGender')?.value || '').trim();
+				const userG = out.user?.gender;
+				if(userG && ['M','F'].includes(userG) && (!window.__progress.gender || !['M','F'].includes(window.__progress.gender))){
+					window.__progress.gender = userG;
+				}else if((!userG || !['M','F'].includes(userG)) && ['M','F'].includes(chosen)){
+					window.__progress.gender = chosen; // preferir lo recién seleccionado
+				}
+			}catch(_){ }
 			// Reflejar nombre de usuario
 			const userName = document.getElementById('userName');
 			if(userName) userName.textContent = out.user.username;
@@ -98,7 +168,18 @@
 				const fName = document.getElementById('fName');
 				if(fName && prog.name){ fName.value = prog.name; }
 				const fGender = document.getElementById('fGender');
-				if(fGender && prog.gender){ fGender.value = prog.gender; }
+				if(fGender){
+					const chosen = (document.getElementById('authGender')?.value || '').trim();
+					const best = (prog.gender && ['M','F'].includes(prog.gender)) ? prog.gender
+						: (['M','F'].includes(out.user?.gender) ? out.user.gender
+						: (['M','F'].includes(chosen) ? chosen : ''));
+					if(best) fGender.value = best;
+				}
+				// Prefill popup extra fields si existen
+				try{ const el = document.getElementById('authCountry'); if(el && out.user?.country) el.value = out.user.country; }catch(e){}
+				try{ const el = document.getElementById('authEmail'); if(el && out.user?.email) el.value = out.user.email; }catch(e){}
+				try{ const el = document.getElementById('authPhone'); if(el && out.user?.phone) el.value = out.user.phone; }catch(e){}
+				try{ const el = document.getElementById('authGender'); if(el && out.user?.gender) el.value = out.user.gender; }catch(e){}
 				const fAge = document.getElementById('fAge');
 				if(fAge && typeof prog.age === 'number'){ fAge.value = String(prog.age); }
 				const likesWrap = document.getElementById('likesWrap');
@@ -116,14 +197,60 @@
 			}catch(e){}
 			// Refrescar concesionario: marcar vehículos ya comprados
 			try{ window.updateCarMenuHighlight && window.updateCarMenuHighlight(); }catch(e){}
+			// Actualizar mini lista de comprobantes si existe
+			try{ window.refreshMyProofs && window.refreshMyProofs(); }catch(e){}
 		} catch(e){}
 		showAuth(false);
 	}
 
 	async function init(){
 		ensureAuthModal();
+		// Configurar campo de contraseña para mostrar en claro hasta que el usuario escriba algo
+		try{
+			const pass = document.getElementById('authPass');
+			if(pass){
+				pass.value='';
+				pass.addEventListener('input', ()=>{
+					if(pass.dataset.plain && pass.value.length>0){
+						pass.type='password';
+						delete pass.dataset.plain;
+						if(!pass.placeholder) pass.placeholder='••••';
+					}
+				});
+				pass.addEventListener('blur', ()=>{
+					// si el usuario borró todo, volver a modo texto limpio
+					if(pass.value.length===0){ pass.type='text'; pass.dataset.plain='1'; pass.placeholder=''; }
+				});
+			}
+		}catch(_){ }
 		document.getElementById('btnAuthRegister').addEventListener('click', handleRegister);
 		document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
+		// Toggle entre login y registro
+		function setAuthMode(mode){
+			const reg = mode === 'register';
+			const title = document.getElementById('authTitle');
+			const hint = document.getElementById('authHint');
+			const regEls = document.querySelectorAll('.regOnly');
+			const loginEls = document.querySelectorAll('.loginOnly');
+			regEls.forEach(el=> el.style.display = reg ? (el.dataset?.display||'') || '' : 'none');
+			loginEls.forEach(el=> el.style.display = reg ? 'none' : '');
+			const toggle = document.getElementById('authToggle');
+			if(reg){
+				if(title) title.textContent = 'Crear cuenta';
+				if(hint) hint.textContent = 'Completa tus datos para registrar tu cuenta.';
+				if(toggle) toggle.textContent = '¿Ya tienes cuenta? Inicia sesión';
+			}else{
+				if(title) title.textContent = 'Inicia sesión';
+				if(hint) hint.textContent = 'Ingresa tu usuario y contraseña para continuar.';
+				if(toggle) toggle.textContent = '¿No tienes cuenta? Regístrate';
+			}
+		}
+		const toggleBtn = document.getElementById('authToggle');
+		if(toggleBtn){
+			let mode = 'login';
+			toggleBtn.addEventListener('click', ()=>{ mode = (mode==='login' ? 'register' : 'login'); setErr(''); setAuthMode(mode); });
+			setAuthMode('login');
+		}
 		// Enviar con Enter: por defecto, intentar login
 		const form = document.getElementById('authForm');
 		if(form){ form.addEventListener('submit', (e)=>{ e.preventDefault(); handleLogin(); }); }

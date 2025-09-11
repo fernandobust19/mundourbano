@@ -16,10 +16,35 @@ body {
   background: linear-gradient(180deg, var(--bg) 0%, #fff8e1 100%);
   color: var(--text);
   line-height: 1.35;
-  padding: 16px;
+  /* Quitar padding global: el lienzo ocupa toda la pantalla */
+  padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Menús con fondo blanco / claro (concesionario, builder, etc.) */
+.white-menu, .dealer-menu, #builderModal, #carDealerModal, .menu-white {
+  color: #000 !important;
+}
+.white-menu * , .dealer-menu * , #builderModal *, #carDealerModal *, .menu-white * {
+  color: #000 !important;
+  --text: #000;
+}
+/* Concesionario: selector de vehículos
+  - Texto normal negro
+  - Placeholder (opción inicial) gris */
+#carTypeSelect { color:#000 !important; background:#f3e8ff !important; border:1px solid #b794f4 !important; }
+#carTypeSelect option { background:#fff; color:#000 !important; }
+#carTypeSelect option[disabled],
+#carTypeSelect option.placeholder,
+#carTypeSelect option[value=""],
+#carTypeSelect option[value="null"],
+#carTypeSelect option[value="undefined"] { color: #6b7280 !important; }
+/* Safari / fallback: aplicar gris al primer option si actúa como placeholder */
+#carTypeSelect option:first-child { color:#6b7280; }
+#carMsg { color:#000; }
+/* Si existe un contenedor general del concesionario */
+#carDealerModal, #carDealerModal * { color:#000 !important; }
 
 /* contenedor principal */
 .container { max-width: 1100px; margin: 0 auto; padding: 18px; }
@@ -34,7 +59,7 @@ header.app-header h1 { font-size: 1.4rem; color: var(--accent); }
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 10px;
   padding: 12px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+  box-shadow: none;
 }
 
 /* elemento govDesc que mencionaste antes */
@@ -72,8 +97,9 @@ header.app-header h1 { font-size: 1.4rem; color: var(--accent); }
     font-size: 0.97rem;
   }
   .btn {
-    padding: 7px 10px;
-    font-size: 0.97rem;
+    padding: 10px 12px;
+    min-height: 42px;
+    font-size: 1rem;
   }
   .row {
     flex-direction: column;
@@ -87,10 +113,7 @@ header.app-header h1 { font-size: 1.4rem; color: var(--accent); }
     font-size: 0.95rem;
     padding: 5px 8px;
   }
-  body {
-    padding: 6px;
-    font-size: 0.98rem;
-  }
+  body { font-size: 1rem; }
   /* Ajuste para menús grandes */
   nav, .menu, .main-menu {
     font-size: 0.98rem !important;

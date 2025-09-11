@@ -25,6 +25,18 @@
   window.addEventListener('error', e => { try{toast('⚠️ Error: '+(e.message||'JS'));}catch(_){} });
   window.addEventListener('unhandledrejection', e => { try{toast('⚠️ Promesa: '+(e.reason?.message||'error'));}catch(_){} });
 
+  // Salvaguarda temprana: si el progreso ya indica que pagó el arriendo inicial,
+  // impedir que cualquier lógica posterior muestre el prompt o bloquee el juego.
+  // (Se refuerza luego dentro de startWorldWithUser, pero esto evita parpadeos.)
+  try{
+    const pr = (window.__progress||{});
+    if(pr.initialRentPaid){
+      window.__rentBlocked = false; // asegurar desbloqueado
+      // Marcar una bandera para que la creación de UI de arriendo se salte siempre
+      window.__skipInitialRentPrompt = true;
+    }
+  }catch(_){ }
+
   // Red: helpers para multijugador
   const hasNet = () => !!(window.sock && window.sock.connected);
   let __lastNetSend = 0;
@@ -45,28 +57,41 @@
 
     /* ===== FORMULARIO ===== */
   const formBar = $("#formBar"), fGender=$("#fGender"), fName=$("#fName"), fAge=$("#fAge"), fUsd=$("#fUsd");
-  // Enforce age rules: default 20, min 20, max 90, cannot decrease once increased
+  // Enforce age rules: editable typing, clamp on blur/change, keep 20–89
   (function enforceAgeField(){
     try{
       if(!fAge) return;
-      // HTML constraints (in case DOM loaded before patch)
-      fAge.min = '20'; fAge.max = '90'; fAge.step = '1';
-      if(!fAge.value || Number(fAge.value) < 20) fAge.value = '20';
-      const clamp = (v)=> Math.max(20, Math.min(90, v|0));
-      const onChange = ()=>{
-        let v = clamp(parseInt(fAge.value||'20',10));
-        // update field within bounds only (allow increasing or decreasing within 20–90)
-        fAge.value = String(v);
+      // HTML constraints
+      fAge.min = '20'; fAge.max = '89'; fAge.step = '1';
+      if(!fAge.value) fAge.value = '20';
+      const clamp = (v)=> Math.max(20, Math.min(89, (v|0)));
+      // Permitir escribir/borrar libremente; sólo limpiar caracteres no numéricos
+      const onInput = ()=>{
+        const raw = fAge.value;
+        if(raw === '') return; // permitir vacío mientras escribe
+        const digits = raw.replace(/[^0-9]/g, '');
+        if(digits !== raw) fAge.value = digits;
       };
-      fAge.addEventListener('input', onChange);
-      fAge.addEventListener('change', onChange);
-      // Wheel adjustments should respect bounds
-      fAge.addEventListener('wheel', (e)=>{ e.preventDefault(); onChange(); }, { passive:false });
-    }catch(_){}
+      // Al salir del campo o confirmar cambio, ajustar a rango
+      const onCommit = ()=>{
+        let v = parseInt(fAge.value || '20', 10);
+        if(Number.isNaN(v)) v = 20;
+        fAge.value = String(clamp(v));
+      };
+      fAge.addEventListener('input', onInput);
+      fAge.addEventListener('change', onCommit);
+      fAge.addEventListener('blur', onCommit);
+      // Rueda del mouse: incrementar/decrementar respetando límites
+      fAge.addEventListener('wheel', (e)=>{
+        e.preventDefault();
+        let v = parseInt(fAge.value || '20', 10);
+        if(Number.isNaN(v)) v = 20;
+        v += (e.deltaY > 0 ? -1 : 1);
+        fAge.value = String(clamp(v));
+      }, { passive:false });
+    }catch(_){ }
   })();
   const btnBuy500 = document.getElementById('btnBuy500');
-  const btnUploadProof = document.getElementById('btnUploadProof');
-  const proofFile = document.getElementById('proofFile');
   async function createPaymentIntent(){
     const r = await fetch('/api/pay/create-intent', { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({}), credentials:'include' });
     if(!r.ok) throw new Error('No se pudo crear la intención');
@@ -122,40 +147,11 @@
     });
   }
 
-  // Subir comprobante de pago -> carpeta 'pagos' (servidor)
-  if(btnUploadProof && proofFile){
-    btnUploadProof.addEventListener('click', ()=>{
-      if(!window.__user){ try{ const m=document.getElementById('authModal'); if(m) m.style.display='flex'; }catch(_){ } toast('Inicia sesión para subir comprobantes.'); return; }
-      proofFile.click();
-    });
-    proofFile.addEventListener('change', async (e)=>{
-      try{
-        const file = e.target.files && e.target.files[0];
-        if(!file){ return; }
-        if(file.size > 8*1024*1024){ toast('Archivo muy grande (máx 8MB).'); return; }
-        // Usar FileReader para evitar crear strings enormes con fromCharCode (...spread)
-        const b64 = await new Promise((resolve, reject)=>{
-          const r = new FileReader();
-          r.onload = ()=>{
-            try{
-              const dataUrl = r.result; // "data:<mime>;base64,...."
-              const comma = (dataUrl||'').indexOf(',');
-              if(comma>0) resolve(dataUrl.slice(comma+1)); else reject(new Error('lectura inválida'));
-            }catch(err){ reject(err); }
-          };
-          r.onerror = ()=> reject(r.error || new Error('no se pudo leer el archivo'));
-          r.readAsDataURL(file);
-        });
-        const payload = { filename: file.name, mime: file.type || 'application/octet-stream', data: b64 };
-        const r = await fetch('/api/pay/upload-proof', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload), credentials:'include' });
-        const js = await r.json().catch(()=>({ ok:false }));
-        if(!r.ok || !js.ok){ throw new Error(js.msg||'Error subiendo comprobante'); }
-        toast('Comprobante enviado. Gracias.');
-        // limpiar input
-        e.target.value='';
-      }catch(err){ console.warn('upload-proof', err); toast(err.message||'No se pudo subir'); }
-    });
-  }
+  // N° doc. eliminado por solicitud
+
+  // Mini lista de comprobantes del usuario
+  // Eliminar mini lista de comprobantes; dejar stub para no romper llamadas externas
+  window.refreshMyProofs = function(){};
 
   // (Botón de verificación de comprobantes eliminado por solicitud)
   const fGenderPreview = document.getElementById('fGenderPreview');
@@ -169,6 +165,12 @@
   // Avatar grid clickable thumbnails
   const avatarGrid = document.getElementById('avatarGrid');
   const uiAvatarEl = document.getElementById('uiAvatar');
+  // Placeholder de avatar: fondo blanco y un gran signo de pregunta
+  const AVATAR_PLACEHOLDER = "data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'>\
+<rect width='100%' height='100%' fill='white'/>\
+<text x='50%' y='52%' text-anchor='middle' dominant-baseline='middle' font-size='84' font-family='Segoe UI, Arial, sans-serif' fill='%239ca3af'>?</text>\
+</svg>";
   const avatarFile = document.getElementById('avatarFile');
   const btnUploadAvatar = document.getElementById('btnUploadAvatar');
   const btnRemoveAvatar = document.getElementById('btnRemoveAvatar');
@@ -192,7 +194,7 @@
   if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ if(me.avatar !== src){ me.avatar = src; try{ AVATAR_CACHE && AVATAR_CACHE.delete && AVATAR_CACHE.delete(src); }catch(_){} try{ window.sockApi?.update({ avatar: src }); }catch(_){} } } }
       }catch(e){}
     });
-    // restore saved selection (if any) or pre-select first and reflect it in the UI avatar preview
+    // restore saved selection (if any). Si no hay, usar placeholder con '?'
     try{
       const isValidSrc = (v)=> typeof v === 'string' && v.length > 0 && (/^data:/.test(v) || /^https?:/.test(v) || v.startsWith('/'));
       let saved = null;
@@ -209,20 +211,17 @@
         }catch(_){ }
         try{
           const src = (typeof saved === 'string') ? saved : String(saved || '');
+          // Si el guardado es el placeholder, sólo reflejar en la vista previa
           if(fGenderPreview) fGenderPreview.src = src;
-          if(uiAvatarEl) uiAvatarEl.src = src;
+          if(src !== AVATAR_PLACEHOLDER){ if(uiAvatarEl) uiAvatarEl.src = src; }
         }catch(_){ }
       } else {
-        const first = avatarGrid.querySelector('.avatar-option');
-        if(first){
-          first.classList.add('selected');
-          try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(_){ }
-        }
+        // No hay avatar guardado: mostrar placeholder en la vista previa y no auto-seleccionar
+        try{ if(fGenderPreview) fGenderPreview.src = AVATAR_PLACEHOLDER; }catch(_){ }
       }
     }catch(e){
-      // ignore localStorage errors y aplicar primer avatar del grid
-      const first = avatarGrid.querySelector('.avatar-option');
-      if(first){ first.classList.add('selected'); try{ const s = first.getAttribute('data-src'); if(s){ if(fGenderPreview) fGenderPreview.src = s; if(uiAvatarEl) uiAvatarEl.src = s; } }catch(_){ } }
+      // Si hay error con localStorage: usar placeholder en la vista previa
+      try{ if(fGenderPreview) fGenderPreview.src = AVATAR_PLACEHOLDER; }catch(_){ }
     }
   }
   // Soporte para subir foto como avatar (Data URL en cliente)
@@ -254,29 +253,30 @@
   if(btnRemoveAvatar){
     btnRemoveAvatar.addEventListener('click', ()=>{
       try{
-        // elegir avatar por defecto según género (si existe), sino usar el primero del grid
-        let src = null;
-        try{ src = (fGender && fGender.value === 'M') ? MALE_IMG : FEMALE_IMG; }catch(_){ src = MALE_IMG; }
-        try{
-          // si el grid tiene un seleccionado, úsalo como valor por defecto visual
-          const first = avatarGrid && avatarGrid.querySelector('.avatar-option');
-          if(first){ const s = first.getAttribute('data-src'); if(s) src = s; }
-        }catch(_){}
-  // actualizar UI
-  try{ if(fGenderPreview) fGenderPreview.src = src; if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){}
-        // persistir
+        const src = AVATAR_PLACEHOLDER;
+        // Actualizar vista previa y avatar del UI
+        try{ if(fGenderPreview) fGenderPreview.src = src; }catch(_){ }
+        try{ if(uiAvatarEl) uiAvatarEl.src = src; }catch(_){ }
+        // Persistir y notificar servidor
         try{ localStorage.setItem('selectedAvatar', src); }catch(_){ }
         try{
           window.__selectedAvatarCurrent = src;
           window.__progress = Object.assign({}, window.__progress||{}, { avatar: src });
           window.saveProgress && window.saveProgress({ avatar: src });
-          if(typeof USER_ID !== 'undefined' && USER_ID){ const me = agents.find(a=>a.id===USER_ID); if(me){ if(me.avatar !== src){ me.avatar = src; try{ AVATAR_CACHE && AVATAR_CACHE.delete && AVATAR_CACHE.delete(src); }catch(_){} try{ window.sockApi?.update({ avatar: src }); }catch(_){} } } }
+          try{ window.sockApi?.update({ avatar: src }); }catch(_){ }
         }catch(_){ }
-        toast('Se restauró el avatar por defecto.');
+        toast('Se quitó la foto. Vista previa con ?');
       }catch(e){}
     });
   }
-  function updateGenderPreview(){ try{ if(!fGender || !fGender.value || !fGenderPreview) return; fGenderPreview.src = fGender.value === 'M' ? MALE_IMG : FEMALE_IMG; }catch(e){} }
+  function updateGenderPreview(){
+    try{
+      if(!fGender || !fGender.value || !fGenderPreview) return;
+      if(fGender.value === 'M') fGenderPreview.src = MALE_IMG;
+      else if(fGender.value === 'F') fGenderPreview.src = FEMALE_IMG;
+      // Si es otro valor, mantener placeholder
+    }catch(e){}
+  }
   if(fGender){ fGender.addEventListener('change', updateGenderPreview); updateGenderPreview(); }
   const btnStart=$("#btnStart"), btnRandLikes=$("#btnRandLikes"), errBox=$("#errBox");
   const likesWrap=$("#likesWrap"), likesCount=$("#likesCount");
@@ -315,11 +315,19 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const uiDock=$("#uiDock"), uiHideBtn=$("#uiHideBtn"), uiShowBtn=$("#uiShowBtn");
   // Mantener UI del mundo oculta al cargar; se mostrará tras crear personaje
   try{ if(uiDock) uiDock.style.display='none'; }catch(e){}
-  const zoomFab=$("#zoomFab"), zoomIn=$("#zoomIn"), zoomOut=$("#zoomOut"), docDock=$("#docDock"), govDock=$("#govDock"), topBar=$("#top-bar");
+  // Controles de zoom fueron removidos; mantener referencias nulas para compatibilidad
+  const zoomFab = null, zoomIn = null, zoomOut = null, docDock=$("#docDock"), govDock=$("#govDock"), topBar=null;
   const mini=$("#mini"), miniCanvas=$("#miniCanvas"), mctx=miniCanvas.getContext('2d');
   const stats=$("#stats"), toggleLinesBtn=$("#toggleLines");
-  const btnShowDoc=$("#btnShowDoc"), accDocBody=$("#docBody");
-  const panelDepositAll=$("#panelDepositAll"), accBankBody=$("#bankBody");
+  // El botón de líneas puede no existir: envolver en chequeo
+  if(toggleLinesBtn){
+    toggleLinesBtn.addEventListener('click', ()=>{
+      SHOW_LINES = !SHOW_LINES;
+      try{ toggleLinesBtn.textContent = SHOW_LINES ? 'Líneas ON' : 'Líneas OFF'; }catch(_){ }
+    });
+  }
+  const btnShowAgentDoc=$("#btnShowAgentDoc"), btnShowGovDoc=$("#btnShowGovDoc"), accDocBody=$("#docBody");
+  const panelDepositAll=null, accBankBody=$("#bankBody");
   // Cache de imágenes de avatar para no crear objetos por frame
   const AVATAR_CACHE = new Map();
   function getAvatarImage(src){
@@ -359,6 +367,40 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const shopModal=$("#shopModal"), shopList=$("#shopList"), shopMsg=$("#shopMsg"), btnShopClose=$("#btnShopClose");
   const govFundsEl=$("#govFunds"), govDescEl = $("#govDesc");
   const govSelectEl=$("#govSelect"), btnGovPlace=$("#btnGovPlace");
+  const btnGovOpen = document.getElementById('btnGovOpen');
+  // Botones de mostrar/ocultar el UI (flechas azules) usando variables existentes
+  if(uiShowBtn && uiDock){ uiShowBtn.addEventListener('click', ()=>{ try{ uiDock.classList.remove('collapsed-left'); uiShowBtn.style.display='none'; }catch(_){ } }); }
+  if(uiHideBtn && uiDock){ uiHideBtn.addEventListener('click', ()=>{ try{ uiDock.classList.add('collapsed-left'); uiShowBtn.style.display='grid'; }catch(_){ } }); }
+
+  // Seguimiento de agente (btn flotante)
+  let FOLLOW_AGENT = false;
+  const followFab = document.getElementById('followFab');
+  if (followFab){
+    followFab.addEventListener('click', ()=>{
+      FOLLOW_AGENT = !FOLLOW_AGENT;
+      if(FOLLOW_AGENT){ followFab.classList.add('on'); } else { followFab.classList.remove('on'); }
+      // Al activar, centra inmediatamente
+      if (FOLLOW_AGENT) {
+        try{
+          const me = agents.find(a=>a.id===USER_ID);
+          if(me){
+            const vw = canvas.width/ZOOM, vh = canvas.height/ZOOM;
+            cam.x = Math.max(0, Math.min(me.x - vw/2, Math.max(0, WORLD.w - vw)));
+            cam.y = Math.max(0, Math.min(me.y - vh/2, Math.max(0, WORLD.h - vh)));
+            clampCam();
+          }
+        }catch(_){ }
+      }
+    });
+  }
+  // Abrir panel de Gobierno desde el botón del UI
+  if(btnGovOpen){
+    btnGovOpen.addEventListener('click', ()=>{
+      try{
+        openGovPanel();
+      }catch(_){ govDock && (govDock.style.display='flex'); }
+    });
+  }
 
   const btnGovClose = $("#btnGovClose");
   if(btnGovClose) btnGovClose.onclick = ()=> closeGovPanel();
@@ -379,8 +421,33 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   }
 
   const isMobile = ()=> innerWidth<=768;
-  let ZOOM=1.0, ZMIN=0.6, ZMAX=2.0, ZSTEP=0.15;
+  let ZOOM=1.0, ZMIN=0.35, ZMAX=2.0, ZSTEP=0.15;
   const WORLD={w:0,h:0}; const cam={x:0,y:0};
+
+  // En móviles: colapsar dock inicial y ocultar mini-mapa para más espacio
+  function applyResponsiveUI(){
+    try{
+      const narrow = innerWidth <= 700;
+      const dock = document.getElementById('uiDock');
+      const bar  = document.getElementById('top-bar');
+      const showBtn = document.getElementById('uiShowBtn');
+      const miniEl = document.getElementById('mini');
+      if(narrow){
+        if(dock){ dock.classList.add('collapsed-left'); }
+        if(bar){ bar.classList.add('collapsed-left'); }
+        if(showBtn){ showBtn.style.display = 'grid'; }
+        if(miniEl){ miniEl.style.display = 'none'; }
+      } else {
+        if(dock){ dock.classList.remove('collapsed-left'); }
+        if(bar){ bar.classList.remove('collapsed-left'); }
+        if(showBtn){ showBtn.style.display = 'none'; }
+        if(miniEl){ miniEl.style.display = 'block'; }
+      }
+    }catch(_){ }
+  }
+  addEventListener('resize', applyResponsiveUI, { passive:true });
+  // aplicar al cargar
+  applyResponsiveUI();
 
   // --- Generador de números aleatorios determinista (semilla fija para el mundo) ---
   let _seed = 20250824; // Usa la fecha de hoy como semilla fija
@@ -410,7 +477,14 @@ btnRandLikes.addEventListener('click', updateLikesUI);
 
   /* ===== PAN/ZOOM ===== */
   const activePointers = new Map();let panPointerId = null;let pinchBaseDist = 0, pinchBaseZoom = 1, pinchCx = 0, pinchCy = 0;
-  function isOverUI(sx,sy){const rects = [];const addRect = (el)=>{if(!el) return;const cs = getComputedStyle(el);if(cs.display==='none' || cs.visibility==='hidden') return;rects.push(el.getBoundingClientRect());};addRect(uiDock); addRect(docDock); addRect(govDock); addRect(topBar); addRect(mini); addRect(zoomFab); addRect(uiShowBtn); addRect(marriedDock); return rects.some(r => sx>=r.left && sx<=r.right && sy>=r.top && sy<=r.bottom);}
+  function isOverUI(sx,sy){
+    const rects = [];
+    const addRect = (el)=>{ if(!el) return; const cs = getComputedStyle(el); if(cs.display==='none' || cs.visibility==='hidden') return; rects.push(el.getBoundingClientRect()); };
+  addRect(uiDock); addRect(docDock); addRect(govDock); addRect(mini); addRect(zoomFab); addRect(uiShowBtn); addRect(marriedDock);
+    addRect(document.getElementById('docModal')); addRect(document.getElementById('marriedModal'));
+  addRect(document.getElementById('followFab'));
+    return rects.some(r => sx>=r.left && sx<=r.right && sy>=r.top && sy<=r.bottom);
+  }
   function setZoom(newZ, anchorX=null, anchorY=null){const before = toWorld(anchorX??(canvas.width/2), anchorY??(canvas.height/2));ZOOM = Math.max(ZMIN, Math.min(ZMAX, newZ));const after  = toWorld(anchorX??(canvas.width/2), anchorY??(canvas.height/2));cam.x += (before.x - after.x); cam.y += (before.y - after.y); clampCam();}
   canvas.addEventListener('wheel', (e)=>{ e.preventDefault();if(isOverUI(e.clientX,e.clientY)) return;setZoom(ZOOM + (Math.sign(e.deltaY)>0?-ZSTEP:ZSTEP), e.clientX, e.clientY);}, {passive:false});
   canvas.addEventListener('pointerdown', (e)=>{if(isOverUI(e.clientX,e.clientY)) return;canvas.setPointerCapture(e.pointerId);activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});if(activePointers.size===1){panPointerId = e.pointerId;}else if(activePointers.size===2){const pts=[...activePointers.values()];pinchBaseDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);pinchBaseZoom = ZOOM;pinchCx = (pts[0].x + pts[1].x)/2;pinchCy = (pts[0].y + pts[1].y)/2;panPointerId = null;}}, {passive:true});
@@ -418,8 +492,7 @@ btnRandLikes.addEventListener('click', updateLikesUI);
   const clearPointer = (id)=>{if(!activePointers.has(id)) return;activePointers.delete(id);if(panPointerId===id) panPointerId=null;if(activePointers.size<2){ pinchBaseDist=0; }};
   canvas.addEventListener('pointerup',   e=> clearPointer(e.pointerId), {passive:true});
   canvas.addEventListener('pointercancel', e=> clearPointer(e.pointerId), {passive:true});
-  $("#zoomIn").onclick = ()=> setZoom(ZOOM+ZSTEP, canvas.width/2, canvas.height/2);
-  $("#zoomOut").onclick= ()=> setZoom(ZOOM-ZSTEP, canvas.width/2, canvas.height/2);
+  // Botones de zoom eliminados: zoom por rueda/pinch permanece activo
 
   // Mapeo directo de imágenes para edificaciones
 const BUILDING_IMAGES = {
@@ -478,30 +551,30 @@ const BUILDING_IMAGES = {
 // Precarga de imágenes para mejor rendimiento
 const BUILDING_IMAGE_CACHE = {};
 
-// Street texture image & pattern cache
-const STREET_IMG = new Image();
-STREET_IMG.src = '/assets/calle1.jpg';
-const STREET_PATTERN_CACHE = { pattern: null, lastZoom: null, lastCam: {x:0,y:0} };
+// Street textures (vertical/horizontal)
+const STREET_IMG_V = new Image(); // calle.jpg para verticales
+const STREET_IMG_H = new Image(); // calle2.jpg para horizontales
+STREET_IMG_V.src = '/assets/calle.jpg';
+STREET_IMG_H.src = '/assets/calle2.jpg';
+const STREET_PAT_CACHE = { v:null, h:null, keyV:null, keyH:null };
 
-function getStreetPattern(ctx){
+function getStreetPattern(ctx, orientation){
   try{
-    if(!STREET_IMG || !STREET_IMG.complete || STREET_IMG.naturalWidth === 0) return null;
-    // If zoom or cam changed significantly, recreate pattern
-    const key = `${Math.round(ZOOM*100)}_${Math.round(cam.x)}_${Math.round(cam.y)}`;
-    if(STREET_PATTERN_CACHE.key === key && STREET_PATTERN_CACHE.pattern) return STREET_PATTERN_CACHE.pattern;
-
+    const IMG = orientation==='h'? STREET_IMG_H : STREET_IMG_V;
+    if(!IMG || !IMG.complete || IMG.naturalWidth===0) return null;
+    const key = `${orientation}_${Math.round(ZOOM*100)}`; // patrón no depende de cámara, solo de zoom
+    if(orientation==='h' && STREET_PAT_CACHE.keyH === key && STREET_PAT_CACHE.h) return STREET_PAT_CACHE.h;
+    if(orientation==='v' && STREET_PAT_CACHE.keyV === key && STREET_PAT_CACHE.v) return STREET_PAT_CACHE.v;
+    const iw = IMG.naturalWidth, ih = IMG.naturalHeight;
     const patternCanvas = document.createElement('canvas');
-    const iw = STREET_IMG.naturalWidth, ih = STREET_IMG.naturalHeight;
-    // scale image to maintain appearance at current zoom (avoid distortion)
     patternCanvas.width = Math.max(64, Math.round(iw * Math.max(1, ZOOM)));
     patternCanvas.height = Math.max(64, Math.round(ih * Math.max(1, ZOOM)));
     const pc = patternCanvas.getContext('2d');
     pc.clearRect(0,0,patternCanvas.width, patternCanvas.height);
-    // draw the source image scaled to canvas size preserving aspect
-    pc.drawImage(STREET_IMG, 0, 0, patternCanvas.width, patternCanvas.height);
-    const pat = ctx.createPattern(patternCanvas, 'repeat');
-    STREET_PATTERN_CACHE.pattern = pat;
-    STREET_PATTERN_CACHE.key = key;
+    pc.drawImage(IMG, 0,0,patternCanvas.width, patternCanvas.height);
+    const pat = ctx.createPattern(patternCanvas,'repeat');
+    if(orientation==='h'){ STREET_PAT_CACHE.h = pat; STREET_PAT_CACHE.keyH = key; }
+    else { STREET_PAT_CACHE.v = pat; STREET_PAT_CACHE.keyV = key; }
     return pat;
   }catch(e){ console.warn('getStreetPattern error', e); return null; }
 }
@@ -518,7 +591,7 @@ function preloadImages() {
       };
       
       img.onerror = function() {
-        console.warn(`Error al cargar la imagen: ${key}. Usando fallback.`);
+        console.warn(`Error al cargar la imagen: ${key} -> ${BUILDING_IMAGES[key]}. Usando fallback.`);
         // Crear un fallback simple que no cause errores
         BUILDING_IMAGE_CACHE[key] = { 
           error: true, 
@@ -537,6 +610,14 @@ function preloadImages() {
 
 // Ejecutar precarga inmediatamente
 preloadImages();
+setTimeout(()=>{
+  // Si muchas fallan, sugiere revisar assets en servidor
+  try{
+    const total = Object.keys(BUILDING_IMAGES).length;
+    const errors = Object.values(BUILDING_IMAGE_CACHE).filter(v => v && v.error).length;
+    if(errors > 6){ console.warn(`[debug] ${errors}/${total} imágenes fallaron. Revisa /api/debug/assets-list y /api/debug/asset?name=archivo.png`); }
+  }catch(_){ }
+}, 1500);
 
 // Limpiar cualquier entrada residual de 'librería' en el cache (por versiones antiguas)
 if (BUILDING_IMAGE_CACHE['librería']) { delete BUILDING_IMAGE_CACHE['librería']; }
@@ -547,13 +628,55 @@ BG_IMG.onload = () => { console.log('Background image loaded:', BG_IMG.src); };
 BG_IMG.onerror = function() { console.warn('Background image not found at /assets/fondo1.jpg — usando color de respaldo'); };
 BG_IMG.src = '/assets/fondo1.jpg';
 
+// ====== Restricción de arena eliminada: ahora se puede construir en cualquier lugar ======
+// Mantendremos funciones stub para no romper llamadas existentes
+function isPointSand(){ return true; }
+function isRectOnSand(){ return true; }
+function sampleSandPoint(){ return {x: Math.random()*WORLD.w, y: Math.random()*WORLD.h}; }
+
+function relocateInitialBuildingsToSand(){
+  try{
+  if(!(BG_IMG && BG_IMG.complete)) return; // esperar a la imagen
+    const groups = [];
+    // Algunas estructuras individuales
+    if(typeof cemetery==='object') groups.push([cemetery]);
+    if(typeof government==='object') groups.push([government]);
+    // Colecciones (si existen)
+    if(Array.isArray(banks)) groups.push(banks);
+    if(Array.isArray(malls)) groups.push(malls);
+    if(Array.isArray(factories)) groups.push(factories);
+    if(Array.isArray(houses)) groups.push(houses);
+    if(Array.isArray(roadRects)) groups.push(roadRects); // caminos podrían quedarse igual, pero incluimos por consistencia
+    if(Array.isArray(avenidas)) groups.push(avenidas);
+    if(Array.isArray(roundabouts)) groups.push(roundabouts);
+    // Reposicionar cada rect que no caiga sobre arena
+    const allOthers = ()=> groups.flat();
+    for(const arr of groups){
+      for(const rect of arr){
+        if(!rect || isRectOnSand(rect)) continue;
+        const original = {x:rect.x,y:rect.y};
+        let placed=false;
+        for(let t=0;t<140;t++){
+          const p = sampleSandPoint();
+            rect.x = Math.max(5, Math.min(WORLD.w - rect.w - 5, Math.round(p.x - rect.w/2)));
+            rect.y = Math.max(5, Math.min(WORLD.h - rect.h - 5, Math.round(p.y - rect.h/2)));
+            if(isRectOnSand(rect) && !allOthers().some(o=> o!==rect && rectsOverlapWithMargin(o, rect, 4))){ placed=true; break; }
+        }
+        if(!placed){ rect.x = original.x; rect.y = original.y; }
+      }
+    }
+    console.log('[terrain] Reubicación inicial a arena completada');
+  }catch(e){ console.warn('[terrain] relocate fail', e); }
+}
+
 // ... no street texture feature (restored to solid fills)
 
   /* ===== CONFIGURACIÓN ===== */
   const CFG = {
-  LINES_ON:true, PARKS:8, SCHOOLS:8, FACTORIES:12, BANKS:8, MALLS:4, HOUSE_SIZE:70, CEM_W:220, CEM_H:130, N_INIT:24,  // Más infraestructuras y casas iniciales
+  LINES_ON:false, PARKS:8, SCHOOLS:8, FACTORIES:12, BANKS:8, MALLS:4, HOUSE_SIZE:70, OWNED_HOUSE_SIZE_MULT:1.4, CEM_W:220, CEM_H:130, N_INIT:24,  // Más infraestructuras y casas iniciales
+  HOME_REST_DURATION:120,
     // Radio base de los agentes (en unidades de mundo). Aumentado para que se vean más grandes.
-  R_ADULT:7.5, R_CHILD:6.0, R_ELDER:7.0, SPEED:60, WORK_DURATION:10, EARN_PER_SHIFT:15, WORK_COOLDOWN:45,
+  R_ADULT:7.5, R_CHILD:6.0, R_ELDER:7.0, SPEED:60, WORK_DURATION:6, EARN_PER_SHIFT:20, WORK_COOLDOWN:45,
     // Tamaños mínimos en pantalla para que no desaparezcan con el zoom.
   MIN_AGENT_PX: 12,
   NAME_FONT_PX: 13,
@@ -565,12 +688,18 @@ BG_IMG.src = '/assets/fondo1.jpg';
     WEALTH_TAX_MAX: 0.06,      // 6% tope de seguridad
     EMPLOYEE_SALARY: 25, SALARY_PAY_EVERY: 120,
     GOV_RENT_EVERY: 10*60, GOV_RENT_AMOUNT: 5, 
+  POST_DEPOSIT_EXPLORE: 30, // segundos de exploración tras depositar (visitar negocios)
+  SHOP_PURCHASE_INTERVAL: 300, // 5 min entre compras máximas
     COST_ROAD: 40,
     COST_PARK: 80, COST_SCHOOL: 120, COST_LIBRARY: 150, COST_POLICE: 200, COST_HOSPITAL: 250, COST_POWER: 350,
     SHOP_W:120, SHOP_H:80, VISIT_RADIUS:220, VISIT_RATE: 0.003, PRICE_MIN:1, PRICE_MAX:3,
     SHOP_DWELL: 5, NEW_SHOP_FORCE_WINDOW: 120,
-    SHOP_PAYOUT_CHUNK: 100,
+  SHOP_PAYOUT_CHUNK: 100,
     OWNER_MANAGE_VS_WORK_RATIO: 0.3, // 30% de probabilidad de gestionar negocio vs trabajar
+  // Exploración del mapa por bots
+  EXPLORE_SECTORS_X: 12,
+  EXPLORE_SECTORS_Y: 9,
+  EXPLORE_REACH_RADIUS: 18,
   };
 
   const VEHICLES = {
@@ -699,6 +828,53 @@ BG_IMG.src = '/assets/fondo1.jpg';
       // listas globales
       try{ removeFromList(government.placed); }catch(e){}
       try{ removeFromList(shops); }catch(e){}
+
+      // ===== Cobertura de exploración (para que bots recorran todo el mapa) =====
+      let EXPLORE_GRID = null; // matriz booleana [sy][sx]
+      function ensureExploreGrid(){
+        const sx = CFG.EXPLORE_SECTORS_X, sy = CFG.EXPLORE_SECTORS_Y;
+        if(!EXPLORE_GRID || EXPLORE_GRID.length!==sy || EXPLORE_GRID[0]?.length!==sx){
+          EXPLORE_GRID = Array.from({length: sy}, ()=> Array.from({length: sx}, ()=> false));
+        }
+        return EXPLORE_GRID;
+      }
+      function markVisitedAt(x, y){
+        const grid = ensureExploreGrid();
+        const sx = CFG.EXPLORE_SECTORS_X, sy = CFG.EXPLORE_SECTORS_Y;
+        const ix = Math.min(sx-1, Math.max(0, Math.floor(x / (WORLD.w / sx))));
+        const iy = Math.min(sy-1, Math.max(0, Math.floor(y / (WORLD.h / sy))));
+        grid[iy][ix] = true;
+      }
+      function nextUnvisitedTarget(){
+        const grid = ensureExploreGrid();
+        const sx = CFG.EXPLORE_SECTORS_X, sy = CFG.EXPLORE_SECTORS_Y;
+        // lista de celdas no visitadas
+        const cells = [];
+        for(let iy=0; iy<sy; iy++){
+          for(let ix=0; ix<sx; ix++){
+            if(!grid[iy][ix]){
+              const cx = (ix + 0.5) * (WORLD.w / sx);
+              const cy = (iy + 0.5) * (WORLD.h / sy);
+              cells.push({ix, iy, x: cx, y: cy});
+            }
+          }
+        }
+        if(cells.length===0){
+          // reset coverage para seguir patrullando
+          for(let iy=0; iy<sy; iy++) for(let ix=0; ix<sx; ix++) grid[iy][ix] = false;
+          // escoger centro después de reiniciar
+          return { x: WORLD.w/2, y: WORLD.h/2 };
+        }
+        // elegir la más lejana al azar entre top-k para dispersión
+        const k = Math.min(8, cells.length);
+        // mezclar un poco
+        for(let i=cells.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cells[i],cells[j]]=[cells[j],cells[i]]; }
+        const sample = cells.slice(0, k);
+        // opcional: priorizar por distancia desde un punto aleatorio
+        const px = Math.random()*WORLD.w, py = Math.random()*WORLD.h;
+        sample.sort((a,b)=> (Math.hypot(b.x-px,b.y-py) - Math.hypot(a.x-px,a.y-py)) );
+        return { x: sample[0].x, y: sample[0].y };
+      }
       try{ removeFromList(factories); }catch(e){}
       try{ removeFromList(banks); }catch(e){}
       try{ removeFromList(malls); }catch(e){}
@@ -722,6 +898,50 @@ BG_IMG.src = '/assets/fondo1.jpg';
     const paddedB = { x: rectB.x - margin, y: rectB.y - margin, w: rectB.w + margin*2, h: rectB.h + margin*2 };
     return rectsOverlap(rectA, paddedB);
   };
+
+  // ===== Cobertura de exploración (scope global) =====
+  // Las versiones anteriores quedaron dentro de removeByLabels(), lo que hacía
+  // que no existieran en el ámbito global. Las definimos aquí para que el bucle
+  // principal pueda usarlas sin ReferenceError.
+  let __EXPLORE_GRID = null; // matriz booleana [sy][sx]
+  function ensureExploreGrid(){
+    const sx = CFG.EXPLORE_SECTORS_X, sy = CFG.EXPLORE_SECTORS_Y;
+    if(!__EXPLORE_GRID || __EXPLORE_GRID.length!==sy || __EXPLORE_GRID[0]?.length!==sx){
+      __EXPLORE_GRID = Array.from({length: sy}, ()=> Array.from({length: sx}, ()=> false));
+    }
+    return __EXPLORE_GRID;
+  }
+  function markVisitedAt(x, y){
+    const grid = ensureExploreGrid();
+    const sx = CFG.EXPLORE_SECTORS_X, sy = CFG.EXPLORE_SECTORS_Y;
+    const ix = Math.min(sx-1, Math.max(0, Math.floor(x / (WORLD.w / sx))));
+    const iy = Math.min(sy-1, Math.max(0, Math.floor(y / (WORLD.h / sy))));
+    grid[iy][ix] = true;
+  }
+  function nextUnvisitedTarget(){
+    const grid = ensureExploreGrid();
+    const sx = CFG.EXPLORE_SECTORS_X, sy = CFG.EXPLORE_SECTORS_Y;
+    const cells = [];
+    for(let iy=0; iy<sy; iy++){
+      for(let ix=0; ix<sx; ix++){
+        if(!grid[iy][ix]){
+          const cx = (ix + 0.5) * (WORLD.w / sx);
+          const cy = (iy + 0.5) * (WORLD.h / sy);
+          cells.push({ix, iy, x: cx, y: cy});
+        }
+      }
+    }
+    if(cells.length===0){
+      for(let iy=0; iy<sy; iy++) for(let ix=0; ix<sx; ix++) grid[iy][ix] = false;
+      return { x: WORLD.w/2, y: WORLD.h/2 };
+    }
+    const k = Math.min(8, cells.length);
+    for(let i=cells.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cells[i],cells[j]]=[cells[j],cells[i]]; }
+    const sample = cells.slice(0, k);
+    const px = Math.random()*WORLD.w, py = Math.random()*WORLD.h;
+    sample.sort((a,b)=> (Math.hypot(b.x-px,b.y-py) - Math.hypot(a.x-px,a.y-py)) );
+    return { x: sample[0].x, y: sample[0].y };
+  }
 
   function isOnRoad(agent) {
     const pt = { x: agent.x, y: agent.y };
@@ -791,61 +1011,69 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 }
 
   function makeBarriosYCasas(totalNeeded, urbanArea, avoidList = []) {
-    barrios.length = 0;
-    houses.length = 0;
-    cityBlocks.length = 0;
-
-    // Casas en 4 barrios organizados simétricamente
-    barrios.length = 0; 
-    houses.length = 0; 
-    cityBlocks.length = 0;
-
-    const barrioMargin = 40; // Margen desde los bordes
-    const barrioSize = {
-      w: 380, 
-      h: 320
-    };
-
-    // Posiciones más simétricas para los barrios
-    const barriosPos = [
-      {x: barrioMargin, y: barrioMargin}, // Noroeste
-      {x: WORLD.w - barrioSize.w - barrioMargin, y: barrioMargin}, // Noreste
-      {x: barrioMargin, y: WORLD.h - barrioSize.h - barrioMargin}, // Suroeste
-      {x: WORLD.w - barrioSize.w - barrioMargin, y: WORLD.h - barrioSize.h - barrioMargin} // Sureste
-    ];
-
-    // Crear los barrios equidistantes
-    for(let i=0; i<4; i++){
-      const b = {
-        ...barriosPos[i], 
-        w: barrioSize.w, 
-        h: barrioSize.h, 
-        name: `Barrio ${i+1}`
-      };
-      barrios.push(b);
-      cityBlocks.push(b);
+    // Nueva lógica: sin barrios. Casas dispersas por todo el mapa.
+    barrios.length = 0; cityBlocks.length = 0; houses.length = 0;
+    const attemptsMax = totalNeeded * 800;
+    let attempts = 0;
+    while(houses.length < totalNeeded && attempts < attemptsMax){
+      attempts++;
+      const size = CFG.HOUSE_SIZE;
+      const x = Math.round(rand(20, WORLD.w - size - 20));
+      const y = Math.round(rand(20, WORLD.h - size - 20));
+      const rect = {x,y,w:size,h:size, ownerId:null, rentedBy:null};
+      if(houses.some(h=>rectsOverlapWithMargin(h, rect, 18))) continue;
+      if(avenidas.some(r=>rectsOverlapWithMargin(r, rect, 12))) continue;
+      if(roundabouts.some(r=>rectsOverlapWithMargin(r, rect, 12))) continue;
+      houses.push(rect);
     }
-    // Distribuir casas en los 4 barrios con tamaños variables más grandes
-    const pad = 24; // Aumentado padding de 18 a 24 para más espacio
-    let totalMade = 0;
-    const housesPerBarrio = Math.ceil(totalNeeded / barrios.length);
-    for (const b of barrios) {
-      let madeInThisBarrio = 0;
-      // Usar tamaños variables: 60-90 píxeles para variar como otras edificaciones
-      const minHouseSize = 60, maxHouseSize = 90;
-      const colsH = Math.max(4, Math.floor((b.w - pad * 2) / (maxHouseSize + 15))); // Ajustado para tamaños mayores
-      const rowsH = Math.max(3, Math.floor((b.h - pad * 2) / (maxHouseSize + 15)));
-      for (let ry = 0; ry < rowsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; ry++) {
-        for (let rx = 0; rx < colsH && madeInThisBarrio < housesPerBarrio && totalMade < totalNeeded; rx++) {
-          // Tamaño aleatorio para cada casa (como fábricas o bancos)
-          const hsize = srandi(minHouseSize, maxHouseSize);
-          const hx = b.x + pad + rx * (maxHouseSize + 15); // Usar max para espaciado consistente
-          const hy = b.y + pad + ry * (maxHouseSize + 15);
-          const newH = { x: hx, y: hy, w: hsize, h: hsize, ownerId: null, rentedBy: null };
-          if ([...avenidas, ...roundabouts].some(av => rectsOverlapWithMargin(av, newH, 8))) continue;
-          houses.push(newH);
-          totalMade++; madeInThisBarrio++;
+    console.log('[world] Casas dispersas generadas:', houses.length);
+  }
+
+  // Asignación / arriendo
+  function ensurePlayerHasHouse(agent){
+    if(!agent) return;
+    // ya es dueño de una casa
+    if(typeof agent.houseIdx === 'number' && houses[agent.houseIdx]) return;
+    // ya renta una
+    const rentedIdx = houses.findIndex(h=> h && h.rentedBy === agent.id);
+    if(rentedIdx>=0){ agent.houseIdx = rentedIdx; return; }
+    // buscar una libre
+    const freeIdx = houses.findIndex(h=> h && !h.ownerId && !h.rentedBy);
+    if(freeIdx>=0){
+      houses[freeIdx].rentedBy = agent.id; agent.houseIdx = freeIdx; toast('Se te asignó una casa en arriendo. Paga 50 créditos cada hora.');
+      try{
+        // Guardar índice de casa rentada para próximas sesiones si todavía no se guardó
+        if(window.saveProgress){
+          window.__progress = Object.assign({}, window.__progress||{}, { rentedHouseIdx: freeIdx });
+          if(!window.__savedRentedIdxOnce){ window.saveProgress({ rentedHouseIdx: freeIdx }); window.__savedRentedIdxOnce = true; }
         }
+      }catch(_){ }
+    }
+  }
+
+  // Cobro periódico de arriendo cada hora real
+  let lastRentCheck = Date.now();
+  function processRent(dtSeconds){
+    // Ejecutar cada ~60s acumulando hasta 3600s
+    if(!window.__rentAccum) window.__rentAccum = 0;
+    window.__rentAccum += dtSeconds;
+    if(window.__rentAccum < 3600) return;
+    window.__rentAccum = 0;
+    for(const a of agents){
+      if(!a || !a.id) continue;
+      if(typeof a.houseIdx !== 'number' || !houses[a.houseIdx]) continue;
+      const h = houses[a.houseIdx];
+      // Debe estar rentando (no dueño)
+      if(h.ownerId && h.ownerId === a.id) continue;
+      if(h.rentedBy !== a.id) continue;
+      const rentCost = 50;
+      if((a.money||0) >= rentCost){
+        a.money -= rentCost;
+        // Sumar a fondos del gobierno (si existe estructura)
+        try{ government.funds = (government.funds||0) + rentCost; if(typeof govFundsEl!=='undefined' && govFundsEl) govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)}`; }catch(_){ }
+        toast(`${a.name||'Jugador'} pagó arriendo: -${rentCost}`);
+      } else {
+        toast(`${a.name||'Jugador'} no pudo pagar arriendo (saldo insuficiente)`);
       }
     }
   }
@@ -1564,16 +1792,18 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     const p = toScreen(rect.x, rect.y);
     ctx.font = `700 ${Math.max(8, 12 * ZOOM)}px system-ui,Segoe UI,Arial`;
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 2 * ZOOM;
+  // sombra de texto eliminada
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
     ctx.textAlign = 'left'; ctx.fillText(label, p.x + 10 * ZOOM, p.y + 20 * ZOOM);
     ctx.font = `700 ${Math.max(10, iconSize * ZOOM)}px system-ui,Segoe UI,Arial,emoji`;
     ctx.textAlign = 'center';
     const iconX = p.x + (rect.w * ZOOM) - (10 * ZOOM);
     const iconY = p.y + (rect.h * ZOOM) / 2 + (iconSize * 0.18) * ZOOM;
     ctx.fillText(emoji, iconX, iconY);
-    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; // asegurado sin sombra
   }
   function drawGrid(){
+  if(!CFG.LINES_ON) return; // grid desactivado
   const step = 120*ZOOM;
   ctx.lineWidth=1; ctx.strokeStyle='#27324c'; ctx.globalAlpha=0.45;
   const xStart = Math.floor((cam.x)/(step/ZOOM))*(step/ZOOM), xEnd = cam.x + canvas.width/ZOOM + step/ZOOM;
@@ -1596,22 +1826,29 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 }
 
   function drawAvenidas(){
-    const pat = getStreetPattern(ctx);
     for(const av of avenidas){
       const p = toScreen(av.x, av.y);
       const w = av.w * ZOOM, h = av.h * ZOOM;
+      // Determinar orientación: vertical si es más alto que ancho
+      const orientation = h > w ? 'v' : 'h';
+      const pat = getStreetPattern(ctx, orientation);
       if(pat){
-        ctx.save();
-        // translate pattern origin so it moves with cam
-        ctx.translate(p.x, p.y);
-        ctx.fillStyle = pat;
-        ctx.fillRect(0, 0, w, h);
-        ctx.restore();
-      }else{
-        ctx.fillStyle = 'rgba(75,85,99,0.95)';
-        ctx.fillRect(p.x, p.y, w, h);
+        ctx.save(); ctx.translate(p.x, p.y); ctx.fillStyle = pat; ctx.fillRect(0,0,w,h); ctx.restore();
+      } else {
+        ctx.fillStyle = '#555'; ctx.fillRect(p.x,p.y,w,h);
       }
-      ctx.strokeStyle='rgba(156,163,175,0.95)'; ctx.lineWidth=2*ZOOM; ctx.strokeRect(p.x,p.y,w,h);
+      // líneas blancas laterales
+      ctx.strokeStyle='#f3f4f6'; ctx.lineWidth=2*ZOOM; ctx.strokeRect(p.x,p.y,w,h);
+      // línea discontinua central
+      ctx.save();
+      ctx.strokeStyle='#ffffff'; ctx.lineWidth=3*ZOOM; ctx.setLineDash([14*ZOOM, 18*ZOOM]);
+      ctx.beginPath();
+      if(orientation==='v'){
+        ctx.moveTo(p.x + w/2, p.y); ctx.lineTo(p.x + w/2, p.y + h);
+      } else {
+        ctx.moveTo(p.x, p.y + h/2); ctx.lineTo(p.x + w, p.y + h/2);
+      }
+      ctx.stroke(); ctx.restore();
     }
   }
   function drawRoundabouts(){
@@ -1642,9 +1879,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       ctx.font = `700 ${Math.max(10, 14 * ZOOM)}px system-ui,Segoe UI`;
       ctx.fillStyle = 'rgba(34,34,34,0.95)';
       // Dar sombra ligera para mejorar legibilidad
-      ctx.shadowColor = 'rgba(255,255,255,0.6)'; ctx.shadowBlur = 2 * ZOOM;
+  // sombra de texto eliminada
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
       ctx.fillText(b.name, p.x + 8 * ZOOM, p.y + 18 * ZOOM);
-      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; // asegurado sin sombra
     }
   }
 
@@ -1653,19 +1891,21 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     if (!(BG_IMG && BG_IMG.complete && BG_IMG.naturalWidth > 0)) return;
     const tileW = BG_IMG.naturalWidth;
     const tileH = BG_IMG.naturalHeight;
-    // Región visible en coordenadas del mundo
     const vx0 = cam.x, vy0 = cam.y;
     const vw = canvas.width / ZOOM, vh = canvas.height / ZOOM;
-    // Indices de tiles a dibujar (añadir margen de 1 tile para evitar huecos)
     const i0 = Math.max(Math.floor(vx0 / tileW) - 1, 0);
     const j0 = Math.max(Math.floor(vy0 / tileH) - 1, 0);
     const i1 = Math.min(Math.ceil((vx0 + vw) / tileW) + 1, Math.ceil(WORLD.w / tileW));
     const j1 = Math.min(Math.ceil((vy0 + vh) / tileH) + 1, Math.ceil(WORLD.h / tileH));
-    for(let i = i0; i < i1; i++){
-      for(let j = j0; j < j1; j++){
-        const wx = i * tileW, wy = j * tileH;
+    ctx.imageSmoothingEnabled = false;
+    for(let i=i0;i<i1;i++){
+      for(let j=j0;j<j1;j++){
+        const wx = i*tileW, wy = j*tileH;
         const p = toScreen(wx, wy);
-        ctx.drawImage(BG_IMG, p.x, p.y, tileW * ZOOM, tileH * ZOOM);
+        // Redondear para evitar sub-pixel gaps y solapar +1px
+        const sx = Math.round(p.x), sy = Math.round(p.y);
+        const sw = Math.round(tileW*ZOOM)+1, sh = Math.round(tileH*ZOOM)+1;
+        ctx.drawImage(BG_IMG, sx, sy, sw, sh);
       }
     }
   }
@@ -1765,48 +2005,43 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       drawBuildingWithImage(s, s.kind, '#8B5CF6', '#c4b5fd');
     });
 
-    // ===== Dibujar etiquetas con nombre/label de cada edificio en el mapa grande =====
+    // Mostrar dinero acumulado de cada negocio comprado
     try{
-      // Reunir todas las entidades que se muestran en el mapa grande
-      const allVisible = [...renderGovernmentPlaced, ...renderShops, ...factories, ...banks, ...malls, ...renderHouses];
-      // Agrupar por tipo/base para numerar repetidos
-      const groups = new Map();
-      const getBaseName = (it) => {
-        let n = (it && (it.label || it.k || it.kind || it.type) || '').toString();
-        n = n.replace(/_+/g, ' ').trim();
-        // quitar numeración final si existe (ej: 'Biblioteca 1')
-        n = n.replace(/\s+#?\d+$/, '').replace(/\s+\d+$/, '').trim();
-        if(!n) n = 'edificio';
-        return n.charAt(0).toUpperCase() + n.slice(1);
-      };
-      for(const ent of allVisible){
-        if(!ent) continue;
-        const key = getBaseName(ent).toLowerCase();
-        const arr = groups.get(key) || [];
-        arr.push(ent);
-        groups.set(key, arr);
-      }
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-      for(const [baseKey, arr] of groups.entries()){
-        for(let i=0;i<arr.length;i++){
-          const ent = arr[i];
-          if(!ent) continue;
-          const base = getBaseName(ent);
-          const display = (arr.length > 1) ? `${base} ${i+1}` : base;
-          const p = toScreen(ent.x, ent.y);
-          const w = (ent.w || 60) * ZOOM;
-          const tx = p.x + w/2;
-          const ty = p.y - 6 * ZOOM; // encima del edificio
-          ctx.lineWidth = Math.max(2, 2 * ZOOM);
-          ctx.font = `${Math.max(10, 12 * ZOOM)}px system-ui,Segoe UI,Arial`;
-          ctx.strokeText(display, tx, ty);
-          ctx.fillText(display, tx, ty);
+      for(const s of renderShops){
+        if(!s || !s.ownerId) continue; // solo negocios con dueño
+        const amount = Math.floor(s.cashbox || 0);
+        if(amount <= 0) continue; // no mostrar cuando está vacío
+        const p = toScreen(s.x, s.y);
+        const w = s.w * ZOOM;
+        const now = performance.now();
+        const age = now - (s._lastCashboxChange || 0);
+        // Fade suave después de 12s sin cambios
+        let alpha = 1.0;
+        const FADE_DELAY = 12000, FADE_LEN = 6000;
+        if(age > FADE_DELAY){
+          alpha = Math.max(0.15, 1 - (age-FADE_DELAY)/FADE_LEN);
         }
+        const label = `💰 ${amount}`;
+        ctx.save();
+        ctx.font = `${11*ZOOM}px ui-monospace,monospace`;
+        const metrics = ctx.measureText(label);
+        const bw = metrics.width + 14;
+        const bh = 16*ZOOM;
+        const cx = p.x + w/2;
+        const topY = p.y - 4*ZOOM;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = 'rgba(30,41,59,0.90)';
+        ctx.strokeStyle = 'rgba(234,179,8,0.85)';
+        ctx.lineWidth = 1;
+        if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx-bw/2, topY-bh, bw, bh, 4*ZOOM); ctx.fill(); ctx.stroke(); }
+        else { ctx.fillRect(cx-bw/2, topY-bh, bw, bh); ctx.strokeRect(cx-bw/2, topY-bh, bw, bh); }
+        ctx.fillStyle = '#fcd34d'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(label, cx, topY-bh/2+1);
+        ctx.restore();
       }
-    }catch(e){ console.warn('Error drawing labels', e); }
+    }catch(_){ }
+
+  // Etiquetas de edificaciones ocultas por solicitud del usuario
 
     for(const inst of renderGovernmentPlaced){
       // Si los datos provienen del servidor, algunos campos (k/key/type) pueden faltar.
@@ -1835,10 +2070,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
           ctx.strokeStyle = '#60a5fa';
           ctx.lineWidth = 2;
           ctx.strokeRect(px, py, w, h);
-          ctx.fillStyle = 'white';
-          ctx.textAlign = 'center';
-          ctx.font = `700 ${Math.max(10, 14 * ZOOM)}px system-ui,Segoe UI`;
-          ctx.fillText('GOBIERNO', px + w/2, py + h/2);
+          // No texto del edificio
         }
       } else if(inst.k === 'carcel'){
         const p = toScreen(inst.x, inst.y);
@@ -1848,24 +2080,51 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         ctx.fillStyle = 'rgba(220,220,220,0.95)';
         const bars = Math.max(3, Math.floor(inst.w/10));
         for(let i=0;i<bars;i++){ const bx = p.x + 4 + i*(w-8)/(bars-1); ctx.fillRect(bx, p.y+4, 2, h-8); }
-        ctx.fillStyle = '#fff'; ctx.font=`700 ${Math.max(10, 14*ZOOM)}px system-ui`; ctx.textAlign='center'; ctx.fillText('CÁRCEL', p.x + w/2, p.y + 18*ZOOM);
+        // Sin texto "CÁRCEL"
       } else {
-        // Usar drawBuildingWithImage en lugar de drawLabelIcon
+        // Usar drawBuildingWithImage en lugar de drawLabelIcon (sin textos)
         drawBuildingWithImage(inst, inst.k, inst.fill, inst.stroke);
-        
-        // Mantener el nombre encima de la imagen para mayor claridad
-        if (ZOOM >= 0.8) {
-          const p = toScreen(inst.x, inst.y);
-          ctx.font = `700 ${Math.max(8, 10 * ZOOM)}px system-ui,Segoe UI`;
-          ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'center';
-          ctx.fillText(inst.label, p.x + (inst.w * ZOOM)/2, p.y + 12 * ZOOM);
-        }
       }
     }
 
+    // Dibujar casas con posible marcador de arriendo
     renderHouses.forEach(h => {
-      drawBuildingWithImage(h, 'house', '#334155', h.ownerId ? '#22d3ee' : '#94a3b8');
+      if(!h) return;
+      const stroke = h.ownerId ? '#22d3ee' : '#94a3b8';
+      // Owned house: slightly different fill
+      const fill = h.owned ? '#2f4858' : '#334155';
+      drawBuildingWithImage(h, 'house', fill, stroke);
+      try{
+        if(!h) return;
+        const isRented = h.rentedBy && !h.ownerId;
+        if(isRented || h._markerInitial){
+          const p = toScreen(h.x, h.y);
+          const w = h.w * ZOOM;
+          const labelInitial = h._markerInitial || '?';
+          ctx.save();
+          ctx.font = `${12*ZOOM}px ui-monospace,monospace`;
+          const label = '✓ ' + labelInitial;
+          const metrics = ctx.measureText(label);
+          const bw = metrics.width + 12;
+          const bh = 16*ZOOM;
+          const cx = p.x + w/2;
+          const topY = p.y - 8*ZOOM;
+          ctx.fillStyle = 'rgba(15,50,28,0.92)';
+          ctx.strokeStyle = 'rgba(60,160,90,0.9)';
+          ctx.lineWidth = 1;
+          // Fondo redondeado manual si roundRect no existe
+          if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx-bw/2, topY-bh, bw, bh, 4*ZOOM); ctx.fill(); ctx.stroke(); }
+          else { ctx.fillRect(cx-bw/2, topY-bh, bw, bh); ctx.strokeRect(cx-bw/2, topY-bh, bw, bh); }
+          ctx.fillStyle = '#5eff94'; ctx.textAlign='left'; ctx.textBaseline='middle';
+          ctx.fillText('✓', cx-bw/2+6, topY-bh/2);
+          ctx.fillStyle='#fff'; ctx.fillText(labelInitial, cx-bw/2+20, topY-bh/2);
+          ctx.restore();
+        }
+        if(h._highlightUntil && performance.now() < h._highlightUntil){
+          const p2 = toScreen(h.x, h.y); const w2 = h.w * ZOOM, h2 = h.h * ZOOM;
+          ctx.save(); ctx.strokeStyle = '#41d77c'; ctx.lineWidth = 3; ctx.globalAlpha = 0.85; ctx.strokeRect(p2.x-2, p2.y-2, w2+4, h2+4); ctx.restore();
+        }
+      }catch(_){ }
     });
   }
 
@@ -1876,15 +2135,21 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const pa = toScreen(conn.a.x, conn.a.y);
       const pb = toScreen(conn.b.x, conn.b.y);
       ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y);
-      let color = 'rgba(148,163,184,0.55)';
-      if (conn.matches === 3) color = 'rgba(252, 165, 165, 0.8)';
-      else if (conn.matches === 4) color = 'rgba(244, 63, 94, 0.9)';
+      // Base blanca tenue y más roja a mayor coincidencia de gustos
+      let color = 'rgba(255,255,255,0.55)'; // blanco
+      if (conn.matches === 2) color = 'rgba(255, 200, 200, 0.7)';
+      else if (conn.matches === 3) color = 'rgba(252, 165, 165, 0.85)';
+      else if (conn.matches === 4) color = 'rgba(244, 63, 94, 0.95)';
       else if (conn.matches >= 5) color = 'rgba(220, 38, 38, 1.0)';
       ctx.strokeStyle = color; ctx.stroke();
     }
   }
   function updateSocialLogic() {
     const newConnections = [];
+    // Mostrar sugerencia de "media naranja" cuando el jugador coincide en 4 gustos con alguien cercano
+    const player = agents.find(a => a.id === USER_ID);
+    const HEART = '💘';
+    const SEEN_SET = (window.__seenLovePrompts = window.__seenLovePrompts || new Set());
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
       if (a.state === 'child') continue;
@@ -1895,6 +2160,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if (d < 50) {
           const matches = likeMatches(a, b);
           newConnections.push({ a, b, matches });
+          // Prompt de media naranja: sólo involucra al jugador; 4 coincidencias, cerca
+          if (player && (a.id === player.id || b.id === player.id) && matches >= 4 && d < 30) {
+            const other = (a.id === player.id) ? b : a;
+            const key = player.id + '|' + other.id;
+            if (!SEEN_SET.has(key)) {
+              SEEN_SET.add(key);
+              try{
+                showLovePrompt(other);
+              }catch(_){ /* ignore UI errors */ }
+            }
+          }
           const near = d < 28;
           const aOwnsHouse = a.houseIdx !== null && houses[a.houseIdx] && houses[a.houseIdx].ownerId === a.id;
           const bOwnsHouse = b.houseIdx !== null && houses[b.houseIdx] && houses[b.houseIdx].ownerId === b.id;
@@ -2028,7 +2304,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
   const pt = toScreen(s.x, s.y);
   const baseR = (p.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
-  const r = Math.max(CFG.MIN_AGENT_PX, baseR);
+  const r = baseR;
   // Solo imagen de avatar (sin círculo de fondo)
   try{
     const img = getAvatarImage(p.avatar);
@@ -2042,7 +2318,13 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   // Mostrar nombre siempre visible con tamaño fijo en pixeles, independiente del zoom
   ctx.font = `700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`;
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - (r + 12));
+  // Escalar nombre de jugador remoto con el zoom; ocultar si muy pequeño
+  const rpNamePx = CFG.NAME_FONT_PX * ZOOM;
+  const rpNameOffset = Math.max(6, 10 * ZOOM);
+  if (rpNamePx >= 6) {
+    ctx.font = `700 ${rpNamePx}px ui-monospace,monospace`; ctx.fillStyle='#fff'; ctx.textAlign='center';
+    ctx.fillText(`${p.name||p.code||'P'}`, pt.x, pt.y - (r + rpNameOffset));
+  }
     }
   }
 
@@ -2052,22 +2334,43 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     const nowMs = performance.now();
     let dt = (nowMs - __lastTime) / 1000; __lastTime = nowMs; dt = Math.min(dt, 0.05);
     frameCount++;
-    updateSocialLogic();
-    drawWorld();
-    drawSocialLines();
+  if(!window.__gamePaused){ updateSocialLogic(); }
+  // Bloqueo por arriendo pendiente: detener actualizaciones de agentes hasta que pague
+  const rentBlocked = (typeof window.__rentBlocked !== 'undefined') && window.__rentBlocked;
+  if(rentBlocked){
+    // Solo dibujar mundo y UI básica; saltar lógica avanzada
+    try{ drawWorld(); }catch(_){ }
+    requestAnimationFrame(loop); return;
+  }
+  // Procesar alquileres de casas (solo en modo local/offline para no duplicar con servidor)
+  try{ if(!window.__gamePaused && typeof hasNet==='function' && !hasNet()) processRent(dt); }catch(_){ }
+  // Seguimiento continuo del agente (si está activado) antes de dibujar el mundo
+    try{
+      if (FOLLOW_AGENT && USER_ID) {
+        const me = agents.find(a => a.id === USER_ID);
+        if (me) {
+          const vw = canvas.width / ZOOM, vh = canvas.height / ZOOM;
+          cam.x = Math.max(0, Math.min(me.x - vw / 2, Math.max(0, WORLD.w - vw)));
+          cam.y = Math.max(0, Math.min(me.y - vh / 2, Math.max(0, WORLD.h - vh)));
+          clampCam();
+        }
+      }
+    }catch(_){ }
+  drawWorld();
+  if(!window.__gamePaused){ drawSocialLines(); }
 
     // ======= Jugadores remotos con smoothing nuevo =======
-    try{ renderRemotePlayers(); }catch(e){}
+  try{ if(!window.__gamePaused) renderRemotePlayers(); }catch(e){}
 
     const nowS = performance.now()/1000;
 
-  for(const a of agents){
+  if(!window.__gamePaused) for(const a of agents){
       a.cooldownSocial = Math.max(0, a.cooldownSocial - dt);
       if (a.employedAtShopId) {
         const myWorkplace = shops.find(s => s.id === a.employedAtShopId);
         if (myWorkplace) { a.target = centerOf(myWorkplace); a.targetRole = 'work_shop'; }
       }
-  if (!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle') && nowS >= (a.nextWorkAt || 0)) {
+  if (!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle') && nowS >= (a.nextWorkAt || 0) && !(a.restUntil && nowS < a.restUntil) && !(a.exploreUntil && nowS < a.exploreUntil)) {
   const myOwnedShops = shops.filter(s => s.ownerId === a.id);
         if (myOwnedShops.length > 0 && Math.random() < CFG.OWNER_MANAGE_VS_WORK_RATIO) {
           const shopToManage = myOwnedShops[(Math.random() * myOwnedShops.length) |  0];
@@ -2088,14 +2391,24 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         a.workingUntil=null; a.pendingDeposit += CFG.EARN_PER_SHIFT; a.goingToBank=true;
         const b=banks[(Math.random()*banks.length)|0]; if(b){ a.target=centerOf(b); a.targetRole='bank'; }
       }
-      if(a.goingToBank && a.target){
+    if(a.goingToBank && a.target){
         const c=a.target; if(Math.hypot(a.x-c.x,a.y-c.y)<14){
-          a.money += a.pendingDeposit; a.pendingDeposit=0; a.goingToBank=false; a.nextWorkAt = nowS + CFG.WORK_COOLDOWN;
-          if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h) a.target=centerOf(h), a.targetRole='home'; else a.target=null, a.targetRole='idle'; }
-          else { a.target=null, a.targetRole='idle'; }
+      a.money += a.pendingDeposit; a.pendingDeposit=0; a.goingToBank=false;
+      // Inicia fase de exploración posterior al depósito
+      a.exploreUntil = nowS + (CFG.POST_DEPOSIT_EXPLORE||30);
+      a.targetRole='explore'; a.target=null; // se generará destino exploración más abajo
+      a.nextWorkAt = null; // se definirá tras descanso en casa
         }
       }
-        if(!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle' || a.targetRole==='home')) {
+      // Transición de exploración -> ir a casa para descanso
+      if(a.exploreUntil && nowS >= a.exploreUntil){
+        a.exploreUntil = null;
+        if(a.houseIdx!=null){ const h=houses[a.houseIdx]; if(h){ a.target=centerOf(h); a.targetRole='home'; a.restUntil = nowS + (CFG.HOME_REST_DURATION||60); } }
+      }
+      // Tras descanso en casa, habilitar próximo trabajo
+      if(a.restUntil && nowS >= a.restUntil){ a.restUntil = null; a.nextWorkAt = nowS; }
+
+  if(!a.forcedShopId && !a.workingUntil && !a.goingToBank && !a.employedAtShopId && (!a.targetRole || a.targetRole==='idle' || a.targetRole==='home' || a.targetRole==='explore')) {
         if (!a.forcedShopId && Math.random() < CFG.VISIT_RATE) {
           // Sólo considerar negocios que ya tienen dueño (comprados). Las panaderías y otros tipos
           // que no estén comprados no deberían atraer visitas porque no existen físicamente.
@@ -2111,13 +2424,30 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
             }
             if(best){ a.target={x:best.x+best.w/2,y:best.y+best.h/2}; a.targetRole='shop'; a._shopTargetId = best.id; }
           }
+          // Si sigue idle, asignar exploración del mapa
+          if((!a.targetRole || a.targetRole==='idle' || a.targetRole==='home') && !a.target){
+            const t = nextUnvisitedTarget();
+            a.target = t; a.targetRole = 'explore';
+          }
         }
       }
       if(a.targetRole==='shop' && a.target){
         const c=a.target;
         if(Math.hypot(a.x-c.x,a.y-c.y)<16){
           const s = shops.find(q=>q.id===a._shopTargetId);
-          if(s){ const price = clamp(s.price, CFG.PRICE_MIN, CFG.PRICE_MAX); if(a.money>=price){ a.money-=price; const bonus = Math.round((s.buyCost || 0) * CFG.SHOP_PROFIT_FACTOR); const saleProfit = price + bonus; s.cashbox = (s.cashbox || 0) + saleProfit; } }
+          if(s){
+            // Comprar sólo si pasó intervalo de compra y tiene dinero
+            const okInterval = (nowS - (a.lastPurchaseAt||0)) >= (CFG.SHOP_PURCHASE_INTERVAL||300);
+            if(okInterval){
+              const price = clamp(s.price, CFG.PRICE_MIN, CFG.PRICE_MAX);
+              if(a.money>=price){
+                a.money-=price;
+                const bonus = Math.round((s.buyCost || 0) * CFG.SHOP_PROFIT_FACTOR);
+                const saleProfit = price + bonus; s.cashbox = (s.cashbox || 0) + saleProfit; s._lastCashboxChange = performance.now();
+                a.lastPurchaseAt = nowS;
+              }
+            }
+          }
           a.target=null; a.targetRole='idle'; a._shopTargetId=null;
         }
       }
@@ -2125,8 +2455,21 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         const c=a.target;
         if(Math.hypot(a.x-c.x,a.y-c.y)<16){
           const s = shops.find(q => q.id === a._shopTargetId);
-          const paid = payoutChunkToOwner(s, CFG.SHOP_PAYOUT_CHUNK);
-          if(!paid){ toast(`${a.code} gestionó ${s?.kind ?? 'su negocio'}, pero la caja no alcanza ${CFG.SHOP_PAYOUT_CHUNK}.`); }
+          if(s && s.ownerId === a.id){
+            const amount = Math.floor(s.cashbox || 0);
+            if(amount > 0){
+              a.money = (a.money || 0) + amount;
+              s.cashbox = 0; s._lastCashboxChange = performance.now();
+              toast(`${a.code} gestionó ${s.kind || 'negocio'} +${amount} créditos.`);
+              try{ window.saveProgress && window.saveProgress({ money: Math.floor(a.money), shops: shops.filter(sh=>sh.ownerId===a.id) }); }catch(_){ }
+            } else {
+              toast(`Caja vacía en ${s.kind || 'negocio'}.`);
+            }
+          } else {
+            // fallback al método anterior por si acaso
+            const paid = payoutChunkToOwner(s, CFG.SHOP_PAYOUT_CHUNK);
+            if(!paid){ toast(`${a.code} gestionó ${s?.kind ?? 'su negocio'}, pero la caja está vacía.`); }
+          }
           a.nextWorkAt = nowS + CFG.WORK_COOLDOWN; a.target=null; a.targetRole='idle'; a._shopTargetId=null;
         }
       }
@@ -2150,8 +2493,10 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         const dd = Math.hypot(dx, dy) || 1;
         const nx = dx / dd, ny = dy / dd;
         a.vx = nx * currentSpeed; a.vy = ny * currentSpeed;
-        if (dd < 6) {
-          if (['work', 'work_shop', 'home'].includes(a.targetRole)) { a.target = null; a.targetRole = 'idle'; }
+        if (dd < CFG.EXPLORE_REACH_RADIUS) {
+          // marcar sector visitado si era exploración
+          if(a.targetRole === 'explore'){ markVisitedAt(a.x, a.y); a.target = null; a.targetRole = 'idle'; }
+          else if (['work', 'work_shop', 'home', 'bank', 'shop', 'manage_shop', 'go_work'].includes(a.targetRole)) { a.target = null; a.targetRole = 'idle'; }
         }
       } else {
         const isWorkingInFactory = a.workingUntil && nowS < a.workingUntil;
@@ -2193,8 +2538,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     try{
       for(const ag of agents){
         const pt = toScreen(ag.x, ag.y);
-        const baseR = (ag.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
-        const r = Math.max(CFG.MIN_AGENT_PX, baseR);
+  const baseR = (ag.state==='child'?CFG.R_CHILD:CFG.R_ADULT) * ZOOM;
+  const r = baseR;
         let drew=false;
         try{
           if(ag.avatar){ const img=getAvatarImage(ag.avatar); if(img&&img.complete&&img.naturalWidth){ ctx.save(); ctx.beginPath(); ctx.arc(pt.x,pt.y,r*0.95,0,Math.PI*2); ctx.clip(); const d=r*1.8; ctx.drawImage(img, pt.x-d/2, pt.y-d/2, d, d); ctx.restore(); drew=true; } }
@@ -2208,9 +2553,14 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
         if (ag.justMarried && (performance.now() - ag.justMarried < 5000)){
           ctx.font=`700 ${Math.max(12, 18*ZOOM)}px system-ui,Segoe UI,Arial,emoji`; ctx.textAlign='center'; ctx.fillText('💕', pt.x, pt.y - 25*ZOOM);
         } else if (ag.justMarried) { ag.justMarried=null; }
-        const ageYrs=(yearsSince(ag.bornEpoch)|0);
-        ctx.font=`700 ${CFG.NAME_FONT_PX}px ui-monospace,monospace`; ctx.fillStyle='#fff'; ctx.textAlign='center';
-        ctx.fillText(`${ag.name||ag.code}·${ageYrs}`, pt.x, pt.y - (r + 12));
+  const ageYrs=(yearsSince(ag.bornEpoch)|0);
+  // Etiqueta de nombre escala 1:1 con el zoom (y se oculta si es muy pequeña)
+  const namePx = CFG.NAME_FONT_PX * ZOOM;
+  const nameOffset = Math.max(6, 10 * ZOOM);
+  if (namePx >= 6) {
+    ctx.font = `700 ${namePx}px ui-monospace,monospace`; ctx.fillStyle='#fff'; ctx.textAlign='center';
+    ctx.fillText(`${ag.name||ag.code}·${ageYrs}`, pt.x, pt.y - (r + nameOffset));
+  }
       }
     }catch(_){ }
     }
@@ -2222,7 +2572,15 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     }catch(e){
       stats.textContent = `Pob: ${agents.length} | $ total: ${total$} | 🏛️ Fondo: ${Math.floor(government.funds)} | 🏪 ${shops.length} | Instituciones: ${instCount}/25`;
     }
-    drawMiniMap();
+    // Actualizar panel del banco en tiempo real con el jugador local
+    try{
+      if(typeof window.updateBankPanel === 'function'){
+        const me = agents.find(a=>a.id===USER_ID);
+        if(me){ window.updateBankPanel(me.money, me.code); }
+        else { window.updateBankPanel(); }
+      }
+    }catch(_){ }
+  drawMiniMap();
     // Enviar mi posición al servidor cada ~120ms
     try{
       if(hasNet() && window.playerId){
@@ -2267,54 +2625,166 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     return lines.join('\n') || 'Sin fondos por ahora.';
   }
   function fullDocument(){
-    const total$=Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
-  const player = agents.find(a => a.id === USER_ID);
-  // Mostrar nombre completo cuando esté disponible, si no usar código
-  const playerName = player ? (player.name || player.code || '—') : '—';
-    const lines=[];
-  lines.push('# Documento');
-  const playerDisplayName = player ? (player.name || player.fullName || player.code || player.id) : '—';
-  lines.push(`Jugador: ${playerDisplayName} (${player ? (player.code || player.id) : '—'})`);
-  // Quitar la línea antigua de población, solo mostrar créditos, fondo, negocios e instituciones
-  lines.push(`Total créditos: ${total$} — Fondo Gobierno: ${Math.floor(government.funds)} — Negocios: ${shops.length} — Instituciones: ${government.placed.length}`);
-    lines.push('');
-    lines.push('## Usuarios en el mundo (tiempo real)');
-    // Mostrar todos los usuarios conectados en tiempo real (de gameState)
+    // Construye HTML del reporte con tablas y métricas amigables
+    const total$ = Math.round(agents.reduce((s,x)=>s+(x.money||0),0));
+    const me = agents.find(a => a.id === USER_ID) || null;
+    const meName = me ? (me.name || me.fullName || me.code || me.id) : '—';
+    const meCode = me ? (me.code || me.id) : '—';
+
+    // Origen de datos de usuarios conectados
     let users = [];
     if (window.gameState && Array.isArray(window.gameState.players)) {
-      // Si hay players desde el servidor, usarlos, pero preferir el nombre local si existe
       users = window.gameState.players.map(p => {
-        // intentar casar con agente local por id o código
         const local = agents.find(a => (p.id && a.id === p.id) || (p.code && a.code === p.code));
-        if(local){
-          return Object.assign({}, p, { _localName: local.name, _localCode: local.code || local.id });
-        }
-        return p;
+        return local ? Object.assign({}, p, { _localName: local.name, _localCode: local.code || local.id }) : p;
       });
     } else {
       users = agents;
     }
-    // Filtrar solo humanos (no bots) y no niños si quieres
     const filtered = users.filter(u => !u.isBot && (!u.state || u.state !== 'child'));
-  lines.push(`Población conectada: ${filtered.length} — Jugador: ${playerName}`);
-    if(filtered.length > 0){
-      for(const u of filtered){
-        // Si se aportó un nombre local (_localName) usarlo
-        let displayName = u._localName || u.name || u.fullName || u.displayName || '';
-        // Si el nombre es muy corto o vacío, usar code del objeto o el localCode
-        const codeRef = (u._localCode || u.code || u.id || '');
-        if(!displayName || displayName.trim().length <= 2){
-          displayName = codeRef || 'Usuario';
-        }
-        lines.push(`- ${displayName}${codeRef ? ' (' + codeRef + ')' : ''}`);
-      }
-    }else{
-      lines.push('No hay usuarios conectados.');
-    }
-    lines.push('');
-    lines.push('## Finanzas por Agente');
-    lines.push(bankReport());
-    return lines.join('\n');
+
+    // Negocios propios del jugador
+    const myId = me ? me.id : null;
+    const myShops = (window.gameState?.shops || shops || []).filter(s => myId && s && s.ownerId === myId);
+    const myShopsCount = myShops.length;
+
+    // Tabla: negocios propios
+    const shopRows = myShops.map(s => {
+      const kind = s.kind || s.k || 'negocio';
+      // buscar metadata del tipo para precio y costo de compra
+      const meta = (Array.isArray(SHOP_TYPES) ? SHOP_TYPES.find(t => t.k === kind) : null) || {};
+      const label = meta.label || kind;
+      const price = (typeof meta.price === 'number' ? meta.price : (s.price || '—'));
+      const buyCost = (typeof meta.buyCost === 'number' ? meta.buyCost : (s.buyCost || '—'));
+      return `<tr><td>${label}</td><td style="text-align:right">${price}</td><td style="text-align:right">${buyCost}</td></tr>`;
+    }).join('');
+    const shopsTable = `
+      <table style="width:100%; border-collapse:collapse; margin:6px 0;">
+        <thead>
+          <tr>
+            <th style="text-align:left; border-bottom:1px solid #ddd; padding:4px 2px;">Negocio</th>
+            <th style="text-align:right; border-bottom:1px solid #ddd; padding:4px 2px;">Precio</th>
+            <th style="text-align:right; border-bottom:1px solid #ddd; padding:4px 2px;">Costo compra</th>
+          </tr>
+        </thead>
+        <tbody>${shopRows || `<tr><td colspan="3" style="padding:6px 2px; color:#6b7280;">No has comprado negocios todavía.</td></tr>`}</tbody>
+      </table>`;
+
+  // Nota: el documento del agente NO incluye instituciones del gobierno
+
+    // Tabla: finanzas por agente
+    const finRows = agents
+      .filter(a => a && a.state !== 'child')
+      .map(a => {
+        const nm = a.name || a.fullName || a.code || a.id;
+        const money = Math.floor(a.money || 0);
+        return `<tr><td>${nm}</td><td style="text-align:right">${money}</td></tr>`;
+      })
+      .sort((ra, rb) => {
+        // sort by money desc parsing inner text between tags; fallback no-op
+        const ma = parseInt((ra.match(/>(\-?\d+)</)||[])[1]||'0',10);
+        const mb = parseInt((rb.match(/>(\-?\d+)</)||[])[1]||'0',10);
+        return mb - ma;
+      })
+      .join('');
+    const finTable = `
+      <table style="width:100%; border-collapse:collapse; margin:6px 0;">
+        <thead>
+          <tr>
+            <th style="text-align:left; border-bottom:1px solid #ddd; padding:4px 2px;">Agente</th>
+            <th style="text-align:right; border-bottom:1px solid #ddd; padding:4px 2px;">Créditos</th>
+          </tr>
+        </thead>
+        <tbody>${finRows || `<tr><td colspan="2" style="padding:6px 2px; color:#6b7280;">Sin fondos por ahora.</td></tr>`}</tbody>
+      </table>`;
+
+    // Lista de usuarios conectados (ligera)
+    const userList = filtered.map(u => {
+      let displayName = u._localName || u.name || u.fullName || u.displayName || '';
+      const codeRef = (u._localCode || u.code || u.id || '');
+      if(!displayName || displayName.trim().length <= 2) displayName = codeRef || 'Usuario';
+      return `<li>${displayName}${codeRef ? ` <span style="color:#6b7280">(${codeRef})</span>` : ''}</li>`;
+    }).join('');
+
+    // Resumen superior
+    const summary = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <div><strong>Jugador:</strong> ${meName} <span style="color:#6b7280">(${meCode})</span></div>
+        <div style="text-align:right"><strong>Total créditos:</strong> ${total$}</div>
+        <div><strong>Mis negocios comprados:</strong> ${myShopsCount}</div>
+        <div style="text-align:right"><strong>Fondo Gobierno:</strong> ${Math.floor(government.funds)}</div>
+        <div><strong>Negocios en el mundo:</strong> ${(window.gameState?.shops||shops||[]).length}</div>
+        <div style="text-align:right"><strong>Instituciones:</strong> ${(government.placed||[]).length}</div>
+      </div>`;
+
+    return `
+      <div>
+        <h2 style="margin:0 0 6px 0; font-size:22px;">Documento del Agente</h2>
+        ${summary}
+        <h3 style="margin:8px 0 4px; font-size:18px;">Mis Negocios</h3>
+        ${shopsTable}
+        <h3 style="margin:8px 0 4px; font-size:18px;">Usuarios en el mundo (${filtered.length})</h3>
+        <ul style="margin:4px 0 10px 18px;">${userList || '<li>No hay usuarios conectados.</li>'}</ul>
+        <h3 style="margin:8px 0 4px; font-size:18px;">Finanzas por Agente</h3>
+        ${finTable}
+      </div>
+    `;
+  }
+
+  function fullGovDocument(){
+    // Documento del Gobierno: saldo, edificaciones (instituciones) e impuestos
+    const funds = Math.floor(government.funds || 0);
+    const inst = Array.isArray(government.placed) ? government.placed : [];
+    const n = inst.length;
+    const effRate = Math.min(CFG.WEALTH_TAX_MAX, CFG.WEALTH_TAX_BASE + n*CFG.INSTITUTION_TAX_PER);
+    const taxInfo = {
+      base: CFG.WEALTH_TAX_BASE,
+      perInst: CFG.INSTITUTION_TAX_PER,
+      cap: CFG.WEALTH_TAX_MAX,
+      effective: effRate
+    };
+
+    const instRows = inst.map(g => {
+      const kind = g.kind || g.k || 'inst';
+      const label = (typeof kind === 'string' ? kind.replace(/_/g,' ') : 'Institución');
+      const cost = g.cost != null ? g.cost : (CFG && CFG[`COST_${String(kind).toUpperCase()}`]) || '—';
+      return `<tr><td>${label}</td><td style="text-align:right">${cost}</td><td style="text-align:right">${Math.round(g.x||0)},${Math.round(g.y||0)}</td></tr>`;
+    }).join('');
+    const instTable = `
+      <table style="width:100%; border-collapse:collapse; margin:6px 0;">
+        <thead>
+          <tr>
+            <th style="text-align:left; border-bottom:1px solid #ddd; padding:4px 2px;">Institución</th>
+            <th style="text-align:right; border-bottom:1px solid #ddd; padding:4px 2px;">Costo</th>
+            <th style="text-align:right; border-bottom:1px solid #ddd; padding:4px 2px;">Ubicación</th>
+          </tr>
+        </thead>
+        <tbody>${instRows || `<tr><td colspan="3" style="padding:6px 2px; color:#6b7280;">Sin instituciones aún.</td></tr>`}</tbody>
+      </table>`;
+
+    const taxTable = `
+      <table style="width:100%; border-collapse:collapse; margin:6px 0;">
+        <tbody>
+          <tr><td>Base</td><td style="text-align:right">${(taxInfo.base*100).toFixed(1)}%</td></tr>
+          <tr><td>Por institución</td><td style="text-align:right">${(taxInfo.perInst*100).toFixed(1)}%</td></tr>
+          <tr><td>Tope</td><td style="text-align:right">${(taxInfo.cap*100).toFixed(1)}%</td></tr>
+          <tr><td>Efectiva (${n} inst.)</td><td style="text-align:right">${(taxInfo.effective*100).toFixed(1)}%</td></tr>
+        </tbody>
+      </table>`;
+
+    return `
+      <div>
+        <h2 style="margin:0 0 6px 0; font-size:22px;">Documento del Gobierno</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+          <div><strong>Saldo del Gobierno:</strong> ${funds}</div>
+          <div style="text-align:right"><strong>Instituciones:</strong> ${n}/25</div>
+        </div>
+        <h3 style="margin:8px 0 4px; font-size:18px;">Edificaciones</h3>
+        ${instTable}
+        <h3 style="margin:8px 0 4px; font-size:18px;">Impuestos</h3>
+        ${taxTable}
+      </div>
+    `;
   }
   function generateMarriedList() {
       const lines = [];
@@ -2340,34 +2810,54 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
   function automaticRoadConstruction() { /* lógica opcional */ }
 
-  btnShowDoc.onclick = ()=>{
-  const isVisible = docDock.style.display === 'flex';
-  if (!isVisible) {
-    // Actualizar el documento cada segundo mientras está abierto
-    if(!window.__docInterval){
-      window.__docInterval = setInterval(()=>{
-        $("#docBody").textContent = fullDocument();
-      }, 1000);
-    }
-    $("#docBody").textContent = fullDocument();
-    // Posicionar al lado del UI dock
-    try {
-      const ui = $("#uiDock");
-      const uiRect = ui.getBoundingClientRect();
-      docDock.style.left = (uiRect.right + 12) + 'px';
-      docDock.style.top = (uiRect.top) + 'px';
-      docDock.classList.remove('collapsed-left');
-    } catch(_){ docDock.style.left='360px'; docDock.style.top='10px'; }
-    docDock.style.display = 'flex';
-  } else {
-    docDock.style.display = 'none';
-    if(window.__docInterval){
-      clearInterval(window.__docInterval);
-      window.__docInterval = null;
-    }
-  }
-};
-  btnShowMarried.onclick = ()=>{ const isVisible = marriedDock.style.display === 'flex'; if (!isVisible) { $("#marriedList").textContent = generateMarriedList(); marriedDock.style.display = 'flex'; } else { marriedDock.style.display = 'none'; } };
+  // Modales para Documento y Casados (pausan el juego)
+  function pauseGame(){ try{ window.__gamePaused = true; }catch(_){} }
+  function resumeGame(){ try{ window.__gamePaused = false; }catch(_){} }
+  // Hook en loop para pausar render/lógica
+  const __origUpdateSocialLogic = updateSocialLogic;
+  function isPaused(){ return !!window.__gamePaused; }
+  updateSocialLogic = function(){ if(isPaused()) return; return __origUpdateSocialLogic(); };
+
+  const docModal = document.getElementById('docModal');
+  const marriedModal = document.getElementById('marriedModal');
+  const btnDocClose = document.getElementById('btnDocClose');
+  const btnMarriedClose = document.getElementById('btnMarriedClose');
+  const docBodyModal = document.getElementById('docBodyModal');
+  const docTitle = document.getElementById('docTitle');
+  const marriedListModal = document.getElementById('marriedListModal');
+
+  // Documento del Agente (rojo en la imagen)
+  if(btnShowAgentDoc) btnShowAgentDoc.onclick = ()=>{
+    pauseGame();
+    if(docTitle) docTitle.textContent = '📄 Documento del Agente';
+    if(!window.__docInterval){ window.__docInterval = setInterval(()=>{ docBodyModal.innerHTML = fullDocument(); }, 1000); }
+    docBodyModal.innerHTML = fullDocument();
+    docModal.style.display = 'flex';
+  };
+  // Documento del Gobierno (amarillo en la imagen)
+  if(btnShowGovDoc) btnShowGovDoc.onclick = ()=>{
+    pauseGame();
+    if(docTitle) docTitle.textContent = '📑 Documento del Gobierno';
+    if(!window.__docInterval){ window.__docInterval = setInterval(()=>{ docBodyModal.innerHTML = fullGovDocument(); }, 1000); }
+    // Reutilizamos el mismo intervalo pero con contenido de gobierno
+    clearInterval(window.__docInterval); window.__docInterval = setInterval(()=>{ docBodyModal.innerHTML = fullGovDocument(); }, 1000);
+    docBodyModal.innerHTML = fullGovDocument();
+    docModal.style.display = 'flex';
+  };
+  btnShowMarried.onclick = ()=>{
+    pauseGame();
+    marriedListModal.textContent = generateMarriedList();
+    marriedModal.style.display = 'flex';
+  };
+  btnDocClose && (btnDocClose.onclick = ()=>{
+    docModal.style.display = 'none';
+    if(window.__docInterval){ clearInterval(window.__docInterval); window.__docInterval = null; }
+    resumeGame();
+  });
+  btnMarriedClose && (btnMarriedClose.onclick = ()=>{
+    marriedModal.style.display = 'none';
+    resumeGame();
+  });
 
   // Gobierno: abrir vía edificio en el mapa (no botón)
   // openGovPanel(target) posiciona el panel sobre el edificio (target en coords del mundo)
@@ -2400,47 +2890,26 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(e.clientX < gd.left || e.clientX > gd.right || e.clientY < gd.top || e.clientY > gd.bottom){ closeGovPanel(); }
     }catch(e){}
   }, {passive:true});
-  // Colapsar UI hacia la izquierda y alinear top-bar debajo del UI
-  $("#uiHideBtn").onclick = ()=>{
-    try{
-      const dock = $("#uiDock");
-      const bar = $("#top-bar");
-      dock.classList.add('collapsed-left');
-      bar.classList.add('collapsed-left');
-      show($("#uiShowBtn"), true);
-    }catch(e){}
-  };
-  $("#uiShowBtn").onclick = ()=>{
-    try{
-      const dock = $("#uiDock");
-      const bar = $("#top-bar");
-      dock.classList.remove('collapsed-left');
-      bar.classList.remove('collapsed-left');
-      show($("#uiShowBtn"), false);
-    }catch(e){}
-  };
-  panelDepositAll.onclick = ()=>{ if(!USER_ID){ toast('Crea tu persona primero.'); return; } const u=agents.find(a=>a.id===USER_ID); if(!u) return; u.money += (u.pendingDeposit||0); u.pendingDeposit=0; try{ window.updateBankPanel && window.updateBankPanel(); }catch(e){} try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money) }); }catch(e){} toast('Depósito realizado.'); };
+  // Handlers duplicados eliminados (se usan los addEventListener definidos arriba para uiShowBtn/uiHideBtn)
+  // Botón de depósito eliminado: el saldo se refleja en tiempo real en el panel del banco.
 
   function setVisibleWorldUI(on){
   // No forzar mostrar formulario aquí; el flujo de login controla su visibilidad
   // $("#formBar").style.display = on ? 'none' : 'block';
     canvas.style.display = on ? 'block':'none';
     uiDock.style.display = on ? 'flex':'none';
-    // Posicionar top-bar debajo del UI y a la izquierda
-    topBar.style.display = on ? 'flex':'none';
-  // Asegurar que no estén colapsados cuando deben mostrarse
-  try{ if(on){ uiDock.classList.remove('collapsed-left'); topBar.classList.remove('collapsed-left'); } }catch(e){}
+  // Mostrar la botonera siempre que el mundo esté activo (independiente del UI)
+  // topBar removido: botones Documento/Casados viven dentro del UI
+  // Asegurar que el UI no arrastre a la botonera
+  try{ if(on){ uiDock.classList.remove('collapsed-left'); } }catch(e){}
+    // Controles de zoom eliminados
     try{
-      if(on){
-        topBar.style.left = '10px';
-        const dockRect = uiDock.getBoundingClientRect();
-        const offset = Math.max(10, (dockRect.height||0) + 12);
-        topBar.style.top = (10 + offset) + 'px';
-      }
-    }catch(e){}
-    zoomFab.style.display = on ? 'flex':'none';
-    mini.style.display = on ? 'block':'none';
-    show($("#uiShowBtn"),false);
+      const collapsed = document.getElementById('uiDock')?.classList.contains('collapsed-left');
+      // Minimap siempre visible (debajo del UI por z-index)
+      document.getElementById('mini').style.display = on ? 'block' : 'none';
+  // Iconos gestionados por CSS; no cambiar texto
+    }catch(_){ mini.style.display = on ? 'block':'none'; }
+  show($("#uiShowBtn"),false);
     docDock.style.display = 'none'; govDock.style.display = 'none';
   }
 
@@ -2452,6 +2921,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     setWorldSize(); 
     fitCanvas(); 
     regenInfrastructure(false);
+  // Reubicar edificaciones iniciales a parches de arena si fuera necesario
+  try{ relocateInitialBuildingsToSand(); }catch(e){ console.warn('relocateInitialBuildingsToSand error', e); }
   // Mantener las panaderías tal como vienen (no eliminar al iniciar)
     populateGovSelect(); // ← AÑADIR ESTA LÍNEA
     
@@ -2473,6 +2944,99 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     chosenAvatar = (typeof pick === 'string' && pick.length) ? pick : '/assets/avatar1.png';
   }catch(e){ chosenAvatar = '/assets/avatar1.png'; }
   const user=makeAgent('adult',{name, gender, ageYears:age, likes, startMoney: startMoney, avatar: chosenAvatar});
+  // Restaurar casa rentada previa si existe en progreso
+  try{
+    if(typeof saved.rentedHouseIdx === 'number' && houses[saved.rentedHouseIdx]){
+      const hRest = houses[saved.rentedHouseIdx];
+      if(!hRest.ownerId && (!hRest.rentedBy || hRest.rentedBy === user.id)){
+        hRest.rentedBy = user.id; user.houseIdx = saved.rentedHouseIdx;
+      }
+    }
+  }catch(_){ }
+  // Asignar casa en arriendo inicial si no posee (nueva sesión sin registro previo)
+  try{ ensurePlayerHasHouse(user); }catch(e){}
+  if(user.houseIdx == null){ toast('Debes arrendar una casa para vivir.'); }
+  // Colocar al jugador en el centro de su casa al inicio
+  try{ if(typeof user.houseIdx==='number' && houses[user.houseIdx]){ const h=houses[user.houseIdx]; user.x = h.x + h.w/2; user.y = h.y + h.h/2; } }catch(_){ }
+  // Programar ventana de arriendo tras 3 segundos y bloquear juego hasta pagar
+  try{
+  const alreadyPaid = !!(window.__progress && window.__progress.initialRentPaid);
+    window.__rentBlocked = !alreadyPaid; // bloquear solo si no ha pagado antes
+    if(window.__rentBlockTimeout) clearTimeout(window.__rentBlockTimeout);
+  if(alreadyPaid || window.__skipInitialRentPrompt){
+      // Para usuarios que regresan, asegurar marcador en su casa asignada
+      try{
+        if(typeof user.houseIdx==='number' && houses[user.houseIdx]){
+          const h=houses[user.houseIdx];
+          if(!h._markerInitial){
+            const baseInitial = (user.name||user.code||'U').trim().charAt(0).toUpperCase() || 'U';
+            window.__houseInitialCounts = window.__houseInitialCounts || {};
+            const count = (window.__houseInitialCounts[baseInitial]||0)+1; window.__houseInitialCounts[baseInitial]=count;
+            h._markerInitial = baseInitial + (count>1?count:'');
+          }
+        }
+      }catch(_){ }
+      /* no mostrar prompt */
+  }
+  else if(!window.__skipInitialRentPrompt) window.__rentBlockTimeout = setTimeout(()=>{
+      try{
+        const existing = document.getElementById('rentPrompt'); if(existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id='rentOverlay';
+        overlay.style.position='fixed'; overlay.style.left=0; overlay.style.top=0; overlay.style.width='100%'; overlay.style.height='100%';
+        overlay.style.background='rgba(0,0,0,0.55)'; overlay.style.backdropFilter='blur(3px)'; overlay.style.zIndex=9998;
+        const rentDiv = document.createElement('div');
+        rentDiv.id = 'rentPrompt';
+        rentDiv.style.position='fixed'; rentDiv.style.zIndex=9999; rentDiv.style.top='50%'; rentDiv.style.left='50%'; rentDiv.style.transform='translate(-50%, -50%)';
+  rentDiv.style.background='linear-gradient(160deg,#20252b,#16191d)'; rentDiv.style.color='#fff'; rentDiv.style.padding='22px 24px'; rentDiv.style.border='1px solid #3a4451'; rentDiv.style.borderRadius='10px'; rentDiv.style.font='14px ui-monospace,monospace'; rentDiv.style.width='320px'; rentDiv.style.boxShadow='none';
+        const title = document.createElement('div'); title.textContent='Arriendo inicial requerido'; title.style.fontSize='16px'; title.style.fontWeight='700'; title.style.marginBottom='10px';
+        const msg = document.createElement('div'); msg.textContent = 'Para continuar debes pagar 50 créditos de arriendo de tu vivienda asignada.'; msg.style.marginBottom='14px'; msg.style.lineHeight='1.35';
+        const payBtn = document.createElement('button'); payBtn.textContent='Pagar arriendo (50)'; payBtn.style.background='#41d77c'; payBtn.style.color='#06210f'; payBtn.style.fontWeight='700'; payBtn.style.padding='10px 14px'; payBtn.style.border='none'; payBtn.style.cursor='pointer'; payBtn.style.borderRadius='6px'; payBtn.style.fontFamily='ui-monospace,monospace'; payBtn.style.fontSize='14px'; payBtn.style.width='100%';
+        const warn = document.createElement('div'); warn.textContent='El mundo está pausado hasta que pagues.'; warn.style.fontSize='11px'; warn.style.opacity='0.75'; warn.style.marginTop='10px'; warn.style.textAlign='center';
+        payBtn.onclick = ()=>{
+          try{
+            const rentCost = 50;
+            if(user.money >= rentCost){
+              user.money -= rentCost; toast('Arriendo inicial pagado: -50');
+              try{ government.funds = (government.funds||0)+rentCost; if(govFundsEl) govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)}`; }catch(_){ }
+              // Guardar bandera de pago inicial en progreso persistente
+              try{
+                window.__progress = Object.assign({}, window.__progress||{}, { initialRentPaid: true, money: Math.floor(user.money), rentedHouseIdx: user.houseIdx });
+                window.saveProgress && window.saveProgress({ initialRentPaid: true, money: Math.floor(user.money), rentedHouseIdx: user.houseIdx });
+              }catch(_){ }
+              window.__rentBlocked = false;
+              // Enfocar cámara sobre la casa del usuario y aplicar zoom cercano temporal
+              try{
+                if(typeof user.houseIdx === 'number' && houses[user.houseIdx]){
+                  const h = houses[user.houseIdx];
+                  // Crear identificador único para la casa arrendada
+                  const baseInitial = (user.name||user.code||'U').trim().charAt(0).toUpperCase() || 'U';
+                  window.__houseInitialCounts = window.__houseInitialCounts || {};
+                  const count = (window.__houseInitialCounts[baseInitial]||0)+1; window.__houseInitialCounts[baseInitial]=count;
+                  h._markerInitial = baseInitial + (count>1?count:'');
+                  h._markerAssignedAt = performance.now();
+                  // Ajustar zoom y cámara
+                  const targetZoom = Math.min(4, Math.max(ZOOM, 3));
+                  ZOOM = targetZoom;
+                  const cx = h.x + h.w/2, cy = h.y + h.h/2;
+                  cam.x = Math.max(0, cx - (canvas.width/ZOOM)/2);
+                  cam.y = Math.max(0, cy - (canvas.height/ZOOM)/2);
+                  clampCam();
+                  // Bandera para animación breve si se quiere
+                  h._highlightUntil = performance.now() + 6000;
+                }
+              }catch(e){ console.warn('focus house error', e); }
+              overlay.remove(); rentDiv.remove();
+            } else {
+              toast('Saldo insuficiente. Reúne 50 créditos.');
+            }
+          }catch(_){ }
+        };
+        rentDiv.appendChild(title); rentDiv.appendChild(msg); rentDiv.appendChild(payBtn); rentDiv.appendChild(warn);
+        document.body.appendChild(overlay); document.body.appendChild(rentDiv);
+      }catch(_){ window.__rentBlocked=false; }
+  }, 3000);
+  }catch(_){ }
   // Restaurar vehículo comprado previamente (y velocidad) antes de insertar al array para que se aplique de inmediato
   try{
     const savedVehicle = (saved && saved.vehicle) || (window.__progress && window.__progress.vehicle);
@@ -2494,7 +3058,17 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   if(typeof saved.bank === 'number') try{ user.bank = Math.max(0, Math.floor(saved.bank)); }catch(e){}
   // Guardar inmediatamente el perfil elegido para futuras sesiones
   try{
-    const patch = { name: user.name, avatar: user.avatar, likes: (user.likes||[]).slice(0,5), gender: user.gender, age: age };
+  const patch = { name: user.name, avatar: user.avatar, likes: (user.likes||[]).slice(0,5), gender: user.gender, age: age };
+  try{ if(fGender && (!fGender.value || !['M','F'].includes(fGender.value)) && ['M','F'].includes(user.gender)){ fGender.value = user.gender; } }catch(_){ }
+    // Si faltan país/correo/teléfono en el progreso, intentar tomarlos del modal de autenticación
+    try{
+      const authCountry = document.getElementById('authCountry');
+      const authEmail = document.getElementById('authEmail');
+      const authPhone = document.getElementById('authPhone');
+      if(authCountry && authCountry.value && !(window.__progress && 'country' in window.__progress)) patch.country = authCountry.value;
+      if(authEmail && authEmail.value && !(window.__progress && 'email' in window.__progress)) patch.email = authEmail.value;
+      if(authPhone && authPhone.value && authPhone.value.trim().length && !(window.__progress && 'phone' in window.__progress)) patch.phone = authPhone.value;
+    }catch(_){ }
     window.__progress = Object.assign({}, window.__progress||{}, patch);
     window.saveProgress && window.saveProgress(patch);
   }catch(e){}
@@ -2574,7 +3148,20 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
   const startHandler = ()=>{
     // Seguridad extra: exigir sesión iniciada antes de crear personaje
     if(!window.__user){ toast('Inicia sesión primero.'); return; }
-  const name=fName.value.trim(),gender=fGender.value,age=Math.max(20, Math.min(90, parseInt(fAge.value||'20',10))),likes=getChecked().map(x=>x.value),usd=fUsd.value;
+  // Determinar género desde el registro (M/F) con fallbacks: campo oculto -> progreso -> usuario -> selección del modal
+  let gender = (fGender.value||'').trim();
+  // Preferir el género del progreso por encima del usuario (es el perfil activo de juego)
+  try{ if((!gender || !['M','F'].includes(gender)) && window.__progress && window.__progress.gender){ gender = String(window.__progress.gender); } }catch(_){ }
+  // Luego intentar con el perfil del usuario
+  try{ if((!gender || !['M','F'].includes(gender)) && window.__user && window.__user.gender){ gender = String(window.__user.gender); } }catch(_){ }
+  // Último recurso: si el modal sigue en el DOM y tiene un valor válido, úsalo
+  try{ if((!gender || !['M','F'].includes(gender))){ const el = document.getElementById('authGender'); if(el && ['M','F'].includes(el.value)) gender = el.value; } }catch(_){ }
+  const name=fName.value.trim();
+  const age=Math.max(20, Math.min(89, parseInt(fAge.value||'20',10)));
+  const likes=getChecked().map(x=>x.value);
+  const usd=fUsd.value;
+  if(!['M','F'].includes(gender)){ toast('Selecciona género en el registro (Hombre o Mujer).'); return; }
+  // Campos extra (país/correo/teléfono) se piden en el registro; aquí no se vuelven a pedir ni validar
     if(!name || likes.length!==5){ errBox.style.display='inline-block'; toast('Completa nombre y marca 5 gustos.'); return; }
     errBox.style.display='none';
     startWorldWithUser({name,gender,age,likes,usd});
@@ -2609,7 +3196,8 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
     if(placingHouse){
       const u=agents.find(a=>a.id===placingHouse.ownerId); if(!u){ placingHouse=null; return; }
-      const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null};
+  const newH = {x: pt.x - placingHouse.size.w/2, y: pt.y - placingHouse.size.h/2, w: placingHouse.size.w, h: placingHouse.size.h, ownerId:u.id, rentedBy:null, owned:true};
+  // Restricción de arena eliminada
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,newH, 8))){ toast('No se puede colocar (muy cerca de otro edificio).'); return; }
       if((u.money||0) < placingHouse.cost){ toast('Saldo insuficiente.'); placingHouse=null; return; }
       if(hasNet()){
@@ -2621,7 +3209,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       }
   u.money -= placingHouse.cost;
       if(u.houseIdx !== null && houses[u.houseIdx]) { houses[u.houseIdx].rentedBy = null; }
-      houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
+  houses.push(newH); u.houseIdx = houses.length-1; placingHouse=null;
   try{ window.saveProgress && window.saveProgress({ money: Math.floor(u.money), houses: houses.filter(h=>h.ownerId===u.id) }); }catch(e){}
   toast('Casa propia construida 🏠'); return;
     }
@@ -2632,6 +3220,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       if(!u){ placingShop = null; return; }
       const size = placingShop.size || {w: CFG.SHOP_W, h: CFG.SHOP_H};
       const newShop = { x: pt.x - size.w/2, y: pt.y - size.h/2, w: size.w, h: size.h, kind: placingShop.kind.k || placingShop.kind, ownerId: u.id };
+  // Restricción de arena eliminada
       // comprobar colisiones
       if(allBuildings.some(r => rectsOverlapWithMargin(r, newShop, 8))){ toast('No se puede colocar el negocio aquí (colisión).'); placingShop = null; return; }
       if((u.money || 0) < (placingShop.price || 0)){ toast('Saldo insuficiente.'); placingShop = null; return; }
@@ -2653,6 +3242,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     if(placingShop){
       const u=agents.find(a=>a.id===placingShop.ownerId); if(!u){ placingShop=null; return; }
       const rectShop = {x: pt.x - placingShop.size.w/2, y: pt.y - placingShop.size.h/2, w: placingShop.size.w, h: placingShop.size.h};
+  // Restricción de arena eliminada
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectShop, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
       if((u.money||0) < placingShop.price){ toast('Saldo insuficiente.'); placingShop=null; return; }
       const newShop = { 
@@ -2684,6 +3274,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const rectX = { x: pt.x - placingGov.w/2, y: pt.y - placingGov.h/2, w: placingGov.w, h: placingGov.h, label: placingGov.label, icon: placingGov.icon, fill: placingGov.fill, stroke: placingGov.stroke, k: placingGov.k };
       rectX.x = clamp(rectX.x, 10, WORLD.w - rectX.w - 10);
       rectX.y = clamp(rectX.y, 10, WORLD.h - rectX.h - 10);
+  // Restricción de arena eliminada
       if(allBuildings.some(r=>rectsOverlapWithMargin(r,rectX, 8))){ toast('No se puede colocar aquí (muy cerca).'); return; }
       if(government.funds < placingGov.cost){ toast('Fondos insuficientes.'); placingGov=null; return; }
       if(hasNet()){
@@ -2773,7 +3364,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
 
   function openBuilderMenu(){if(!STARTED){ toast('Primero inicia el mundo.'); return; }if(!USER_ID){ toast('Crea tu persona primero.'); return; }const u=agents.find(a=>a.id===USER_ID); if(!u){ toast('No encontré tu persona.'); return; }$("#builderMsg").textContent = `Tu saldo: ${Math.floor(u.money)}.`;show(builderModal,true);}
   btnBuilderClose.onclick = ()=> show(builderModal,false);
-  btnBuy.onclick = ()=>{const u=agents.find(a=>a.id===USER_ID); if(!u) return;if(u.houseIdx!=null && houses[u.houseIdx]?.ownerId===u.id){ $("#builderMsg").textContent='Ya eres dueño de una casa.'; return; }if(u.money<CFG.HOUSE_BUY_COST){ $("#builderMsg").textContent=`No te alcanza para comprar (${CFG.HOUSE_BUY_COST}).`; return; }placingHouse = {cost: CFG.HOUSE_BUY_COST, size:{w:CFG.HOUSE_SIZE, h:CFG.HOUSE_SIZE}, ownerId: u.id};show(builderModal,false);toast('Modo colocación: toca un espacio libre.');};
+  btnBuy.onclick = ()=>{const u=agents.find(a=>a.id===USER_ID); if(!u) return; if(u.houseIdx!=null && houses[u.houseIdx]?.ownerId===u.id){ $("#builderMsg").textContent='Ya eres dueño de una casa.'; return; } if(u.money<CFG.HOUSE_BUY_COST){ $("#builderMsg").textContent=`No te alcanza para comprar (${CFG.HOUSE_BUY_COST}).`; return; } const big= Math.round(CFG.HOUSE_SIZE * (CFG.OWNED_HOUSE_SIZE_MULT||1.4)); placingHouse = {cost: CFG.HOUSE_BUY_COST, size:{w:big, h:big}, ownerId: u.id, owned:true}; show(builderModal,false); toast('Modo colocación: toca un espacio libre (casa propia grande).'); };
 
   function openShopMenu(){
       if(!STARTED){ toast('Primero inicia el mundo.'); return; }
@@ -2847,7 +3438,7 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
     updateGovDesc();
   }, CFG.GOV_TAX_EVERY*1000);
 
-  setInterval(()=>{if(!STARTED) return; if(hasNet()) return; let rentCollected = 0; let renters = 0;for(const h of houses){if(h.rentedBy){const renter = agents.find(a => a.id === h.rentedBy);if(renter && renter.money >= CFG.GOV_RENT_AMOUNT){renter.money -= CFG.GOV_RENT_AMOUNT; rentCollected += CFG.GOV_RENT_AMOUNT; renters++;}}}government.funds += rentCollected;if(rentCollected > 0){govFundsEl.textContent = `Fondo: ${Math.floor(government.funds)} (+${Math.round(rentCollected)})`;toast(`Gobierno recaudó ${Math.round(rentCollected)} en alquileres de ${renters} personas.`);} }, CFG.GOV_RENT_EVERY*1000);
+  // (Intervalo de cobro de alquiler eliminado: ahora se procesa dentro del loop con processRent acumulando 1 hora real)
 
   setInterval(()=>{if(!STARTED) return; if(hasNet()) return;
     for(const shop of shops){
@@ -2905,6 +3496,23 @@ function distributeEvenly(n, widthRange, heightRange, avoid, zone, margin) {
       const vType = carTypeSelect.value;
       if (!vType || !VEHICLES[vType]) { carMsg.textContent = 'Por favor, selecciona un vehículo.'; carMsg.style.color = 'var(--warn)'; return; }
       const vehicle = VEHICLES[vType];
+      // Bloquear compra duplicada: si ya lo tienes, sólo activarlo sin costo
+      try{
+        const prog = (window.__progress || {});
+        const ownedList = Array.isArray(prog.vehicles) ? prog.vehicles : [];
+        const alreadyOwned = ownedList.includes(vType) || (u.vehicle === vType);
+        if(alreadyOwned){
+          // Activar como vehículo actual, persistir y notificar
+          u.vehicle = vType;
+          try{ window.saveProgress && window.saveProgress({ vehicle: vType }); }catch(_){ }
+          try{ window.sockApi?.update({ vehicle: vType }); }catch(_){ }
+          carMsg.textContent = `Ya tienes ${vehicle.name}. Se activó como vehículo actual.`;
+          carMsg.style.color = 'var(--ok)';
+          toast('Vehículo ya comprado. Activado.');
+          try{ updateCarMenuHighlight(); }catch(_){ }
+          return;
+        }
+      }catch(_){ }
       if (u.money >= vehicle.cost){
         u.money -= vehicle.cost;
         u.vehicle = vType;
@@ -3014,6 +3622,123 @@ function likeMatches(a, b) {
   return a.likes.filter(like => b.likes.includes(like)).length;
 }
 
+// Popup "media naranja"
+function showLovePrompt(otherAgent){
+  // Evitar múltiples a la vez
+  if(document.getElementById('lovePrompt')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'lovePrompt';
+  wrap.style.position = 'fixed'; wrap.style.inset = '0'; wrap.style.zIndex='70';
+  wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='center';
+  wrap.style.background='rgba(0,0,0,0.45)';
+  const box = document.createElement('div');
+  box.className = 'modalBox'; box.style.width='min(440px,92vw)';
+  const name = otherAgent.name || otherAgent.fullName || otherAgent.code || 'esta persona';
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-size:28px">💖</div>
+      <div>
+        <h3 style="margin:0">¿Deseas conocer a tu media naranja?</h3>
+        <div class="hint">Coinciden en varios gustos con <b>${name}</b>.</div>
+      </div>
+    </div>
+    <div class="actions" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button id="btnLoveNo" class="btn">No</button>
+      <button id="btnLoveYes" class="btn primary">Sí</button>
+    </div>
+  `;
+  wrap.appendChild(box);
+  document.body.appendChild(wrap);
+  const close = ()=>{ try{ wrap.remove(); }catch(_){ } };
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) close(); });
+  document.getElementById('btnLoveNo').addEventListener('click', close);
+  document.getElementById('btnLoveYes').addEventListener('click', ()=>{
+    try{
+      // Acción simple: marcar objetivo para acercarse y mostrar un toast
+      const me = agents.find(a=>a.id===USER_ID);
+      if(me){ me.target = { x: otherAgent.x, y: otherAgent.y }; me.targetRole = 'meet'; me.cooldownSocial = (me.cooldownSocial||0) + 30; }
+      toast('¡Ve a conocer a tu media naranja! 💘');
+      openChatWith(otherAgent);
+    }catch(_){ }
+    close();
+  });
+}
+
+// Chat simple entre jugador y otro agente
+function ensureChatUI(){
+  if(document.getElementById('chatDock')) return;
+  const dock = document.createElement('div');
+  dock.id = 'chatDock';
+  dock.style.position='fixed'; dock.style.right='16px'; dock.style.bottom='16px'; dock.style.zIndex='65';
+  dock.style.width='min(320px, 90vw)'; dock.style.maxHeight='60vh'; dock.style.display='none';
+  dock.style.background='rgba(17,24,39,0.92)'; dock.style.border='1px solid #334155'; dock.style.borderRadius='10px'; dock.style.boxShadow='none';
+  dock.innerHTML = `
+    <div id="chatHeader" style="padding:8px 10px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:8px;justify-content:space-between">
+      <div id="chatTitle" style="font-weight:600">Chat</div>
+      <button id="chatClose" class="btn">×</button>
+    </div>
+    <div id="chatBody" style="padding:10px; overflow:auto; max-height:36vh; font-size:14px; line-height:1.3"></div>
+    <div style="padding:8px 10px;border-top:1px solid #334155;display:flex;gap:6px;align-items:center">
+      <input id="chatInput" class="input" placeholder="Escribe un mensaje…" style="flex:1;min-width:0"/>
+      <button id="chatSend" class="btn primary">Enviar</button>
+    </div>
+    <div style="padding:6px 10px 10px;display:flex;gap:8px;align-items:center">
+      <button id="sendRoses" class="btn">🌹 Rosas</button>
+      <button id="sendChoco" class="btn">🍫 Chocolates</button>
+    </div>
+  `;
+  document.body.appendChild(dock);
+  document.getElementById('chatClose').addEventListener('click', ()=> dock.style.display='none');
+}
+
+let __chatPeer = null;
+function openChatWith(other){
+  ensureChatUI(); __chatPeer = other; const dock = document.getElementById('chatDock'); if(!dock) return;
+  dock.style.display='block';
+  const title = document.getElementById('chatTitle');
+  if(title){ title.textContent = 'Chat con ' + (other.name || other.code || other.id); }
+  const body = document.getElementById('chatBody'); if(body){ body.innerHTML = ''; }
+  const send = (gift=null)=>{
+    const input = document.getElementById('chatInput'); const text = (input?.value || '').trim();
+    if(!text && !gift) return;
+    const to = other.id; const payload = { to, text: text || null, gift: gift||null };
+    if(window.sockApi && window.sock){ window.sockApi.sendChat(payload, ()=>{}); }
+    renderIncomingMsg({ from: { id: 'me', name:'Tú' }, to: { id: other.id }, text, gift, ts: Date.now() });
+    if(input) input.value='';
+  };
+  document.getElementById('chatSend').onclick = ()=> send(null);
+  document.getElementById('chatInput').onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(null); } };
+  document.getElementById('sendRoses').onclick = ()=> send('roses');
+  document.getElementById('sendChoco').onclick = ()=> send('chocolates');
+}
+
+function renderIncomingMsg(msg){
+  try{
+    const body = document.getElementById('chatBody'); if(!body) return;
+    const meId = USER_ID;
+    const isMine = msg.from && (msg.from.id==='me' || msg.from.id===meId);
+    const who = isMine ? 'Tú' : (msg.from?.name || msg.from?.id || 'Alguien');
+    const line = document.createElement('div');
+    line.style.margin = '4px 0';
+    line.style.textAlign = isMine ? 'right' : 'left';
+    const gift = msg.gift==='roses' ? ' 🌹' : (msg.gift==='chocolates' ? ' 🍫' : '');
+    const text = (msg.text ? msg.text : '') + gift;
+    line.textContent = who + ': ' + text;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }catch(_){ }
+}
+
+// Mensajes entrantes desde socket
+window.__onChatMessage = function(msg){
+  try{
+    // Abrir chat si llega algo del peer actual o si aún no hay chat abierto
+    ensureChatUI();
+    const dock = document.getElementById('chatDock'); if(dock) dock.style.display='block';
+    renderIncomingMsg(msg);
+  }catch(_){ }
+}
+
 // Función para asignar alquiler
 function assignRental(agent) {
   if (agent.houseIdx !== null) return false;
@@ -3025,54 +3750,7 @@ function assignRental(agent) {
   return true;
 }
 
-// Mejorar tu contraseña: mostrar modal, guardar nueva contraseña y mostrar recomendación
-const btnImprovePwd = document.getElementById('btnImprovePwd');
-const pwdModal = document.getElementById('pwdModal');
-const btnClosePwdModal = document.getElementById('btnClosePwdModal');
-const btnSaveNewPwd = document.getElementById('btnSaveNewPwd');
-const newPwdInput = document.getElementById('newPwdInput');
-const pwdMsg = document.getElementById('pwdMsg');
-if(btnImprovePwd && pwdModal && btnClosePwdModal && btnSaveNewPwd && newPwdInput && pwdMsg){
-  btnImprovePwd.onclick = ()=>{
-    pwdModal.style.display = 'flex';
-    newPwdInput.value = '';
-    pwdMsg.style.display = 'none';
-  };
-  btnClosePwdModal.onclick = ()=>{ pwdModal.style.display = 'none'; };
-  btnSaveNewPwd.onclick = async ()=>{
-    const pwd = newPwdInput.value.trim();
-    // Validación básica
-    if(pwd.length < 8 || !/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[^A-Za-z0-9]/.test(pwd)){
-      pwdMsg.textContent = 'La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas, números y símbolos.';
-      pwdMsg.style.color = '#ef4444';
-      pwdMsg.style.display = 'block';
-      return;
-    }
-    // Enviar al servidor para guardar de forma segura
-    try {
-      const resp = await fetch('/api/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword: pwd })
-      });
-      const data = await resp.json();
-      if(data.ok){
-        pwdMsg.textContent = '¡Contraseña actualizada con éxito!';
-        pwdMsg.style.color = '#22c55e';
-        pwdMsg.style.display = 'block';
-        newPwdInput.value = '';
-      }else{
-        pwdMsg.textContent = data.msg || 'Error al guardar la contraseña.';
-        pwdMsg.style.color = '#ef4444';
-        pwdMsg.style.display = 'block';
-      }
-    } catch(e){
-      pwdMsg.textContent = 'Error de conexión con el servidor.';
-      pwdMsg.style.color = '#ef4444';
-      pwdMsg.style.display = 'block';
-    }
-  };
-}
+// (Removido) Mejora de contraseña: botón y modal
 
 // Asegurar que el avatar por defecto esté presente en el progreso
 function ensureDefaultAvatar(progress) {

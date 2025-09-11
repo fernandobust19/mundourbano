@@ -17,6 +17,10 @@ const io = require('socket.io')(server, {
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// Cargar configuración centralizada
+const cfg = require('./server/config');
+// Directorio de comprobantes (configurable). En producción usa un disco persistente.
+const PAGOS_DIR = process.env.PAGOS_DIR || path.join(__dirname, 'pagos');
 // Pago sencillo: secret compartido para webhooks y generación de intents
 const PAYMENT_SECRET = process.env.PAYMENT_SECRET || 'dev-pay-secret';
 const PAY_BASE_LINK = process.env.PAY_BASE_LINK || 'https://ppls.me/ptnd6qxvmV1Km0yys7Hg';
@@ -56,6 +60,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/login', express.static(path.join(__dirname, 'login')));
 // Servir assets descargados
 app.use('/game-assets', express.static(path.join(__dirname, 'game-assets')));
+// Exponer carpeta de comprobantes (si no existe, crearla)
+try{ if(!fs.existsSync(PAGOS_DIR)) fs.mkdirSync(PAGOS_DIR, { recursive:true }); }catch(_){}
+app.use('/pagos', express.static(PAGOS_DIR));
 // Aumentar límite del body JSON para permitir data URLs de avatar
 app.use(express.json({ limit: '12mb' }));
 app.use(cookieParser());
@@ -77,11 +84,11 @@ function getSessionUserId(req){ const raw = req.cookies?.[SESS_COOKIE]; const ui
 // API de autenticación
 app.post('/api/register', (req, res) => {
   try{
-    const { username, password } = req.body || {};
-    const out = brain.registerUser(username, password);
+  const { username, password, country, email, phone, gender } = req.body || {};
+  const out = brain.registerUser(username, password, { country, email, phone, gender });
     if(!out.ok) return res.status(400).json(out);
     setSession(res, out.user.id);
-    return res.json({ ok: true, user: out.user, progress: brain.getProgress(out.user.id) });
+  return res.json({ ok: true, user: out.user, progress: brain.getProgress(out.user.id) });
   }catch(e){ return res.status(500).json({ ok:false, msg:'Error' }); }
 });
 
@@ -104,7 +111,23 @@ app.get('/api/me', (req, res) => {
   if(!uid) return res.status(401).json({ ok:false });
   const user = brain.getUserById(uid);
   if(!user) return res.status(401).json({ ok:false });
-  return res.json({ ok:true, user: { id:user.id, username:user.username }, progress: brain.getProgress(uid) });
+  return res.json({ ok:true, user: { id:user.id, username:user.username, gender: user.gender||null, country: user.country||null, email: user.email||null, phone: user.phone||null }, progress: brain.getProgress(uid) });
+});
+
+// Estado del gobierno (solo lectura)
+app.get('/api/gov', (req, res) => {
+  try{ return res.json({ ok:true, government: brain.getGovernment() }); }catch(e){ return res.status(500).json({ ok:false }); }
+});
+
+// Añadir fondos al gobierno (demo; en producción debería requerir admin)
+app.post('/api/gov/funds/add', (req, res) => {
+  try{
+    const amount = Number(req.body?.amount||0);
+    if(!Number.isFinite(amount) || amount===0) return res.status(400).json({ ok:false });
+    const out = brain.addGovernmentFunds(amount);
+    if(!(out && out.ok)) return res.status(400).json({ ok:false });
+    return res.json({ ok:true, funds: out.funds });
+  }catch(e){ return res.status(500).json({ ok:false }); }
 });
 
 
@@ -185,6 +208,45 @@ app.get('/api/pay/status', (req, res) => {
   }catch(e){ return res.status(500).json({ ok:false }); }
 });
 
+// 3b) URL de retorno/confirmación (GET) por si el proveedor solo redirige (sin webhook)
+// Acepta: ?ref=...&txId=...&amountUsd=5&currency=USD&ts=...&sig=HMAC
+// Donde sig opcionalmente puede ser HMAC-SHA256(secret, `${ref}|${txId}|${amountUsd||''}|${currency||''}|${ts||''}`)
+// Si no hay 'sig', se requiere currency USD y amountUsd >= 5.
+app.get('/api/pay/return', (req, res) => {
+  try{
+    const ref = String(req.query.ref||'');
+    const txId = String(req.query.txId||'').trim();
+    const amountUsd = req.query.amountUsd != null ? Number(req.query.amountUsd) : null;
+    const currency = String(req.query.currency||'').toUpperCase();
+    const ts = String(req.query.ts||'');
+    const sig = String(req.query.sig||'');
+    if(!ref || !txId){ return res.status(400).send('missing ref/txId'); }
+
+    // Verificación opcional por firma HMAC
+    let sigOk = false;
+    try{
+      const raw = [ref, txId, (amountUsd!=null?amountUsd:''), currency, ts].join('|');
+      const mac = crypto.createHmac('sha256', PAYMENT_SECRET).update(raw).digest('hex');
+      if(sig && mac.length === sig.length){ sigOk = crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(sig)); }
+    }catch(_){ }
+
+    const basicOk = (amountUsd!=null) && amountUsd >= 5 && (currency||'USD') === 'USD';
+    if(!(sigOk || basicOk)){
+      // Si no pasa validación, no acreditar; redirigir con estado de error.
+      return res.redirect('/?pay=' + encodeURIComponent('invalid'));
+    }
+
+    const intent = pendingPayments.get(ref);
+    if(!intent){ return res.redirect('/?pay=' + encodeURIComponent('unknown')); }
+    // Acreditar +500 de forma idempotente por txId
+    const reason = 'payment:' + txId;
+    const out = brain.addMoneyOnce(intent.userId, 500, reason);
+    if(out && out.ok){ intent.creditedAt = Date.now(); intent.txId = txId; pendingPayments.set(ref, intent); }
+    const status = (out && out.ok && !out.duplicated) ? 'credited' : 'already';
+    return res.redirect('/?pay=' + encodeURIComponent(status));
+  }catch(e){ return res.status(500).send('error'); }
+});
+
 // 4) Subida de comprobante manual -> carpeta /pagos
 app.post('/api/pay/upload-proof', async (req, res) => {
   try{
@@ -193,17 +255,24 @@ app.post('/api/pay/upload-proof', async (req, res) => {
     const { filename, mime, data } = req.body || {};
     if(!data || typeof data !== 'string') return res.status(400).json({ ok:false, msg:'faltan datos' });
     const safeName = String(filename||'comprobante').replace(/[^a-zA-Z0-9_.-]/g,'_');
-    const ext = (safeName.includes('.') ? safeName.split('.').pop() : 'bin');
-    const ts = new Date().toISOString().replace(/[:]/g,'-');
-    const outDir = path.join(__dirname, 'pagos');
+    const ext = (safeName.includes('.') ? safeName.split('.').pop().toLowerCase() : 'bin');
+    // Validar tipo: solo jpg/png
+    const allowedExt = new Set(['jpg','jpeg','png']);
+    const allowedMime = new Set(['image/jpeg','image/png']);
+    if(!(allowedExt.has(ext) && (!mime || allowedMime.has(String(mime).toLowerCase())))){
+      return res.status(400).json({ ok:false, msg:'Formato no permitido. Usa JPG o PNG.' });
+    }
+  const ts = new Date().toISOString().replace(/[:]/g,'-');
+    const outDir = PAGOS_DIR;
     if(!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
     const outName = `${ts}-${uid}.${ext}`;
     const outPath = path.join(outDir, outName);
     const buf = Buffer.from(data, 'base64');
     fs.writeFileSync(outPath, buf);
     // Guardar pequeño .json con metadatos
-    const meta = { ts: Date.now(), userId: uid, filename: safeName, savedAs: outName, mime: mime||null };
-    fs.writeFileSync(path.join(outDir, `${ts}-${uid}.json`), JSON.stringify(meta, null, 2));
+  const userObj = brain.getUserById(uid);
+  const meta = { ts: Date.now(), userId: uid, username: (userObj && userObj.username) || null, filename: safeName, savedAs: outName, mime: mime||null };
+  fs.writeFileSync(path.join(outDir, `${ts}-${uid}.json`), JSON.stringify(meta, null, 2));
       console.log(`[upload-proof] saved ${outName} for user ${uid}`);
       // Enviar email si está configurado SMTP
       if(mailer){
@@ -222,17 +291,18 @@ app.post('/api/pay/upload-proof', async (req, res) => {
   }catch(e){ console.error('upload-proof error', e); return res.status(500).json({ ok:false }); }
 });
 
+
   // Listar comprobantes del usuario autenticado (solo metadatos)
   app.get('/api/pay/proofs', (req, res) => {
     try{
       const uid = getSessionUserId(req);
       if(!uid) return res.status(401).json({ ok:false });
-      const outDir = path.join(__dirname, 'pagos');
+  const outDir = PAGOS_DIR;
       if(!fs.existsSync(outDir)) return res.json({ ok:true, items: [] });
-      const files = fs.readdirSync(outDir).filter(f => typeof f === 'string' && f.endsWith(`${uid}.json`));
+      const files = fs.readdirSync(outDir).filter(f => typeof f === 'string' && f.toLowerCase().endsWith('.json'));
       const items = [];
       for(const f of files){
-        try{ const meta = JSON.parse(fs.readFileSync(path.join(outDir, f), 'utf8')); items.push(meta); }catch(_){ }
+        try{ const meta = JSON.parse(fs.readFileSync(path.join(outDir, f), 'utf8')); if(meta && String(meta.userId||'') === String(uid)) items.push(meta); }catch(_){ }
       }
       // Ordenar por ts desc
       items.sort((a,b)=> (b.ts||0)-(a.ts||0));
@@ -274,11 +344,33 @@ app.get('/img', async (req, res) => {
   }catch(e){ res.status(500).send('error'); }
 });
 
+// Debug simple para verificar assets en producción (limitar a carpeta /public/assets)
+app.get('/api/debug/assets-list', (req, res) => {
+  try{
+    const dir = path.join(__dirname, 'public', 'assets');
+    const files = fs.readdirSync(dir).filter(f => typeof f === 'string');
+    return res.json({ ok:true, dir, count: files.length, files });
+  }catch(e){ return res.status(500).json({ ok:false, msg: e.message }); }
+});
+app.get('/api/debug/asset', (req, res) => {
+  try{
+    const name = String(req.query.name||'');
+    if(!name) return res.status(400).json({ ok:false, msg:'missing name' });
+    const p = path.join(__dirname, 'public', 'assets', name);
+    const exists = fs.existsSync(p);
+    let size = null;
+    if(exists){ try{ size = fs.statSync(p).size; }catch(_){ } }
+    return res.json({ ok:true, name, path: p, exists, size });
+  }catch(e){ return res.status(500).json({ ok:false, msg: e.message }); }
+});
+
+// Debug: Google Sheets info (no escribe, sólo lee metadatos)
+
 const state = {
   players: {},
   shops: [],
   houses: [],
-  government: { funds: 10000, placed: [] }
+  government: (function(){ try{ return brain.getGovernment(); }catch(e){ return { funds: 0, placed: [] }; } })()
 };
 
 function now() { return Date.now(); }
@@ -535,14 +627,42 @@ io.on('connection', (socket) => {
   });
 
   socket.on('placeGov', (payload, ack) => {
-    if ((state.government.funds || 0) < (payload.cost || 0)) {
+  if ((state.government.funds || 0) < (payload.cost || 0)) {
       if (ack) ack({ ok:false, msg: 'Fondos insuficientes' });
       return;
     }
-    state.government.funds -= payload.cost || 0;
-    state.government.placed.push(payload);
+  try{ brain.addGovernmentFunds(-Math.abs(payload.cost||0)); }catch(_){ }
+  try{ brain.placeGovernment(payload); }catch(_){ }
+  state.government = brain.getGovernment();
     io.emit('govPlaced', payload);
     if (ack) ack({ ok:true });
+  });
+
+  // Chat básico entre jugadores conectados
+  socket.on('chat:send', (payload, ack) => {
+    try{
+      const fromId = socket.playerId;
+      const from = state.players[fromId];
+      if(!from){ if(ack) ack({ ok:false, msg:'no-sender' }); return; }
+      const toId = (payload && payload.to) ? String(payload.to) : null;
+      const toName = (payload && payload.toName) ? String(payload.toName) : null;
+      let target = null;
+      if(toId && state.players[toId]) target = state.players[toId];
+      if(!target && toName){ target = Object.values(state.players).find(p => (p.code||'').toLowerCase() === toName.toLowerCase()); }
+      if(!target){ if(ack) ack({ ok:false, msg:'notfound' }); return; }
+      if(!target.socketId){ if(ack) ack({ ok:false, msg:'offline' }); return; }
+      const msg = {
+        from: { id: fromId, name: from.code || from.id, avatar: from.avatar||null },
+        to: { id: target.id, name: target.code || target.id },
+        text: (payload && typeof payload.text==='string') ? payload.text.slice(0,300) : null,
+        gift: (payload && payload.gift && (payload.gift==='roses' || payload.gift==='chocolates')) ? payload.gift : null,
+        ts: now()
+      };
+      // Entregar al destinatario y eco al remitente
+      io.to(target.socketId).emit('chat:msg', msg);
+      if(socket.id) io.to(socket.id).emit('chat:msg', msg);
+      if(ack) ack({ ok:true });
+    }catch(e){ if(ack) ack({ ok:false }); }
   });
 
   socket.on('disconnect', () => {

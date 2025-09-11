@@ -9,9 +9,10 @@ const DB_PATH = path.join(__dirname, 'brain.db.json');
 const LEDGER_PATH = path.join(__dirname, 'saldos.ledger.json');
 
 let db = {
-	users: [], // { id, username, passHash, createdAt, lastLoginAt }
-	// userId -> { money, bank, vehicle, vehicles:[], shops:[], houses:[], name, avatar, likes:[], gender, age }
+	users: [], // { id, username, passHash, createdAt, lastLoginAt, gender?, country?, email?, phone? }
+	// userId -> { money, bank, vehicle, vehicles:[], shops:[], houses:[], name, avatar, likes:[], gender, age, initialRentPaid?, rentedHouseIdx? }
 	progress: {},
+	government: { funds: 0, placed: [] },
 	activityLog: [] // { ts, type, userId, details }
 };
 
@@ -36,6 +37,8 @@ function load() {
 			const raw = fs.readFileSync(DB_PATH, 'utf8');
 			const parsed = JSON.parse(raw);
 			if (parsed && typeof parsed === 'object') db = Object.assign(db, parsed);
+			// backfill gobierno
+			if(!db.government){ db.government = { funds: 0, placed: [] }; }
 		} else {
 			persist();
 		}
@@ -98,6 +101,45 @@ function log(type, userId = null, details = null) {
 	schedulePersist();
 }
 
+// ===== Gobierno (persistente) =====
+function getGovernment(){
+	try{
+		if(!db.government || typeof db.government !== 'object') db.government = { funds: 0, placed: [] };
+		if(!Array.isArray(db.government.placed)) db.government.placed = [];
+		if(typeof db.government.funds !== 'number') db.government.funds = 0;
+		return db.government;
+	}catch(e){ return { funds: 0, placed: [] }; }
+}
+function setGovernment(gov){
+	try{
+		const g = getGovernment();
+		if(gov && typeof gov === 'object'){
+			if(typeof gov.funds === 'number') g.funds = Math.floor(gov.funds);
+			if(Array.isArray(gov.placed)) g.placed = gov.placed;
+			schedulePersist();
+			log('gov_set', null, { funds: g.funds, placed: g.placed.length });
+			return { ok:true };
+		}
+	}catch(e){}
+	return { ok:false };
+}
+function addGovernmentFunds(delta){
+	const g = getGovernment();
+	const add = Math.floor(delta||0);
+	if(!isFinite(add) || add===0) return { ok:false };
+	g.funds = Math.max(0, (g.funds||0) + add);
+	schedulePersist();
+	log('gov_funds', null, { delta: add, funds: g.funds });
+	return { ok:true, funds: g.funds };
+}
+function placeGovernment(payload){
+	const g = getGovernment();
+	try{ g.placed.push(payload); }catch(_){ }
+	schedulePersist();
+	log('gov_place', null, { k: payload?.k||payload?.label||'item' });
+	return { ok:true };
+}
+
 function getUserByUsername(username) {
 	return db.users.find(u => u.username.toLowerCase() === String(username || '').toLowerCase());
 }
@@ -107,7 +149,7 @@ function getUserById(userId) {
 }
 
 function ensureProgress(userId) {
-	if (!db.progress[userId]) db.progress[userId] = { money: 400, bank: 0, vehicle: null, vehicles: [], shops: [], houses: [], name: null, avatar: null, likes: [], gender: null, age: null };
+	if (!db.progress[userId]) db.progress[userId] = { money: 400, bank: 0, vehicle: null, vehicles: [], shops: [], houses: [], name: null, avatar: null, likes: [], gender: null, age: null, initialRentPaid: false, rentedHouseIdx: null };
 	// backfill para repos anteriores
 	const p = db.progress[userId];
 	if(!('vehicles' in p)) p.vehicles = [];
@@ -118,10 +160,12 @@ function ensureProgress(userId) {
 	if(!Array.isArray(p.likes)) p.likes = [];
 	if(!('gender' in p)) p.gender = null;
 	if(!('age' in p)) p.age = null;
+	if(!('initialRentPaid' in p)) p.initialRentPaid = false;
+	if(!('rentedHouseIdx' in p)) p.rentedHouseIdx = null;
 	return p;
 }
 
-function registerUser(username, password) {
+function registerUser(username, password, extra={}) {
 	const name = String(username || '').trim();
 	if (!name || name.length < 3) return { ok: false, msg: 'Nombre inválido' };
 	if (String(password || '').length < 4) return { ok: false, msg: 'Contraseña muy corta' };
@@ -129,11 +173,21 @@ function registerUser(username, password) {
 
 	const passHash = bcrypt.hashSync(String(password), 10);
 	const user = { id: uid(), username: name, passHash, createdAt: Date.now(), lastLoginAt: null };
+	// Guardar campos adicionales opcionales
+	try{
+		if(extra && typeof extra === 'object'){
+			const { country, email, phone, gender } = extra;
+			if(country) user.country = String(country);
+			if(email) user.email = String(email);
+			if(phone) user.phone = String(phone);
+			if(gender && ['M','F','X'].includes(String(gender))) user.gender = String(gender);
+		}
+	}catch(_){ }
 	db.users.push(user);
 	ensureProgress(user.id);
 	log('register', user.id, { username: name });
 	schedulePersist();
-	return { ok: true, user: { id: user.id, username: user.username } };
+	return { ok: true, user: { id: user.id, username: user.username, gender: user.gender||null, country: user.country||null, email: user.email||null, phone: user.phone||null } };
 }
 
 function verifyLogin(username, password) {
@@ -144,7 +198,7 @@ function verifyLogin(username, password) {
 	user.lastLoginAt = Date.now();
 	log('login', user.id, { username: user.username });
 	schedulePersist();
-	return { ok: true, user: { id: user.id, username: user.username } };
+	return { ok: true, user: { id: user.id, username: user.username, gender: user.gender||null, country: user.country||null, email: user.email||null, phone: user.phone||null } };
 }
 
 function getProgress(userId) {
@@ -157,7 +211,7 @@ function updateProgress(userId, patch) {
 	const p = ensureProgress(userId);
 	if (patch == null || typeof patch !== 'object') return { ok: false };
 	// Solo campos permitidos
-	const allowed = ['money', 'bank', 'vehicle', 'vehicles', 'shops', 'houses', 'name', 'avatar', 'likes', 'gender', 'age'];
+	const allowed = ['money', 'bank', 'vehicle', 'vehicles', 'shops', 'houses', 'name', 'avatar', 'likes', 'gender', 'age', 'country', 'email', 'phone', 'initialRentPaid', 'rentedHouseIdx'];
 	for (const k of allowed) {
 		if (k in patch) {
 			if (k === 'shops' || k === 'houses' || k === 'vehicles' || k === 'likes') {
@@ -318,6 +372,11 @@ module.exports = {
 	// credits helpers
 	addMoney,
 	addMoneyOnce,
-	hasLedgerReason
+	hasLedgerReason,
+	// government
+	getGovernment,
+	setGovernment,
+	addGovernmentFunds,
+	placeGovernment
 };
 
